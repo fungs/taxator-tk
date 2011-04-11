@@ -1,5 +1,4 @@
 #include <fstream>
-// #include <sstream>
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
@@ -11,6 +10,7 @@
 #include <set>
 #include "utils.hh"
 #include "ncbidata.hh"
+#include "constants.hh"
 
 Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::string& names_filename, const std::vector< std::string >* ranks_to_mark ) {
 
@@ -176,9 +176,9 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 
 
 Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_to_mark ) {
-	char* env = getenv("TTP_NCBI_ROOT");
+	char* env = getenv( ENVVAR_TAXONOMY_ROOT.c_str() );
 	if( env == NULL ) {
-		std::cerr << "Specify the folder containing the NCBI taxonomy dump files as TTP_NCBI_ROOT environment variable" << std::endl;
+		std::cerr << "Specify the folder containing the NCBI taxonomy dump files as " << ENVVAR_TAXONOMY_ROOT << " environment variable" << std::endl;
 		return NULL;
 	}
 
@@ -206,4 +206,3 @@ const std::string extractFastaCommentField( const std::string& comment, const st
 	}
 	return fields.back(); //default behavior if not found
 }
-

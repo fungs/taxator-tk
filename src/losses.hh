@@ -1,5 +1,5 @@
 /*
-The taxatorTK predicts the taxon for DNA sequences based on sequence alignment.
+taxator-tk predicts the taxon for DNA sequences based on sequence alignment.
 
 Copyright (C) 2010 Johannes Dröge
 

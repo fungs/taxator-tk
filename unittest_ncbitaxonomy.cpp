@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "src/ncbidata.hh"
 #include "src/accessconv.hh"
-#include "src/taxontree.hh"
+#include "src/taxonomyinterface.hh"
 #include "src/constants.hh"
 // #include "src/tree_util.hh"
 

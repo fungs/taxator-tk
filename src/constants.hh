@@ -1,5 +1,5 @@
 /*
-The taxatorTK predicts the taxon for DNA sequences based on sequence alignment.
+taxator-tk predicts the taxon for DNA sequences based on sequence alignment.
 
 Copyright (C) 2010 Johannes Dröge
 
@@ -31,5 +31,7 @@ const int default_rank_number = 7;
 const int standard_max_support_stop = -1; // negative values have no effect
 
 typedef unsigned int TaxonID;
+
+const std::string ENVVAR_TAXONOMY_ROOT = "TAXATORTK_NCBI_ROOT";
 
 #endif //constants_hh_
