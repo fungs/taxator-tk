@@ -1,0 +1,211 @@
+COMPILATION:
+============
+
+You need to have installed a recent version of the Boost C++ libararies
+(www.boost.org), basically the sub-part providing "boost-program-options" (>=
+version 1.34), including the development header files.
+
+You also need a recent version of the SQLite (>= version 3) libraries
+(www.sqlite.org) which is used to load large mapping files without flooding
+your main memory. Compilation requires the development header files.
+
+Finally, you will need the build management tool "cmake" >= version 2.6
+and the UNIX tools "make" and "uname" which should be contained in a standard
+installation.
+
+On a Unix/Linux box type
+./build.sh
+
+and all programs will be built in a sub-directory called "Build-ARCH" where
+ARCH is your computer architecture.
+
+--------------------------------------------------------------------------------
+
+INSTALLATION:
+=============
+
+There is no installation procedure. Either copy the executables from the build
+directory to your prefered directory in your PATH variable like /usr/local/bin
+or execute them from the build directory.
+
+--------------------------------------------------------------------------------
+
+USAGE:
+======
+
+Basic concept:
+The basic pipeline concept allows splitting the overall prediction into
+individual sub-tasks that are implemented in separate programs. Intermediate
+data is text-based and consists of lines with TAB-separated fields. At each step
+of the process the user can decide whether to save an intermediate file, e. g.
+compressing it using a standared compressor like gzip or bzip2, or to feed it
+directly into the next program without the necessity to save the data on a slow
+disk storage. This process also implicitly features the use of multiple
+processor cores by the producer-consumer model. The prediction process is as
+follows:
+
+--------------------------------------------------------------------------------
+|          ALIGN => CONVERT [=> PREFILTER] => PREDICT [=> EVALUATE]            |
+--------------------------------------------------------------------------------
+
+(1) ALIGN: Align sample sequences against data base.
+
+The aligner can be replaced as long a conversion tool is provided that will
+convert the aligners output into the universal alignment format used in the
+pipeline. I provide scripts to use "NCBI BLAST"  and "LAST" in the alignment
+phase.
+
+blastn
+lastal
+
+--------------------------------------------------------------------------------
+
+(2) CONVERT:   Transform alignment into universal TAB-separated format.
+
+blastxml2alignments.py:
+Blast+ XML output converter (use "-outfmt 5"). Check out the options using the
+"-h" option.
+
+last2alignments.py:
+LAST tabular format converter (use "-f 0"). In order to fill out all required
+fields, you will need the patched version of LAST. LAST output is not sorted by
+query identifier, so you must run through "sort" after conversion to
+intermediate format.
+
+--------------------------------------------------------------------------------
+
+(3) PREFILTER: Apply e. g. quality restriction filters to exclude bad
+               alignments.
+
+alignment-prefilter:
+Support some filtering schemes based on absolute and relative score values.
+Check out the options.
+
+alignment-prefilter-training: Filtering in the case when the taxonomic origin of
+the query sequences are known. This helps to evaluate the algorithms.
+
+--------------------------------------------------------------------------------
+
+(4) PREDICT:   Make a taxonomic classification for each query sequence.
+
+predictor:
+
+--------------------------------------------------------------------------------
+
+(5) EVALUATE:  In the case of supervised classification, evaluation is possible.
+
+prediction2distances:
+Converts a taxonomic prediction of a sequence with known taxonomic origin into
+taxonomy tree distances.
+
+prediction-error:
+Converts a triple of taxonomy tree distances into an error quantity. Check out
+the available formulas.
+
+--------------------------------------------------------------------------------
+
+Extra tools:
+------------
+
+rank-filter:                    Traverses taxonomic ids up to a given rank.
+name-filter:                    Prints the name or rank name of a given taxon.
+acc2taxid:                      Convert sequence identifier to taxonomic ID.
+extract-fastacomment-ncbifield: Parse NCBI FASTA file headers fields.
+
+--------------------------------------------------------------------------------
+
+NCBI taxonomy:
+--------------
+
+All programs that need a taxonomy to work will read the NCBI taxonomy dump files
+from a directory that is defined via the environment variable
+TAXATORTK_NCBI_TAXONOMY. You can use the provided script
+"download-ncbi-taxonomy-gimapping.sh" to download the taxonomy files from the
+official NCBI FTP server. Example:
+
+mkdir ncbi_taxdump
+cd ncbi_taxdump
+path_where_you_unpacked_source/tools/download-ncbi-taxonomy-gimapping.sh
+export TAXATORTK_NCBI_TAXONOMY=$PWD
+
+
+Examples:
+---------
+(a)
+#Align sequences to DATABASE using LAST and do a best-hit classification (reference
+#sequence identifiers are the NCBI fasta headers)
+lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | alignments-prefilter -b 1 | predictor -g gitaxid.mapping -a all-lca
+
+#or shorter
+lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | predictor -g gitaxid.mapping -a n-best-lca -n 1
+
+(b)
+#do a BLAST-MEGAN-style classification with top-percent filter (30 %) and a minimum E-value of 0.01
+blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna | alignments-prefilter -t 0.3 -e 0.01 | predictor -g gitaxid.mapping -a lca
+
+#or shorter
+blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna | predictor -g gitaxid.mapping -a megan-lca -t 0.3 -e 0.01
+
+#or in this case it is better to restict the evalue directly in the BLAST search
+blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna -evalue 0.01 | predictor -g gitaxid.mapping -a megan-lca -t 0.3
+
+(c)
+#if you want to save the alignments with LAST with best alignment per reference sequences only and in sorted order
+lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | alignments-prefilter -k > dump.alignments
+
+# or in compressed form
+lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort |  alignments-prefilter -k | gzip > dump.alignments.gz
+
+# and continue with a simple lca prediction
+cat dump.alignments | predictor -g gitaxid.mapping -a lca
+
+# or better
+predictor -g gitaxid.mapping -a lca < dump.alignments
+
+# and in the compressed case
+zcat dump.alignments.gz | predictor -g gitaxid.mapping -a lca
+
+(d)
+# if you want to save the predictions
+zcat dump.alignments.gz | predictor -g gitaxid.mapping -a lca > dump.predictions
+
+#and show the corresponding predictions
+name-filter -f 2 < dump.predictions
+
+#or if you want to show the names on the phylum level
+rank-filter -r phylum -f 2 < dump.predictions | name-filter -f 2
+
+--------------------------------------------------------------------------------
+
+RECOMMENDATION
+==============
+
+For comparable settings, use BLAST and LAST with the same scoring scheme, use
+BLAST raw scores for classification instead of bitscores. If you want to have
+precise scores, you need to recalculate the BLAST raw scores (implemented in the
+conversion script "blastxml2alignments.py"), because recent BLAST versions do
+not give precise scores as LAST does. The LAST aligner does not produce E-values
+(only through separate program).
+
+Some classification algorithms are still undocumented and will receive more
+attention in future.
+
+--------------------------------------------------------------------------------
+
+TECHNICAL ASPECTS
+=================
+
+The software implementation and design try to be as slick, fast and flexible as
+possible to provide a real tool kit for building an analysis pipeline or to be
+integrated in such. The following considerations were taken:
+
+- the mapping from sequence identifiers to taxonomic IDs are usually small
+enough to be read into memory. If you want, you can instead use an SQLite3
+backend that is slower but saves some memory.
+
+- all tree operations implemented, especially the lowest common ancestor finding
+are implemented in constant time.
+
+- the taxonomy tree is read from the NCBI dump files that define the NCBI
+taxonomy each time a module is loaded. Likely the data structure is going to be
+shared among modules in the future.
