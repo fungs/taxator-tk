@@ -66,11 +66,15 @@ blastxml2alignments.py:
 Blast+ XML output converter (use "-outfmt 5"). Check out the options using the
 "-h" option.
 
-last2alignments.py:
-LAST tabular format converter (use "-f 0"). In order to fill out all required
-fields, you will need the patched version of LAST. LAST output is not sorted by
-query identifier, so you must run through "sort" after conversion to
-intermediate format.
+lastmaf2alignments.py:
+LAST MAF format converter (use "-f 1"). This version now works with the main
+stream version of LAST. As a limitation of the MAF format used by BLAST
+(http://genome.ucsc.edu/FAQ/FAQformat.html) sequence identifiers of database and
+query sequences must not contain white spaces or the first white space separated
+part must be uniquely trackable for you.
+LAST output is not sorted by query identifier, so you must run through "sort"
+after conversion to intermediate format. The UNIX sort command like sort from
+the GNU coreutils is usually sufficient for this.
 
 --------------------------------------------------------------------------------
 
@@ -78,17 +82,22 @@ intermediate format.
                alignments.
 
 alignment-prefilter:
-Support some filtering schemes based on absolute and relative score values.
-Check out the options.
+Support some filtering schemes based on absolute and relative score values or
+e-values. Check out the options.
 
 alignment-prefilter-training: Filtering in the case when the taxonomic origin of
-the query sequences are known. This helps to evaluate the algorithms.
+the query sequences are known (accession number is contained in the sequence
+identifier). This helps to evaluate the algorithms.
 
 --------------------------------------------------------------------------------
 
 (4) PREDICT:   Make a taxonomic classification for each query sequence.
 
 predictor:
+Does the actual taxonomic prediction by mapping the alignment reference
+sequences on the NCBI taxonomy tree. As a general and efficient way the LCA
+as used in MEGAN algorithm is implemented and refined to use partially
+classified taxa in the NCBI taxonomy tree. Check out the options.
 
 --------------------------------------------------------------------------------
 
@@ -131,13 +140,17 @@ export TAXATORTK_NCBI_TAXONOMY=$PWD
 
 Examples:
 ---------
+
+For database construction with LAST, use the accession number to index the
+sequences. LAST README shows how to transform your FASTA identifiers.
+
 (a)
 #Align sequences to DATABASE using LAST and do a best-hit classification (reference
 #sequence identifiers are the NCBI fasta headers)
-lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | alignments-prefilter -b 1 | predictor -g gitaxid.mapping -a all-lca
+lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort | alignments-prefilter -b 1 | predictor -g gitaxid.mapping -a all-lca
 
 #or shorter
-lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | predictor -g gitaxid.mapping -a n-best-lca -n 1
+lastal -f 1 DATABASE mysample.fna | last2alignments.py | sort | predictor -g gitaxid.mapping -a n-best-lca -n 1
 
 (b)
 #do a BLAST-MEGAN-style classification with top-percent filter (30 %) and a minimum E-value of 0.01
@@ -151,10 +164,10 @@ blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna -evalue 0.01 | pr
 
 (c)
 #if you want to save the alignments with LAST with best alignment per reference sequences only and in sorted order
-lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort | alignments-prefilter -k > dump.alignments
+lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort | alignments-prefilter -k > dump.alignments
 
 # or in compressed form
-lastal -f 0 DATABASE mysample.fna | last2alignments.py | sort |  alignments-prefilter -k | gzip > dump.alignments.gz
+lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort |  alignments-prefilter -k | gzip > dump.alignments.gz
 
 # and continue with a simple lca prediction
 cat dump.alignments | predictor -g gitaxid.mapping -a lca
@@ -175,6 +188,10 @@ name-filter -f 2 < dump.predictions
 #or if you want to show the names on the phylum level
 rank-filter -r phylum -f 2 < dump.predictions | name-filter -f 2
 
+(e)
+# using e-values with LAST is more tricky because it requires a second binary.
+lastal -f 1 DATABASE mysample.fna | lastex -z 1 DATABASE.prj mysample.prj - | lastmaf2alignments.py | sort | ...
+
 --------------------------------------------------------------------------------
 
 RECOMMENDATION
@@ -188,7 +205,9 @@ not give precise scores as LAST does. The LAST aligner does not produce E-values
 (only through separate program).
 
 Some classification algorithms are still undocumented and will receive more
-attention in future.
+attention in future. I would recommend the algorithm ic-megan-lca which is like
+MEGAN but little smarter with taxa that are only partially classified in the
+NCBI taxonomy (something like "unclassified gammaproteobacteria").
 
 --------------------------------------------------------------------------------
 
@@ -200,12 +219,14 @@ possible to provide a real tool kit for building an analysis pipeline or to be
 integrated in such. The following considerations were taken:
 
 - the mapping from sequence identifiers to taxonomic IDs are usually small
-enough to be read into memory. If you want, you can instead use an SQLite3
-backend that is slower but saves some memory.
+enough to be read into memory. I recommend to generate a custom mappings file
+by filtering out all identifiers in the DB from the large mappings that you can
+usually download from FTP servers. If you want however, you can instead use an
+SQLite3 backend that is slower but does not flood you memory.
 
 - all tree operations implemented, especially the lowest common ancestor finding
 are implemented in constant time.
 
 - the taxonomy tree is read from the NCBI dump files that define the NCBI
 taxonomy each time a module is loaded. Likely the data structure is going to be
-shared among modules in the future.
+shared among modules and dumped in a blob in the future.
