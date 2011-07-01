@@ -27,12 +27,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <list>
 #include <fstream>
 #include <boost/lexical_cast.hpp>
+#include "constants.hh"
 
 //TODO: clean up template functions
 
 
 inline bool ignoreLine( const std::string& line ) {
-	return line.empty() || line[0] == '#';
+	return line.empty() || line[0] == default_comment_symbol;
+}
+
+
+
+inline bool maskedLine( const std::string& line ) {
+	return ! line.empty() && line[0] == default_mask_symbol;
 }
 
 

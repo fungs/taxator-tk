@@ -95,9 +95,9 @@ int main( int argc, char** argv ) {
 
 		//check whether unclassified nodes are marked correctly
 		for( node_it = ++( tax->begin() ); node_it != tax->end(); ++node_it ) {
-			TaxonNode* node = node_it.node;
+			const TaxonNode* node = node_it.node;
 			if( node->data->is_unclassified ) {
-				TaxonNode* tmp_node;
+				const TaxonNode* tmp_node;
 				for( tmp_node = node; tmp_node != root_node; tmp_node = tmp_node->parent ) {
 // 					std::cerr << "marked as unclassified: " << tmp_node->data->annotation->name << std::endl;
 					if( tmp_node->data->annotation && tmp_node->data->annotation->name.find( "unclassified" ) != std::string::npos ) {
@@ -108,7 +108,7 @@ int main( int argc, char** argv ) {
 			}
 		}
 
-		TaxonNode* node = taxinter.getNode( 166532 );
+		const TaxonNode* node = taxinter.getNode( 166532 );
 		if( node ) {
 			alltests = alltests && unittest_assert( node->data->is_unclassified, "UNCLASSIFIED_MARKED (unclassified Potamonautes)" );
 		}
@@ -137,7 +137,7 @@ int main( int argc, char** argv ) {
 
 		//check depth information for specic rank
 		for( node_it = ++( tax->begin() ); node_it != tax->end(); ++node_it ) {
-			TaxonNode* node = node_it.node;
+			const TaxonNode* node = node_it.node;
 			if( node->data->annotation ) {
 				const string& rank = node->data->annotation->rank;
 
@@ -166,6 +166,48 @@ int main( int argc, char** argv ) {
 					alltests = alltests && unittest_assert( node->data->root_pathlength == 7 , "NORMALIZED_DEPTH (" +  node->data->annotation->name + ")" );
 				}
 			}
+		}
+		delete tax;
+	}
+	
+	{
+		// randomly choose tree nodes and check whether PathIterators return the same path up and downwards
+		Taxonomy* tax = loadTaxonomyFromEnvironment( &default_ranks );
+		TaxonomyInterface taxinter( tax );
+		const TaxonNode* root = taxinter.getRoot();
+
+		for( Taxonomy::leaf_iterator node_it = tax->begin_leaf(); node_it != tax->end_leaf(); ++node_it ) {
+			const TaxonNode* node = node_it.node;
+
+			std::list< const TaxonNode* > up_list;
+			{ //path to root
+				Taxonomy::PathUpIterator it = taxinter.traverseUp( node );
+				up_list.push_front( &*it );
+				while( it != root ) {
+					++it;
+					up_list.push_front( &*it );
+				}
+			}
+			
+		  bool same_path = true;
+			{ //path from root
+				Taxonomy::PathDownIterator it = taxinter.traverseDown< Taxonomy::PathDownIterator >( node );
+				same_path = same_path && &*it == up_list.front();
+				up_list.pop_front();
+				while( it != node && same_path ) {
+					++it;
+					same_path = same_path && &*it == up_list.front();
+
+// 					if( &*it == up_list.front() ) {
+// 						std::cerr << "path iterators match for node " << it->data->taxid << std::endl;
+// 					} else {
+// 						std::cerr << "path iterators DON'T match for node " << it->data->taxid << std::endl;
+// 						std::cerr << "upward node was" << up_list.front()->data->taxid << std::endl;
+// 					}
+					up_list.pop_front();
+				}
+			}
+			alltests = alltests && unittest_assert( same_path , "PATH_ITERATORS (" +  node->data->annotation->name + ")" );
 		}
 		delete tax;
 	}

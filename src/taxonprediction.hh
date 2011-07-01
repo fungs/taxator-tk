@@ -40,12 +40,12 @@ template< typename ContainerT >
 class TaxonPredictionModel {
 	public:
 		TaxonPredictionModel( Taxonomy* tax ) : taxinter( tax ), taxonomy( tax ), root( taxinter.getRoot() ) {};
-		virtual TaxonNode* predict( ContainerT& recordset ) = 0;
-		TaxonNode* unclassified() { return root; };
+		virtual const TaxonNode* predict( ContainerT& recordset ) = 0;
+		const TaxonNode* unclassified() { return root; };
 	protected:
 		TaxonomyInterface taxinter;
 		Taxonomy* taxonomy;
-		TaxonNode* root;
+		const TaxonNode* root;
 };
 
 
@@ -55,7 +55,7 @@ class DummyPredictionModel : public TaxonPredictionModel< ContainerT > { //TODO:
 	public:
 		DummyPredictionModel( Taxonomy* tax ) : TaxonPredictionModel< ContainerT >( tax ) {}
 
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			return this->unclassified();
 		};
 };
@@ -66,8 +66,8 @@ template< typename ContainerT >
 class LCASimplePredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		LCASimplePredictionModel( Taxonomy* tax ) : TaxonPredictionModel< ContainerT >( tax ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
-			std::list< TaxonNode* > refnodes;
+		const TaxonNode* predict( ContainerT& recordset ) {
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 			if( ! refnodes.empty() ) {
 				return this->taxinter.getLCA( refnodes );
@@ -83,12 +83,12 @@ class MeganLCAPredictionModel : public TaxonPredictionModel< ContainerT > { //TO
 	public:
 		MeganLCAPredictionModel( Taxonomy* tax, bool iuc, const float toppercent, const float minscore = 0.0, const int minsupport = 1, const float winscore = 0.0) : TaxonPredictionModel< ContainerT >( tax ),
 			msp( minsupport ), wsc( winscore ), minscore_toppercent( minscore, toppercent ), ignore_unclassified( iuc ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			minscore_toppercent.filter( recordset );
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 			if( ignore_unclassified ) {
-				std::list< TaxonNode* >::iterator it = refnodes.begin();
+				std::list< const TaxonNode* >::iterator it = refnodes.begin();
 				while( it != refnodes.end() ) {
 					if( (*it)->data->is_unclassified ) {
 						it = refnodes.erase( it );
@@ -118,9 +118,9 @@ class ICMeganLCAPredictionModel : public TaxonPredictionModel< ContainerT > { //
 	public:
 		ICMeganLCAPredictionModel( Taxonomy* tax, const float toppercent, const float minscore = 0.0, const int minsupport = 1, const float winscore = 0.0) : TaxonPredictionModel< ContainerT >( tax ),
 		msp( minsupport ), wsc( winscore ), minscore_toppercent( minscore, toppercent ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			minscore_toppercent.filter( recordset );
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 			if( refnodes.size() >= msp ) {
 				return this->taxinter.getICLCA( refnodes );
@@ -140,9 +140,9 @@ template< typename ContainerT >
 class NBestLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		NBestLCAPredictionModel( Taxonomy* tax, const int n = 1) : TaxonPredictionModel< ContainerT >( tax ), findnbest( n ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			findnbest.filter( recordset );
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 			if( ! refnodes.empty() ) {
 				return this->taxinter.getLCA( refnodes );
@@ -159,17 +159,17 @@ template< typename ContainerT >
 class ClosestNodePredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ClosestNodePredictionModel( Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			AlignmentRecord* firstrec = recordset.front();
 
 			// determine query label node
-			TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
+			const TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
 
 			// determine closest node in LCA tree
-			TaxonNode* pairlca = this->root;
+			const TaxonNode* pairlca = this->root;
 			for( typename ContainerT::iterator it = recordset.begin(); it != recordset.end(); ++it ) {
 				if( ! (*it)->mask ) {
-					TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+					const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 					tmpnode = this->taxinter.getLCA( tmpnode, qnode );
 					if( tmpnode->data->root_pathlength > pairlca->data->root_pathlength ) {
 						pairlca = tmpnode;
@@ -188,26 +188,26 @@ template< typename ContainerT >
 class CorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		CorrectionPredictionModel( Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			AlignmentRecord* firstrec = recordset.front();
 
 			// determine query label node
-			TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
+			const TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
 
 			// determine best scoring alignment and corresponding node in taxonomy
 			findbestscoring.filter( recordset );
-			std::list< TaxonNode* > nodes;
+			std::list< const TaxonNode* > nodes;
 			records2Nodes( findbestscoring.getBests(), &this->taxinter, nodes );
 
 // 			std::cerr << "Total number of nodes: " << recordset.size() << std::endl;
 // 			std::cerr << "Number of best nodes: " << nodes.size() << std::endl;
 // 			std::cerr << "Query is: " << qnode->data->annotation->name << " (" << qnode->data->taxid << ")" << std::endl;
 
-			TaxonNode* lowest_lca;
+			const TaxonNode* lowest_lca;
 			unsigned int longest_pathlength = 0;
 			if( ! nodes.empty() ) {
 				while( ! nodes.empty() ) {
-					TaxonNode* tmp = this->taxinter.getLCA( nodes.back(), qnode );
+					const TaxonNode* tmp = this->taxinter.getLCA( nodes.back(), qnode );
 					if( tmp->data->root_pathlength >= longest_pathlength ) {
 						longest_pathlength = tmp->data->root_pathlength;
 						lowest_lca = tmp;
@@ -218,7 +218,7 @@ class CorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 				// make upper range check
 				if( lowest_lca ) {
 					records2Nodes( recordset, &this->taxinter, nodes );
-					TaxonNode* lca_all = this->taxinter.getLCA( nodes );
+					const TaxonNode* lca_all = this->taxinter.getLCA( nodes );
 
 					if( this->taxinter.isParentOf( lowest_lca, lca_all ) ) {
 						return lca_all;
@@ -240,25 +240,25 @@ template< typename ContainerT >
 class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ICCorrectionPredictionModel( Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 
 			if( ! recordset.empty() ) {
-				std::list< TaxonNode* > nodes;
-				std::list< std::pair< float, TaxonNode* > > unclassified_nodes;
+				std::list< const TaxonNode* > nodes;
+				std::list< std::pair< float, const TaxonNode* > > unclassified_nodes;
 // 				std::list< float > unclassified_bitscores;
-				std::list< TaxonNode* > best_nodes;
-// 				std::pair< TaxonNode*, float > best_bs( NULL, 0.0 );
+				std::list< const TaxonNode* > best_nodes;
+// 				std::pair< const TaxonNode*, float > best_bs( NULL, 0.0 );
 				float best_bs = 0.0;
 
 				// determine query label node
 				AlignmentRecord* firstrec = recordset.front();
-				TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
+				const TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
 
 				// sort out unclassified nodes with corresponding bitscore
 				// get best scoring node in normal set
 				for( typename ContainerT::iterator it = recordset.begin(); it != recordset.end(); ++it ) {
 					if( ! (*it)->mask ) {
-						TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+						const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 						if( tmpnode->data->is_unclassified ) {
 							tmpnode = this->taxinter.mapUnclassified( tmpnode );
 							unclassified_nodes.push_back( std::make_pair( (*it)->bitscore, tmpnode ) );
@@ -277,7 +277,7 @@ class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 						nodes.push_back( tmpnode );
 					}
 				}
-				TaxonNode* lca_all = this->taxinter.getLCA( nodes );
+				const TaxonNode* lca_all = this->taxinter.getLCA( nodes );
 
 // 				std::cerr << "Total number of nodes: " << recordset.size() << std::endl;
 // 				std::cerr << "Number of unclassified nodes: " << unclassified_nodes.size() << std::endl;
@@ -285,7 +285,7 @@ class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 // 				std::cerr << "Query is: " << qnode->data->annotation->name << " (" << qnode->data->taxid << ")" << std::endl;
 
 				// remove unclassified nodes with bitscore less than maximum in normal set
-				std::list< std::pair< float, TaxonNode* > >::iterator n_it = unclassified_nodes.begin();
+				std::list< std::pair< float, const TaxonNode* > >::iterator n_it = unclassified_nodes.begin();
 // 				std::list< float >::iterator b_it = unclassified_bitscores.begin();
 				while( n_it != unclassified_nodes.end() ) {
 					if( n_it->first < best_bs ) {
@@ -297,9 +297,9 @@ class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 
 				if( ! unclassified_nodes.empty() ) {
 					// sort nodes and find out lowest possible prediction
-					unclassified_nodes.sort( std::greater< std::pair< float, TaxonNode* > >() );
-					TaxonNode* lcc = this->root;
-					for( std::list< std::pair< float, TaxonNode* > >::iterator n_it = unclassified_nodes.begin(); n_it != unclassified_nodes.end(); ++n_it ) {
+					unclassified_nodes.sort( std::greater< std::pair< float, const TaxonNode* > >() );
+					const TaxonNode* lcc = this->root;
+					for( std::list< std::pair< float, const TaxonNode* > >::iterator n_it = unclassified_nodes.begin(); n_it != unclassified_nodes.end(); ++n_it ) {
 // 						std::cerr << "Bitscore: " << n_it->first << " for node " << n_it->second->data->annotation->name << std::endl;
 						lcc = this->taxinter.getLCC( n_it->second, lcc );
 						best_nodes.push_back( lcc );
@@ -310,9 +310,9 @@ class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 // 				std::cerr << "Number of unclassified nodes with better score: " << unclassified_nodes.size() << std::endl;
 
 				unsigned int max_depth = 0;
-				TaxonNode* correction = NULL;
+				const TaxonNode* correction = NULL;
 				while( ! best_nodes.empty() ) {
-					TaxonNode* tmpnode = this->taxinter.getLCA( best_nodes.back(), qnode );
+					const TaxonNode* tmpnode = this->taxinter.getLCA( best_nodes.back(), qnode );
 					if( tmpnode->data->root_pathlength >= max_depth ) {
 						correction = tmpnode;
 						max_depth = correction->data->root_pathlength;
@@ -327,9 +327,9 @@ class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 					}
 					return correction;
 				}
-// 				TaxonNode* lcc_unclassified = ;
-// 				TaxonNode* qlca_normal = this->taxinter.getLCA( best_bs.first, qnode );
-// 				TaxonNode* qlca_unclassified = this->taxinter.getLCA( lcc_unclassified, qnode );
+// 				const TaxonNode* lcc_unclassified = ;
+// 				const TaxonNode* qlca_normal = this->taxinter.getLCA( best_bs.first, qnode );
+// 				const TaxonNode* qlca_unclassified = this->taxinter.getLCA( lcc_unclassified, qnode );
 //
 // 				if( qlca_unclassified->data->root_pathlength > qlca_normal->data->root_pathlength ) {
 // 					return qlca_unclassified;
@@ -350,21 +350,21 @@ template< typename ContainerT >
 class QueryBestLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		QueryBestLCAPredictionModel( Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 			AlignmentRecord* firstrec = recordset.front();
 
 			// determine query label node
-			TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
+			const TaxonNode* qnode = this->taxinter.getNode( seqid2taxid[ extractFastaCommentField( firstrec->query_identifier, "gi" ) ] );
 
 			// determine best scoring alignment and corresponding node in taxonomy
 			findbestscoring.filter( recordset );
-			std::list< TaxonNode* > nodes;
+			std::list< const TaxonNode* > nodes;
 			records2Nodes( findbestscoring.getBests(), &this->taxinter, nodes );
-			TaxonNode* lowest_lca;
+			const TaxonNode* lowest_lca;
 			unsigned int longest_pathlength = 0;
 			if( ! nodes.empty() ) {
 				while( ! nodes.empty() ) {
-					TaxonNode* tmp = this->taxinter.getLCA( nodes.back(), qnode );
+					const TaxonNode* tmp = this->taxinter.getLCA( nodes.back(), qnode );
 					if( tmp->data->root_pathlength >= longest_pathlength ) {
 						longest_pathlength = tmp->data->root_pathlength;
 						lowest_lca = tmp;
@@ -391,17 +391,17 @@ template< typename ContainerT >
 class ExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ExtLCAPredictionModel( Taxonomy* tax, const float thresh, const float gam ) : TaxonPredictionModel< ContainerT >( tax ), threshold( thresh ), gamma( gam ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 
 			findbestscoring.filter( recordset );
 			AlignmentRecord* bestaln = findbestscoring.getBest();
-			TaxonNode* best_node = this->taxinter.getNode( bestaln->reference_taxid );
+			const TaxonNode* best_node = this->taxinter.getNode( bestaln->reference_taxid );
 			float &best_bs = bestaln->bitscore;
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 
 			for( typename ContainerT::iterator it = recordset.begin(); it != recordset.end(); ++it ) {
 				if( ! (*it)->mask ) {
-					TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+					const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 					int a, b, c;
 					boost::tie( a, b, c ) = this->taxinter.getInterDistances( tmpnode, best_node );
 					float weight = distWeight( c, gamma );
@@ -432,12 +432,12 @@ template< typename ContainerT >
 class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		TestExtLCAPredictionModel( Taxonomy* tax, const float thresh, const float dlb , const float b ) : TaxonPredictionModel< ContainerT >( tax ), threshold( thresh ), distweight_factor( ( 1.0 - dlb )/float( default_ranks.size() ) ), beta( b ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 
 			sort.filter( recordset );
-			std::list< TaxonNode* > bestnodes;
-// 			TaxonNode* best_node = this->taxinter.getNode( bestaln->reference_taxid );
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > bestnodes;
+// 			const TaxonNode* best_node = this->taxinter.getNode( bestaln->reference_taxid );
+			std::list< const TaxonNode* > refnodes;
 			int a, b, c;
 
 			float best_bs;
@@ -445,7 +445,7 @@ class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 			for( ; it != recordset.end(); ++it ) { //get best valid alignment
 				if( ! (*it)->mask ) {
 					best_bs = (*it)->bitscore;
-					TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+					const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 					bestnodes.push_back( tmpnode );
 					refnodes.push_back( tmpnode );
 					break;
@@ -454,7 +454,7 @@ class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 
 			for( ; it != recordset.end() && (*it)->bitscore == best_bs; ++it ) { //ties will be included, too
 				if( ! (*it)->mask ) {
-					TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+					const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 					bestnodes.push_back( tmpnode );
 					refnodes.push_back( tmpnode );
 				}
@@ -462,7 +462,7 @@ class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 
 			for( ; it != recordset.end(); ++it ) {
 				if( ! (*it)->mask ) {
-					TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+					const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 					float bs_rel = (*it)->bitscore / best_bs;
 					float norm_dist = getNormDist( tmpnode, bestnodes );
 // 					std::cerr << "bs_rel: " << bs_rel << " norm_dist: " << norm_dist << " combined: " << combinedFeature( bs_rel, norm_dist ) << std::endl;
@@ -480,10 +480,10 @@ class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 		};
 
 	private:
-		float getNormDist( TaxonNode* n, std::list< TaxonNode* >& bestnds ) {
+		float getNormDist( const TaxonNode* n, std::list< const TaxonNode* >& bestnds ) {
 			int a, b, c;
 			int c_sum = 0;
-			for( std::list< TaxonNode* >::iterator it = bestnds.begin(); it != bestnds.end(); ++it ) {
+			for( std::list< const TaxonNode* >::iterator it = bestnds.begin(); it != bestnds.end(); ++it ) {
 				boost::tie( a, b, c ) = this->taxinter.getInterDistances( n, *it );
 				c_sum += c;
 			}
@@ -505,11 +505,11 @@ template< typename ContainerT >
 class ExtendedLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ExtendedLCAPredictionModel( Taxonomy* tax, const float t1, const float t2 ) : TaxonPredictionModel< ContainerT >( tax ), cleanse( tax, t1, t2 ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 
 			cleanse.filter( recordset );
 
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 
 			if( ! refnodes.empty() ) {
@@ -530,12 +530,12 @@ template< typename ContainerT >
 class TopPercentOutlierLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		TopPercentOutlierLCAPredictionModel( Taxonomy* tax, const float t1 = 1.0, const float t2 = 0.5, const unsigned int m = 3 ) : TaxonPredictionModel< ContainerT >( tax ), outlier( tax, t2, m ), min_top( 0.0, t1 ) {};
-		TaxonNode* predict( ContainerT& recordset ) {
+		const TaxonNode* predict( ContainerT& recordset ) {
 
 			min_top.filter( recordset );
 			outlier.filter( recordset );
 
-			std::list< TaxonNode* > refnodes;
+			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, &this->taxinter, refnodes );
 
 			if( ! refnodes.empty() ) {
@@ -559,7 +559,7 @@ class AtomicTaxonPredictionModel {
 	public:
 		AtomicTaxonPredictionModel( Taxonomy* tax ) : taxinter( tax ), taxonomy( tax ) {};
 		virtual void loadModel( const std::string& filename ) = 0;
-		virtual TaxonNode* predict( AlignmentRecord* record ) = 0;
+		virtual const TaxonNode* predict( AlignmentRecord* record ) = 0;
 	protected:
 		TaxonomyInterface taxinter;
 		Taxonomy* taxonomy;
@@ -571,7 +571,7 @@ class MyTaxonPredictionModel : AtomicTaxonPredictionModel {
 	public:
 		MyTaxonPredictionModel( Taxonomy* tax ) : AtomicTaxonPredictionModel( tax ) {};
 		void loadModel( const std::string& filename );
-		TaxonNode* predict( AlignmentRecord* record );
+		const TaxonNode* predict( AlignmentRecord* record );
 
 	private:
 		std::map< unsigned int, float > bitscore_cutoff;
@@ -583,7 +583,7 @@ class MyTaxonPredictionModel2 : AtomicTaxonPredictionModel {
 	public:
 		MyTaxonPredictionModel2( Taxonomy* tax ) : AtomicTaxonPredictionModel( tax ) {};
 		void loadModel( const std::string& filename );
-		TaxonNode* predict( AlignmentRecord* record );
+		const TaxonNode* predict( AlignmentRecord* record );
 
 	private:
 		std::map< const std::string*, float > ranks_cutoff;
@@ -596,7 +596,7 @@ class MyTaxonPredictionModel3 : AtomicTaxonPredictionModel {
 		MyTaxonPredictionModel3( Taxonomy* tax ) : AtomicTaxonPredictionModel( tax ), max_bitscore( 0.0 ) {};
 		void loadModel( const std::string& filename );
 		void setMaxBitscore( const float bitscore );
-		TaxonNode* predict( AlignmentRecord* record );
+		const TaxonNode* predict( AlignmentRecord* record );
 
 	private:
 		std::map< const std::string*, float > ranks_cutoff;
@@ -636,7 +636,7 @@ class PredictionsParser {
 					continue;
 				}
 
-				tokenizeSingleCharDelim( line, fields, FSEP, 2 );
+				tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
 				field_it = fields.begin();
 
 				try {

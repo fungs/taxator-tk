@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/tuple/tuple.hpp>
 #include "types.hh"
 #include "tree.hh"
+#include <stack>
 
 
 
@@ -51,6 +52,12 @@ class Taxon {
 					delete delanno;
 				}
 		};
+		
+		//default order is pre-order
+		bool operator<( const Taxon& t ) {
+			return this->leftvalue < t.leftvalue;
+		}
+		
 // 		Taxon( const Taxon& taxon);
 		unsigned int taxid;
 		unsigned int root_pathlength;
@@ -59,31 +66,157 @@ class Taxon {
 		TaxonAnnotation* annotation;
 		bool mark_special;
 		bool is_unclassified;
-	};
+};
 
 
 
 typedef tree_node_<Taxon*> TaxonNode;
 
+// class TaxonNode : public tree_node_< Taxon* > {
+// 	inline bool isLeaf( const TaxonNode* node ) const {
+// 		return node->first_child;
+// 	}
+// };
+
+
+
 class TaxonomyInterface;
+
+
 
 class TaxonTree : public tree< Taxon* > {
 	friend class TaxonomyInterface;
 	public:
-		TaxonTree() {};
+		TaxonTree() : rank_not_found( *ranks.insert( "" ).first ) {};
  		~TaxonTree();
 		typedef tree_node Node;
-		int indexSize();
-		const std::string& getRankInternal( const std::string& rankname, const bool insert = false );
+		int indexSize() const;
+		const std::string& insertRankInternal( const std::string& rankname );
+		const std::string& getRankInternal( const std::string& rankname ) const;
 		void deleteUnmarkedNodes();
 // 		void addDummyRankNodes( const std::vector< std::string >& ranks );
 		void setRankDistances( const std::vector< std::string >& ranks );
 		void recalcNestedSetInfo();
 		void addToIndex( unsigned int taxid, Node* node );
 		void recreateNodeIndex();
+		
+		// base class for path iterators (only forward)
+		class PathIteratorBase {
+		public:
+			typedef std::forward_iterator_tag iterator_category;
+			typedef PathIteratorBase self_type;
+			typedef Node value_type;
+			typedef size_t difference_type;
+			typedef Node* pointer;
+			typedef const Node* const_pointer;
+			typedef Node& reference;
+			typedef const Node& const_reference;
+			
+			const_reference operator*() const {
+				return *current;
+			};
+			
+			const_pointer operator->() const {
+				return current;
+			};
+			
+			bool operator==( const PathIteratorBase &it ) const {
+				return current == it.current;
+			};
+			
+			bool operator==( const_pointer node ) const {
+				return current == node;
+			};
+			
+			bool operator!=( const PathIteratorBase &it ) const {
+				return current != it.current;
+			};
+			
+			bool operator!=( const_pointer node ) const {
+				return current != node;
+			};
+			
+			virtual self_type& operator++() = 0;
+			
+		protected:
+			const Node* current;
+		};
+		
+		// attention: PathDownIterator's increment operator doesn't run in constant time but is linear in number of children
+		class PathDownIterator : public PathIteratorBase {
+		public:
+			PathDownIterator( const_pointer startnode, const_pointer stopnode ) : stop_v( stopnode->data->leftvalue ) {
+				current = startnode;
+			};
+
+			PathDownIterator& operator++() {
+				for( sibling_iterator it = current->first_child; it != it.end(); ++it ) {
+					Taxon* t = *it;
+					if( t->leftvalue <= stop_v && t->rightvalue > stop_v ) {
+						current = it.node;
+						break;
+					}
+				}
+				return *this;
+			};
+			
+			PathDownIterator operator++( int ) {
+				PathDownIterator tmp( *this );
+				operator++();
+				return tmp;
+			}
+			
+		private:
+			const unsigned int stop_v; //leading value
+		};
+		
+		class PathUpIterator : public PathIteratorBase { //iterator will go forever, if not checked for target
+		public:
+			PathUpIterator( const_pointer startnode ) {
+				current = startnode;
+			};
+
+			PathUpIterator& operator++() {
+				current = current->parent;
+				return *this;
+			};
+			
+			PathUpIterator operator++( int ) {
+				PathUpIterator tmp( *this );
+				operator++();
+				return tmp;
+			}
+		};
+			
+		//cached version of PathDownIterator using a stack as cache to do everything in constant time 
+		class CPathDownIterator : public PathIteratorBase {
+		public:
+			CPathDownIterator( const_pointer startnode, const_pointer stopnode ) {
+				current = startnode;
+				for( PathUpIterator it( stopnode ); it != startnode; ++it ) {
+					path.push( &*it );
+				}
+			};
+
+			CPathDownIterator& operator++() {
+				current = path.top();
+				path.pop();
+				return *this;
+			};
+			
+			CPathDownIterator operator++( int ) {
+				CPathDownIterator tmp( *this );
+				operator++();
+				return tmp;
+			}
+			
+		private:
+			std::stack< const_pointer > path;
+		};
 
 	private:
 		std::set< std::string > ranks;
+		const std::string& rank_not_found;
 		std::map< unsigned int, Node* > taxid2node; //use boost::ptr_map<> -> no destructor needed
 };
 

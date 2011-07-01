@@ -23,40 +23,41 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
 #include <boost/tuple/tuple.hpp>
+#include <iterator>
 #include "types.hh"
 #include "taxontree.hh"
 
 class TaxonomyInterface {
 	public:
-		TaxonomyInterface( Taxonomy* taxtree ) : tax( taxtree ) {};
+		TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {};
 
-		TaxonNode* const getNode( const unsigned int taxid );
-		TaxonNode* const getRoot();
+		const TaxonNode* getNode( const unsigned int taxid ) const;
+		const TaxonNode* getRoot() const;
 
-		const TTPString getRank( const TaxonNode* node );
-		const TTPString getRank( const unsigned int taxid );
-		const TTPString getName( const TaxonNode* node );
-		const TTPString getName( const unsigned int taxid );
+		const TTPString getRank( const TaxonNode* node ) const ;
+		const TTPString getRank( const unsigned int taxid ) const;
+		const TTPString getName( const TaxonNode* node ) const;
+		const TTPString getName( const unsigned int taxid ) const;
 
-		bool isParentOf( const TaxonNode* A, const TaxonNode* B );
-		bool isParentOf( const unsigned int A_taxid, const unsigned int B_taxid );
+		bool isParentOf( const TaxonNode* A, const TaxonNode* B ) const;
+		bool isParentOf( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
-		TaxonNode* const getLCA( const TaxonNode* A, const TaxonNode* B );
-		TaxonNode* const getLCA( const unsigned int A_taxid, const unsigned int B_taxid );
+		const TaxonNode* getLCA( const TaxonNode* A, const TaxonNode* B ) const;
+		const TaxonNode* getLCA( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
-		TaxonNode* const getLCC( TaxonNode* A, TaxonNode* B );
-		TaxonNode* const getLCC( const unsigned int A_taxid, const unsigned int B_taxid );
+		const TaxonNode* getLCC( const TaxonNode* A, const TaxonNode* B ) const;
+		const TaxonNode* getLCC( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
 
 
 		template < typename ContainerT >
-		TaxonNode* const getLCA( const ContainerT& nodescontainer ) { //TODO: handle taxid not found
+		const TaxonNode* getLCA( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
 			if( nodescontainer.empty() ) {
 				return NULL;
 			}
 
 			typename ContainerT::const_iterator node_it = nodescontainer.begin();
-			TaxonNode* tmplca = *node_it++;
+			const TaxonNode* tmplca = *node_it++;
 			while( node_it != nodescontainer.end() ) {
 				tmplca = getLCA( tmplca, *node_it );
 				++node_it;
@@ -67,19 +68,19 @@ class TaxonomyInterface {
 
 
 		template < typename ContainerT >
-		TaxonNode* const getLCC( const ContainerT& nodescontainer ) { //TODO: handle taxid not found
+		const TaxonNode* getLCC( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
 			if( nodescontainer.empty() ) {
 				return NULL;
 			}
 			// we need to start with lowest overall concept
-			std::pair< TaxonNode*, unsigned int > lowest( NULL, 0 );
+			std::pair< const TaxonNode*, unsigned int > lowest( NULL, 0 );
 			for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
 				if( (*node_it)->data->root_pathlength >= lowest.second ) {
 					lowest.first = *node_it;
 					lowest.second = (*node_it)->data->root_pathlength;
 				}
 			}
-			TaxonNode* tmplcc = lowest.first;
+			const TaxonNode* tmplcc = lowest.first;
 			for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
 				tmplcc = getLCC( tmplcc, *node_it );
 			}
@@ -89,7 +90,7 @@ class TaxonomyInterface {
 
 
 		template < typename ContainerT >
-		TaxonNode* const getICLCA( ContainerT nodescontainer ) { //TODO: handle taxid not found
+		const TaxonNode* getICLCA( ContainerT nodescontainer ) const { //TODO: handle taxid not found
 			if( nodescontainer.empty() ) {
 				return NULL;
 			}
@@ -104,26 +105,35 @@ class TaxonomyInterface {
 			return getLCC( nodescontainer );
 		};
 
-		TaxonNode* mapUnclassified( TaxonNode* node );
-		TaxonNode* mapUnclassified( unsigned int taxid );
+		const TaxonNode* mapUnclassified( const TaxonNode* node ) const;
+		const TaxonNode* mapUnclassified( unsigned int taxid ) const;
 
-		std::pair< int, int > getPathLength( const TaxonNode* A, const TaxonNode* B );
-		std::pair< int, int > getPathLength( const unsigned int A_taxid, const unsigned int B_taxid );
+		std::pair< int, int > getPathLength( const TaxonNode* A, const TaxonNode* B ) const;
+		std::pair< int, int > getPathLength( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
-		boost::tuple< int, int, int > getInterDistances( const TaxonNode* A, const TaxonNode* B );
-		boost::tuple< int, int, int > getInterDistances( const unsigned int A_taxid, const unsigned int B_taxid );
+		boost::tuple< int, int, int > getInterDistances( const TaxonNode* A, const TaxonNode* B ) const;
+		boost::tuple< int, int, int > getInterDistances( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
-		int getPathLengthToParent( const TaxonNode* A, const TaxonNode* B );
-		int getPathLengthToParent( const unsigned int A_taxid, const unsigned int B_taxid );
+		int getPathLengthToParent( const TaxonNode* A, const TaxonNode* B ) const;
+		int getPathLengthToParent( const unsigned int A_taxid, const unsigned int B_taxid ) const;
 
-		const std::string& getNameAtRank( TaxonNode* node, const std::string& rank );
-		const std::string& getNameAtRank( TaxonNode* node, const std::string* internal_rank );
+		const std::string& getNameAtRank( const TaxonNode* node, const std::string& rank ) const;
+		const std::string& getNameAtRank( const TaxonNode* node, const std::string* internal_rank ) const;
+		
+		Taxonomy::PathUpIterator traverseUp( const TaxonNode* node ) const;
+		
+		template< typename T >
+		T traverseDown( const TaxonNode* node ) const {
+			return T( tax->begin().node, node );
+		};
+		
+		bool isLeaf( const TaxonNode* node ) const;
 
 	private:
-		Taxonomy* tax;
+		const Taxonomy* const tax;
 };
 
-void printPath( TaxonomyInterface& taxinter, TaxonNode* node, TaxonNode* ancestor );
-void printPath( Taxonomy* tax, TaxonNode* node, TaxonNode* ancestor );
+// void printPath( TaxonomyInterface& taxinter, TaxonNode* node, TaxonNode* ancestor );
+// void printPath( Taxonomy* tax, TaxonNode* node, TaxonNode* ancestor );
 
 #endif // taxonomyinterface_hh_

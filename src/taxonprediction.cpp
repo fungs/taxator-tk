@@ -9,17 +9,17 @@
 
 
 void MyTaxonPredictionModel::loadModel( const std::string& filename ) {
-	loadMapFromFile( filename, bitscore_cutoff, FSEP );
+	loadMapFromFile( filename, bitscore_cutoff, default_field_separator );
 }
 
 
 
-TaxonNode* MyTaxonPredictionModel::predict( AlignmentRecord* record ) {
+const TaxonNode* MyTaxonPredictionModel::predict( AlignmentRecord* record ) {
 		unsigned int taxid = record->reference_taxid;
-		TaxonNode* node = taxinter.getNode( taxid );
+		const TaxonNode* node = taxinter.getNode( taxid );
 
 		// generate path from root to leaf
-		std::stack< TaxonNode* > working_list;
+		std::stack< const TaxonNode* > working_list;
 		const TaxonNode* root_node = taxinter.getRoot();
 		while( node != root_node ) {
 			if( node->data->mark_special ) {
@@ -56,7 +56,7 @@ void MyTaxonPredictionModel2::loadModel( const std::string& filename ) {
 
 	while( std::getline( file_handle, line ) ) {
 		if( ! ignoreLine( line ) ) {
-			tokenizeSingleCharDelim( line, fields, FSEP, 2 );
+			tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
 			field_it = fields.begin();
 			rank = boost::lexical_cast< std::string >( *field_it++ );
 			bthreshold = boost::lexical_cast< float >( *field_it );
@@ -70,8 +70,8 @@ void MyTaxonPredictionModel2::loadModel( const std::string& filename ) {
 
 
 
-TaxonNode* MyTaxonPredictionModel2::predict( AlignmentRecord* record ) {
-	TaxonNode* node = taxinter.getNode( record->reference_taxid );
+const TaxonNode* MyTaxonPredictionModel2::predict( AlignmentRecord* record ) {
+	const TaxonNode* node = taxinter.getNode( record->reference_taxid );
 	const TaxonNode* root_node = taxinter.getRoot();
 	float bitscore = record->bitscore;
 
@@ -101,7 +101,7 @@ void MyTaxonPredictionModel3::loadModel( const std::string& filename ) {
 
 	while( std::getline( file_handle, line ) ) {
 		if( ! ignoreLine( line ) ) {
-			tokenizeSingleCharDelim( line, fields, FSEP, 2 );
+			tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
 			field_it = fields.begin();
 			std::string rank = *field_it++;
 			bthreshold = boost::lexical_cast< float >( *field_it );
@@ -116,8 +116,8 @@ void MyTaxonPredictionModel3::loadModel( const std::string& filename ) {
 
 
 
-TaxonNode* MyTaxonPredictionModel3::predict( AlignmentRecord* record ) {
-	TaxonNode* node = taxinter.getNode( record->reference_taxid );
+const TaxonNode* MyTaxonPredictionModel3::predict( AlignmentRecord* record ) {
+	const TaxonNode* node = taxinter.getNode( record->reference_taxid );
 	const TaxonNode* root_node = taxinter.getRoot();
 	float bitscore = record->bitscore;
 

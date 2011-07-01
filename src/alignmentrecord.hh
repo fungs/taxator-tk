@@ -36,6 +36,9 @@ class AlignmentRecord {
 		AlignmentRecord( bool m = false ) : mask( m ), raw_line( NULL ) {};
 		AlignmentRecord( std::string* line , bool m = false ) : mask( m ), raw_line( line ) {};
 		~AlignmentRecord() { if( raw_line ) { delete raw_line; } };
+		void print( std::ostream& strm = std::cout ) const {
+			//TODO: strm << ... << default_field_separator << ..<< std::endl;
+		};
 
 		unsigned int reference_taxid;
 		std::string reference_identifier;
@@ -54,6 +57,7 @@ class AlignmentFileParser {
 		AlignmentFileParser( const std::string& filename, StrIDConverter* seqid2taxid, const bool keep_raw_lines = false ) : accessconv( seqid2taxid ), filehandle( filename.c_str() ), handle( filehandle ), keep_lines( keep_raw_lines ) {};
 		AlignmentFileParser( std::istream& strm, StrIDConverter* seqid2taxid, const bool keep_raw_lines = false ) : accessconv( seqid2taxid ), handle( strm ), keep_lines( keep_raw_lines ) {};
 		AlignmentRecord* next();
+		void destroyRecord( const AlignmentRecord* rec ) const;
 		bool eof() { return handle.eof(); };
 	protected:
 		StrIDConverter* accessconv;
@@ -103,7 +107,7 @@ class RecordSetGenerator {
 template< typename ContainerT1, typename ContainerT2 >
 void records2Nodes( const ContainerT1& recordset, TaxonomyInterface* inter, ContainerT2& refnodes ) {
 	typename ContainerT1::const_iterator record_it = recordset.begin();
-	TaxonNode* node;
+	const TaxonNode* node;
 	while( record_it != recordset.end() ) {
 		if( !(*record_it)->mask ) {
 			node = inter->getNode( (*record_it)->reference_taxid );

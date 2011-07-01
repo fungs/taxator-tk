@@ -86,21 +86,21 @@ int main( int argc, char** argv ) {
   while( getline( cin, line ) ) {
     if( ignoreLine( line ) ) { continue; }
 
-    tokenizeSingleCharDelim( line, fields, FSEP, field_pos );
+    tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 
     if( fields.size() < field_pos ) {
 		  cout << line << endl; //leave line unchanged
 		} else {
       field_it = fields.begin();
       for( unsigned int i = 1; i < field_pos; ++i ) {
-          buffer << *field_it++ << FSEP;
+          buffer << *field_it++ << default_field_separator;
       }
 
       std::string acc = *field_it++;
       try {
         cout << buffer.str() << seqid2taxid[ acc ];
         if( ! field_it->empty() ) { //don't print empty field at the end
-          cout << FSEP << *field_it;
+          cout << default_field_separator << *field_it;
         }
         cout << endl;
       } catch ( out_of_range e ) {

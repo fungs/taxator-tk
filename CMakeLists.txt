@@ -1,11 +1,26 @@
 PROJECT(taxator-tk)
-
 cmake_minimum_required( VERSION 2.6 )
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake-modules)
+# internal variables
+set( boost_version_required 1.34.1 )
+set( boost_version_required_enc 103401 )
+set( project_name taxator-tk )
 
-find_package(Sqlite3)
-find_package(Boost 1.34.1 REQUIRED program_options)
+# cmake requirements detection
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake-modules)
+find_package( Sqlite3 )
+find_package( Boost "${boost_version_required}" REQUIRED COMPONENTS program_options filesystem )
+if( Boost_FOUND )
+	if( Boost_VERSION LESS "${boost_version_required_enc}" )
+    message( FATAL_ERROR "FOUND INCORRECT BOOST VERSION: ${Boost_LIB_VERSION},\n${project_name} requires at least version ${boost_version_required} ")
+  else()
+# 		#SET(Boost_USE_STATIC_LIBS OFF)
+# 		#SET(Boost_USE_MULTITHREADED ON)
+# 		#SET(Boost_USE_STATIC_RUNTIME OFF)
+	endif()
+else()
+  message( FATAL_ERROR "Unable to find a Boost version. Did you set BOOST_ROOT?" )
+endif()
 
 set(CMAKE_CXX_FLAGS "-g -Wall")
 # set(CMAKE_CXX_FLAGS "-m32")
@@ -37,6 +52,10 @@ target_link_libraries( alignments-prefilter boost_program_options )
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
 add_executable( predictor predictor.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/sqlite3pp.cpp src/alignmentrecord.cpp src/taxonprediction.cpp )
 target_link_libraries( predictor sqlite3 boost_program_options )
+
+# apply filtering to predictions file
+add_executable( predictions-filter predictions-filter.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
+target_link_libraries( predictions-filter boost_program_options boost_filesystem )
 
 # measures the prediction error in terms of tree path distances
 add_executable( prediction2distances prediction2distances.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )

@@ -79,7 +79,7 @@ int main( int argc, char** argv ) {
 	while( getline( cin, line ) ) {
 		if( ignoreLine( line ) ) { continue; }
 
-		tokenizeSingleCharDelim( line, fields, FSEP, 4 );
+		tokenizeSingleCharDelim( line, fields, default_field_separator, 4 );
 		field_it = fields.begin();
 
 		try {
@@ -105,15 +105,15 @@ int main( int argc, char** argv ) {
 			vector< float > loss = it->second->get();
 			summary_strm << it->first;
 			for( unsigned int i = 0; i < loss.size(); ++i ) {
-				summary_strm << FSEP << loss[i];
+				summary_strm << default_field_separator << loss[i];
 				average[i] += loss[i];
 			}
-			summary_strm << FSEP << it->second->support() << endl;
+			summary_strm << default_field_separator << it->second->support() << endl;
 			++count;
 		}
 // 		summary_strm << "#======";
 // 		for( int i = 0; i < average.size(); ++i ) {
-// 			summary_strm << FSEP << "=======";
+// 			summary_strm << default_field_separator << "=======";
 // 		}
 // 		summary_strm << endl;
 
@@ -124,7 +124,7 @@ int main( int argc, char** argv ) {
 		// output average
 		cout << "NORM";
 		for( unsigned int i = 0; i < average.size(); ++i ) {
-			cout << FSEP << average[i] / float( count );
+			cout << default_field_separator << average[i] / float( count );
 		}
 		cout << endl;
 	}
@@ -133,7 +133,7 @@ int main( int argc, char** argv ) {
 		vector< float > all = loss_all->get();
 		cout << "ALL";
 		for( unsigned int i = 0; i < all.size(); ++i ) {
-			cout << FSEP << all[i];
+			cout << default_field_separator << all[i];
 		}
 		cout << endl;
 	}

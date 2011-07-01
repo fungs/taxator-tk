@@ -79,17 +79,17 @@ int main( int argc, char** argv ) {
 	list< string > fields;
 	list< string >::iterator field_it;
 	unsigned int taxid;
-	TaxonNode* node;
+	const TaxonNode* node;
 	stringstream buffer;
 
 	if ( show_what == "name" ) {
 		while( getline( cin, line ) ) {
-			tokenizeSingleCharDelim( line, fields, FSEP, field_pos );
+			tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 			field_it = fields.begin();
 			unsigned int i = 1;
 			while( field_it != fields.end() ) {
 			  if( i < field_pos ) {
-          buffer << *field_it++ << FSEP;
+          buffer << *field_it++ << default_field_separator;
           ++i;
 			  } else {
 			    try {
@@ -99,18 +99,18 @@ int main( int argc, char** argv ) {
               if( node->data->annotation ) {
                 cout << buffer.str() << node->data->annotation->name;
                 if( ! (++field_it)->empty() ) {
-                  cout << FSEP << *field_it;
+                  cout << default_field_separator << *field_it;
                 }
                 cout << endl;
               } else {
                 cout << "node_without_annotation";
               }
             } else {
-              cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
+              cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
               if ( invalid_replace ) {
                 cout << buffer.str() << invalid_replace_value;
                 if( ! (++field_it)->empty() ) {
-                  cout << FSEP << *field_it;
+                  cout << default_field_separator << *field_it;
                 }
                 cout << endl;
               }
@@ -120,7 +120,7 @@ int main( int argc, char** argv ) {
             if ( invalid_replace ) {
               cout << buffer.str() << invalid_replace_value;
               if( ! (++field_it)->empty() ) {
-                cout << FSEP << *field_it;
+                cout << default_field_separator << *field_it;
               }
               cout << endl;
             }
@@ -140,7 +140,7 @@ int main( int argc, char** argv ) {
         unsigned int i = 1;
         while( field_it != fields.end() ) {
           if( i < field_pos ) {
-            buffer << *field_it++ << FSEP;
+            buffer << *field_it++ << default_field_separator;
             ++i;
           } else {
             try {
@@ -150,7 +150,7 @@ int main( int argc, char** argv ) {
                 if( node->data->annotation ) {
                   cout << buffer.str() << node->data->annotation->rank;
                   if( ! field_it->empty() ) {
-                    cout << FSEP << *field_it;
+                    cout << default_field_separator << *field_it;
                   }
                   cout << endl;
                 } else {
@@ -161,7 +161,7 @@ int main( int argc, char** argv ) {
                if ( invalid_replace ) {
                   cout << buffer.str() << invalid_replace_value;
                   if( ! (++field_it)->empty() ) {
-                    cout << FSEP << *field_it;
+                    cout << default_field_separator << *field_it;
                   }
                   cout << endl;
                 }
@@ -171,7 +171,7 @@ int main( int argc, char** argv ) {
               if ( invalid_replace ) {
                 cout << buffer.str() << invalid_replace_value;
                 if( ! (++field_it)->empty() ) {
-                  cout << FSEP << *field_it;
+                  cout << default_field_separator << *field_it;
                 }
                 cout << endl;
               }

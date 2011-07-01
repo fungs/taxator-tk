@@ -102,7 +102,7 @@ int main( int argc, char** argv ) {
 		while( getline( *predictions, line ) ) {
 			if( ignoreLine( line ) ) { continue; }
 
-			tokenizeSingleCharDelim( line, fields, FSEP, 2 );
+			tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
 			field_it = fields.begin();
 
 			try {
@@ -110,7 +110,7 @@ int main( int argc, char** argv ) {
 				query_taxid = boost::lexical_cast< unsigned int >( *field_it++ );
 				prediction_taxid = boost::lexical_cast< unsigned int >(  *field_it );
 				boost::tie( a, b, c ) = interface.getInterDistances( query_taxid, prediction_taxid );
-				cout << qid << FSEP << a << FSEP << b << FSEP << c << endl;
+				cout << qid << default_field_separator << a << default_field_separator << b << default_field_separator << c << endl;
 			} catch( boost::bad_lexical_cast e ) {
 				cerr << "Could not parse line in input: " << line << endl;
 			}
@@ -127,7 +127,7 @@ int main( int argc, char** argv ) {
 			if( ignoreLine( line1 ) || ignoreLine( line2 ) ) {
 				continue;
 			}
-			tokenizeSingleCharDelim( line1, fields1, FSEP, 2 );
+			tokenizeSingleCharDelim( line1, fields1, default_field_separator, 2 );
 			field_it1 = fields1.begin();
 			try {
 				prediction_taxid = boost::lexical_cast< unsigned int >(  *++field_it1 );
@@ -136,13 +136,13 @@ int main( int argc, char** argv ) {
 				fields1.clear();
 				continue;
 			}
-			tokenizeSingleCharDelim( line2, fields2, FSEP, 2 );
+			tokenizeSingleCharDelim( line2, fields2, default_field_separator, 2 );
 			field_it2 = fields2.begin();
 			try {
 				const string& qid = *field_it2++;
 				query_taxid = boost::lexical_cast< unsigned int >( *field_it2 );
 				boost::tie( a, b, c ) = interface.getInterDistances( query_taxid, prediction_taxid );
-				cout << qid << FSEP << a << FSEP << b << FSEP << c << endl;
+				cout << qid << default_field_separator << a << default_field_separator << b << default_field_separator << c << endl;
 			} catch( boost::bad_lexical_cast e ) {
 				cerr << "Could not parse line in input: " << line2 << " in file '" << correctionsfile << "'" << endl;
 			}

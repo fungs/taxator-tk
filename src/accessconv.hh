@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/lexical_cast.hpp>
 #include "sqlite3pp.hh"
 #include "constants.hh"
+#include "types.hh"
 #include "utils.hh"
 
 
@@ -149,7 +150,7 @@ class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
       while( std::getline( flatfile, line ) ) {
         if( ignoreLine( line ) ) { continue; }
         fields.clear();
-        tokenizeSingleCharDelim( line, fields, FSEP, 2 );
+        tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
         field_it = fields.begin();
 
         try {

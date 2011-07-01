@@ -30,5 +30,6 @@ typedef std::string TTPString;
 typedef std::vector< TTPString > TTPStringVector;
 typedef std::vector< const TTPString > TTPConstStringVector;
 typedef std::vector< float > TTPFloatVector;
+typedef unsigned int TaxonID;
 
 #endif //types_hh_

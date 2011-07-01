@@ -20,7 +20,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	if( ranks_to_mark ) {
 		for( std::vector< std::string >::const_iterator rank_it = ranks_to_mark->begin(); rank_it != ranks_to_mark->end(); ++rank_it ) {
 // 			std::cerr << "inserting special rank: " << *rank_it << std::endl;
-			specialranks.insert( &(tax->getRankInternal( *rank_it, true )) );
+			specialranks.insert( &(tax->insertRankInternal( *rank_it )) );
 		}
 	}
 
@@ -44,7 +44,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 			parent_taxid = boost::lexical_cast< unsigned int >( *field_it++ );
 			rank = *field_it;
 			children.insert( std::make_pair( parent_taxid, taxid ) );
-			annotation[ taxid ] = new TaxonAnnotation( tax->getRankInternal( rank, true ) );
+			annotation[ taxid ] = new TaxonAnnotation( tax->insertRankInternal( rank ) );
 			fields.clear();
 		}
 		nodesfile.close(); //close nodes.dmp

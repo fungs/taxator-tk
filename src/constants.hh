@@ -24,13 +24,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
-const std::string FSEP = "\t";
+const std::string default_field_separator = "\t";
 const std::string default_ranks_carray[7] =  { "superkingdom", "phylum", "class", "order", "family", "genus", "species" };
 const std::vector< std::string > default_ranks( default_ranks_carray, default_ranks_carray+7 );
 const int default_rank_number = 7;
 const int standard_max_support_stop = -1; // negative values have no effect
-
-typedef unsigned int TaxonID;
+const char default_comment_symbol = '#';
+const char default_mask_symbol = '*';
 
 const std::string ENVVAR_TAXONOMY_ROOT = "TAXATORTK_NCBI_ROOT";
 

@@ -22,7 +22,7 @@ TrainingRecord* TrainingFileParser::next() { //TODO: increase performance by avo
 			record = new TrainingRecord;
 		}
 
-		tokenizeSingleCharDelim( *line, fields, FSEP, 4 );
+		tokenizeSingleCharDelim( *line, fields, default_field_separator, 4 );
 		field_it = fields.begin();
 		
 		try {

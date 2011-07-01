@@ -162,7 +162,7 @@ int main( int argc, char** argv ) {
 	RecordSetType recordset;
 	while( recgen.notEmpty() ) {
 		recgen.getNext( recordset );
-		cout << recordset.front()->query_identifier << FSEP << predictor->predict( recordset )->data->taxid << endl;
+		cout << recordset.front()->query_identifier << default_field_separator << predictor->predict( recordset )->data->taxid << endl;
 		deleteRecords( recordset );
 	}
 

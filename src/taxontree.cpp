@@ -29,23 +29,25 @@ void TaxonTree::recreateNodeIndex() {
 
 
 // constant in time as apposed to size(), I think
-int TaxonTree::indexSize() { //returns only real nodes (no dummies)
+int TaxonTree::indexSize() const { //returns only real nodes (no dummies)
 	return taxid2node.size();
 }
 
 
 
-const std::string& TaxonTree::getRankInternal ( const std::string& rankname, const bool insert ) {
-	if( insert ) {
-		return *ranks.insert( rankname ).first;
-	}
+const std::string& TaxonTree::getRankInternal ( const std::string& rankname ) const {
 
-	std::set< std::string >::iterator rank_it = ranks.find( rankname );
+	std::set< std::string >::const_iterator rank_it = ranks.find( rankname );
 	if( rank_it == ranks.end() ) {
-		return *ranks.insert( "" ).first;
+		return rank_not_found;
 	}
-
 	return *rank_it;
+}
+
+
+
+const std::string& TaxonTree::insertRankInternal ( const std::string& rankname ) {
+	return *ranks.insert( rankname ).first;
 }
 
 

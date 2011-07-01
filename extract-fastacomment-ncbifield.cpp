@@ -67,20 +67,20 @@ int main( int argc, char** argv ) {
 	while( getline( cin, line ) ) {
 		if( ignoreLine( line ) ) { continue; }
 
-		tokenizeSingleCharDelim( line, fields, FSEP, field_pos );
+		tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 
 		if( fields.size() < field_pos ) {
 		  cout << line << endl; //leave line unchanged
 		} else {
       field_it = fields.begin();
       for( unsigned int i = 1; i < field_pos; ++i ) {
-          cout << *field_it++ << FSEP;
+          cout << *field_it++ << default_field_separator;
       }
 
       cout << extractFastaCommentField( *field_it++, key );
 
       if( ! field_it->empty() ) { //don't print empty field at the end
-        cout << FSEP << *field_it;
+        cout << default_field_separator << *field_it;
       }
       cout << endl;
 		}

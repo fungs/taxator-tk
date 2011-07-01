@@ -210,17 +210,17 @@ class CleanseFDistAlignmentFilter : public SortByBitscoreFilter< ContainerT > {
 				SortByBitscoreFilter< ContainerT >::filter( recordset );
 
 				typename ContainerT::iterator record_it = recordset.begin();
-				std::list< TaxonNode* > bestnodes;
+				std::list< const TaxonNode* > bestnodes;
 
 				typename ContainerT::iterator it = recordset.begin();
 				while( it != recordset.end() && (*it)->mask ) { ++it; } //get best valid alignment
 				float best_bs = (*it)->bitscore;
-				TaxonNode* tmpnode = this->taxinter.getNode( (*it++)->reference_taxid );
+				const TaxonNode* tmpnode = this->taxinter.getNode( (*it++)->reference_taxid );
 				bestnodes.push_back( tmpnode );
 
 				for( ; it != recordset.end() && (*it)->bitscore >= coreset_threshold*best_bs; ++it ) { //collate all best hits until cutoff
 					if( ! (*it)->mask ) {
-						TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+						const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 						bestnodes.push_back( tmpnode );
 					}
 				}
@@ -231,7 +231,7 @@ class CleanseFDistAlignmentFilter : public SortByBitscoreFilter< ContainerT > {
 				// wheight remaining alignments by combined distance
 				for( ; it != recordset.end(); ++it ) {
 					if( ! (*it)->mask ) {
-						TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
+						const TaxonNode* tmpnode = this->taxinter.getNode( (*it)->reference_taxid );
 						float bs_dist = 1.0 - (*it)->bitscore / best_bs;
 						float tree_dist = getNormDist( tmpnode, bestnodes );
 						float comb_dist = ( bs_dist + tree_dist ) / 2.0;
@@ -248,10 +248,10 @@ class CleanseFDistAlignmentFilter : public SortByBitscoreFilter< ContainerT > {
 		}
 
 	private:
-		float getNormDist( TaxonNode* n, std::list< TaxonNode* >& bestnds ) {
+		float getNormDist( const TaxonNode* n, std::list< const TaxonNode* >& bestnds ) {
 			int a, b, c;
 			int c_sum = 0;
-			for( std::list< TaxonNode* >::iterator it = bestnds.begin(); it != bestnds.end(); ++it ) {
+			for( std::list< const TaxonNode* >::iterator it = bestnds.begin(); it != bestnds.end(); ++it ) {
 				boost::tie( a, b, c ) = this->taxinter.getInterDistances( n, *it );
 				c_sum += c;
 			}
@@ -287,7 +287,7 @@ class OutlierDetectionAlignmentFilter : public MaxBitscoreAlignmentFilter< Conta
 				int best_num = bests.size() - 1;
 				for( typename ContainerT::iterator it = recordset.begin(); it != recordset.end(); ++it ) {
 					if( ! (*it)->mask ) {
-						TaxonNode* tmp_node = this->taxinter.getNode( (*it)->reference_taxid );
+						const TaxonNode* tmp_node = this->taxinter.getNode( (*it)->reference_taxid );
 						if( tmp_node ) {
 							datapoints.push_back( boost::make_tuple( tmp_node, *it ) );
 						}
@@ -404,7 +404,7 @@ class OutlierDetectionAlignmentFilter : public MaxBitscoreAlignmentFilter< Conta
 		}
 
 	private:
-		typedef boost::tuple< TaxonNode*, AlignmentRecord* > DataPoint;
+		typedef boost::tuple< const TaxonNode*, AlignmentRecord* > DataPoint;
 
 		float getDistance( const DataPoint& p1, const DataPoint& p2 ) {
 			int a, b, c;
@@ -433,7 +433,7 @@ class RemoveRedundantFilter : public AlignmentRecordSetFilter< ContainerT > { //
 				typename ContainerT::iterator record_it = recordset.begin();
 
 				// set lca to first valid alignment
-				TaxonNode* lca;
+				const TaxonNode* lca;
 				while( record_it != recordset.end() ) {
 					if( ! (*record_it)->mask ) {
 						lca = taxinter.getNode( (*record_it)->reference_taxid );
@@ -446,7 +446,7 @@ class RemoveRedundantFilter : public AlignmentRecordSetFilter< ContainerT > { //
 				// see whether the other alignments contribute or not
 				while( record_it != recordset.end() ) {
 					if( ! (*record_it)->mask ) {
-						TaxonNode* const tmp_node = taxinter.getNode( (*record_it)->reference_taxid );
+						const TaxonNode* tmp_node = taxinter.getNode( (*record_it)->reference_taxid );
 						if( lca == tmp_node || taxinter.isParentOf( lca, tmp_node ) ) {
 							(*record_it)->mask = true;
 // 							std::cerr << "RemoveRedundantFilter: masking alignment..." << std::endl;
@@ -838,12 +838,12 @@ class TagEssentialFilter : public AlignmentRecordSetFilter< ContainerT > {
 				try {
 					std::list< int > lcadepths;
 					unsigned int taxid = seqid2taxid[ seqid ];
-					TaxonNode* label_node = taxinter.getNode( taxid );
+					const TaxonNode* label_node = taxinter.getNode( taxid );
 					int maxdepth = 0;
 
 					while( record_it != recordset.end() ) {
-						TaxonNode* node = taxinter.getNode( (*record_it)->reference_taxid );
-						TaxonNode* pair_lca = taxinter.getLCA( node, label_node );
+						const TaxonNode* node = taxinter.getNode( (*record_it)->reference_taxid );
+						const TaxonNode* pair_lca = taxinter.getLCA( node, label_node );
 
 						int depth = pair_lca->data->root_pathlength;
 
@@ -860,9 +860,9 @@ class TagEssentialFilter : public AlignmentRecordSetFilter< ContainerT > {
 					record_it = recordset.begin();
 					while( record_it != recordset.end() ) {
 						if( *depth_it < maxdepth ) {
-							(*record_it)->raw_line->append( FSEP + "excess" );
+							(*record_it)->raw_line->append( default_field_separator + "excess" );
 						} else {
-							(*record_it)->raw_line->append( FSEP + "essential" );
+							(*record_it)->raw_line->append( default_field_separator + "essential" );
 						}
 						record_it++;
 						depth_it++;

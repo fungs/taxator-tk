@@ -95,3 +95,10 @@ AlignmentRecord* AlignmentFileParser::next() { //TODO: increase performance by a
 	delete line;
 	return NULL;
 }
+
+
+
+void AlignmentFileParser::destroyRecord(const AlignmentRecord* rec) const {
+	delete rec;
+}
+

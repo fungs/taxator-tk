@@ -92,18 +92,18 @@ int main( int argc, char** argv ) {
 	list< string > fields;
 	list< string >::iterator field_it;
 	unsigned int taxid;
-	TaxonNode* rootnode = interface.getRoot();
-	TaxonNode* node;
+	const TaxonNode* rootnode = interface.getRoot();
+	const TaxonNode* node;
 
 	while( getline( cin, line ) ) {
 		if( ignoreLine( line ) ) { continue; }
 
-		tokenizeSingleCharDelim( line, fields, FSEP, field_pos );
+		tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 		field_it = fields.begin();
 		unsigned int i = 1;
 		while( field_it != fields.end() ) {
       if( i < field_pos ) {
-        buffer << *field_it++ << FSEP;
+        buffer << *field_it++ << default_field_separator;
         ++i;
       } else {
         try {
@@ -128,7 +128,7 @@ int main( int argc, char** argv ) {
             if( (++field_it)->empty() ) {
               cout << endl;
             } else {
-              cout << FSEP << *field_it << endl;
+              cout << default_field_separator << *field_it << endl;
             }
           } else {
             cerr << "rank-filter: Could not find node with taxid " << *field_it << " in the taxonomy";
@@ -141,7 +141,7 @@ int main( int argc, char** argv ) {
                 cout << taxid;
               }
               if( ! (++field_it)->empty() ) {
-                cout << FSEP << *field_it;
+                cout << default_field_separator << *field_it;
               }
               cout << endl;
             } else {
