@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "taxontree.hh"
 #include "sqlite3pp.hh"
+#include "utils.hh"
 
 
 
@@ -35,6 +36,5 @@ Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_t
 
 
 const std::string extractFastaCommentField( const std::string& comment, const std::string& key );
-
 
 #endif // ncbidata_hh_

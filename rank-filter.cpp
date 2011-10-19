@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <assert.h>
 #include "src/taxonomyinterface.hh"
 #include "src/ncbidata.hh"
@@ -76,8 +77,9 @@ int main( int argc, char** argv ) {
   bool invalid_replace = vm.count( "set-invalid-value" );
 
 	// create taxonomy
-	Taxonomy* tax = loadTaxonomyFromEnvironment();
-	TaxonomyInterface interface( tax );
+	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
+	if( ! tax ) return EXIT_FAILURE;
+	TaxonomyInterface interface( tax.get() );
 
 	// string reference comparison is fastest
 	const string& rank = tax->getRankInternal( rank_name );
@@ -118,9 +120,9 @@ int main( int argc, char** argv ) {
             if( keep_not_rank && node == rootnode ) {
               cout << buffer.str();
               if( invalid_replace ) {
-                cout << taxid;
-              } else {
                 cout << invalid_replace_value;
+              } else {
+								cout << taxid;
               }
             } else {
               cout << buffer.str() << node->data->taxid;
@@ -159,7 +161,5 @@ int main( int argc, char** argv ) {
 		buffer.clear();
 	}
 
-	// tidy up and quit
-	delete tax;
 	return EXIT_SUCCESS;
 }

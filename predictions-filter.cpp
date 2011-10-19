@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
-// #include <boost/ptr_container/ptr_unordered_set.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "boost/filesystem.hpp"
 #include "src/taxontree.hh"
 #include "src/ncbidata.hh"
@@ -65,36 +65,32 @@ int main ( int argc, char** argv ) {
 		return EXIT_FAILURE;
 	}
 
-	if ( ! vm.count ( "ranks" ) ) { //set to fallback if not given
-		ranks = default_ranks;
-	}
+	if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 	
 	set< string > additional_files;
 	
 	// create taxonomy
-	Taxonomy* tax = loadTaxonomyFromEnvironment ( &ranks );
-	if ( ! tax ) {
-		return EXIT_FAILURE;
-	}
-	if( delete_unmarked ) { //make sure input does not contain other nodes
-		tax->deleteUnmarkedNodes();
-	}
-	TaxonomyInterface taxinter ( tax );
+	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );
+	if( ! tax ) return EXIT_FAILURE;
+	
+	if( delete_unmarked ) tax->deleteUnmarkedNodes();
+	
+	TaxonomyInterface taxinter ( tax.get() );
 	
 // setup parser for primary input file (that determines the output order)
 	PredictionFileParser* parse = NULL;
 	if ( files.empty() ) {
-		parse = new PredictionFileParser ( std::cin, tax );
+		parse = new PredictionFileParser ( std::cin, tax.get() );
 	} else {
 		vector< string >::iterator file_it = files.begin();
 		while( file_it != files.end() ) {
 			if( *file_it == "-" ) {
-				parse = new PredictionFileParser ( std::cin, tax );
+				parse = new PredictionFileParser ( std::cin, tax.get() );
 				++file_it;
 				break;
 			} else {
 				if( boost::filesystem::exists( *file_it ) ) {
-					parse = new PredictionFileParser ( *file_it, tax );
+					parse = new PredictionFileParser ( *file_it, tax.get() );
 					break;
 				} else {
 					cerr << "Could not read file \"" << *file_it++ << "\"" << endl;
@@ -104,7 +100,6 @@ int main ( int argc, char** argv ) {
 		
 		if( ! parse ) {
 			cerr << "There was no valid input file" << endl;
-			delete tax;
 			return EXIT_FAILURE;
 		}
 		
@@ -139,7 +134,6 @@ int main ( int argc, char** argv ) {
 					resolveNodePair = &TaxonomyInterface::getLCC;
 				} else {
 					cerr << "Parameter for --combination-mode, -c must be either \"lca\" or \"lcc\"" << endl;
-					delete tax;
 					delete parse;
 					return EXIT_FAILURE;
 				}
@@ -153,7 +147,7 @@ int main ( int argc, char** argv ) {
 			
 			// parse additional files
 			for (set< string >::const_iterator file_it = additional_files.begin(); file_it != additional_files.end(); ++file_it ) {
-				PredictionFileParser parse( *file_it, tax );
+				PredictionFileParser parse( *file_it, tax.get() );
 				for ( PredictionRecord* rec = parse.next(); rec; rec = parse.next() ) {
 					map< string, PredictionRecord* >::const_iterator recfind_it = records_by_queryid.find( rec->query_identifier );
 					if ( recfind_it == records_by_queryid.end() ) {
@@ -219,7 +213,6 @@ int main ( int argc, char** argv ) {
 	
 	// second pass: consolidation
 	for ( boost::ptr_vector< PredictionRecord >::iterator it = record_container.begin(); it != record_container.end(); ++it ) {
-// 		cerr << "processing record " << it->query_identifier << endl;
 		Taxonomy::PathUpIterator path_it = taxinter.traverseUp ( it->prediction_node );
 		unsigned int count;
 
@@ -240,10 +233,8 @@ int main ( int argc, char** argv ) {
 		it->prediction_node = &*path_it;
 
 		// print result
-		it->print();
+		std::cout << *it;
 	}
 
-	// tidy up and quit
-	delete tax;
 	return EXIT_SUCCESS;
 }

@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <assert.h>
 #include "src/taxonomyinterface.hh"
 #include "src/ncbidata.hh"
@@ -48,7 +49,7 @@ int main( int argc, char** argv ) {
 	( "help,h", "show help message")
 	( "field,f", po::value< unsigned int >( &field_pos )->default_value( 1 ), "column number to use" )
 	( "set-invalid-value,b", po::value< string >( &invalid_replace_value ),"replace all taxids that are invalid by this given value" )
-	( "show,s", po::value< string >( &show_what )->default_value( "name" ), "either 'name' or 'rank'" );
+	( "show,s", po::value< string >( &show_what )->default_value( "name" ), "either 'name', 'rank', 'path' or 'taxid-path'" );
 
 	po::variables_map vm;
 	po::store(po::command_line_parser( argc, argv ).options( desc ).run(), vm);
@@ -67,12 +68,10 @@ int main( int argc, char** argv ) {
 	bool invalid_replace = vm.count( "set-invalid-value" );
 
 	// create taxonomy
-	Taxonomy* tax = loadTaxonomyFromEnvironment();
-	if( !tax ) {
-		return EXIT_FAILURE;
-	}
+	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
+	if( ! tax ) return EXIT_FAILURE;
 
-	TaxonomyInterface interface( tax );
+	TaxonomyInterface interface( tax.get() );
 
 	// parse line by line
 	string line;
@@ -135,7 +134,7 @@ int main( int argc, char** argv ) {
 	} else {
 		if( show_what == "rank" ) {
 			while( getline( cin, line ) ) {
-				tokenizeSingleCharDelim( line, fields, "\t", 1 );
+				tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 				field_it = fields.begin();
         unsigned int i = 1;
         while( field_it != fields.end() ) {
@@ -144,12 +143,12 @@ int main( int argc, char** argv ) {
             ++i;
           } else {
             try {
-              taxid = boost::lexical_cast< unsigned int >( *field_it++ );
+              taxid = boost::lexical_cast< unsigned int >( *field_it );
               node = interface.getNode( taxid );
               if( node ) {
                 if( node->data->annotation ) {
                   cout << buffer.str() << node->data->annotation->rank;
-                  if( ! field_it->empty() ) {
+                  if( ! (++field_it)->empty() ) {
                     cout << default_field_separator << *field_it;
                   }
                   cout << endl;
@@ -184,13 +183,129 @@ int main( int argc, char** argv ) {
         buffer.clear();
 			}
 		} else {
-			cerr << "unknown parameter for --show / -s" << endl;
-			cout << desc << endl;
-			return EXIT_FAILURE;
+			if ( show_what == "path" ) {
+				while( getline( cin, line ) ) {
+					tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
+					field_it = fields.begin();
+					unsigned int i = 1;
+					while( field_it != fields.end() ) {
+						if( i < field_pos ) {
+							buffer << *field_it++ << default_field_separator;
+							++i;
+						} else {
+							try {
+								taxid = boost::lexical_cast< unsigned int >( *field_it );
+								node = interface.getNode( taxid );
+								if( node ) {
+									cout << buffer.str();
+									const TaxonNode* root = interface.getRoot();
+									for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
+										if ( it->data->mark_special ) {
+											if( it->data->annotation ) {
+												cout << it->data->annotation->name << ';';
+											} else {
+												cout << "node_without_annotation;";
+											}
+										}
+									}
+									if ( node->data->mark_special ) {
+										cout << node->data->annotation->name << ';';
+									}
+									if( ! (++field_it)->empty() ) {
+										cout << default_field_separator << *field_it;
+									}
+										cout << endl;
+								} else {
+									cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
+								if ( invalid_replace ) {
+										cout << buffer.str() << invalid_replace_value;
+										if( ! (++field_it)->empty() ) {
+											cout << default_field_separator << *field_it;
+										}
+										cout << endl;
+									}
+								}
+							} catch( boost::bad_lexical_cast e ) {
+								cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
+								if ( invalid_replace ) {
+									cout << buffer.str() << invalid_replace_value;
+									if( ! (++field_it)->empty() ) {
+										cout << default_field_separator << *field_it;
+									}
+									cout << endl;
+								}
+							}
+							break;
+						}
+					}
+					fields.clear();
+					buffer.str("");
+					buffer.clear();
+				}
+			} else {
+				if ( show_what == "taxid-path" ) {
+						while( getline( cin, line ) ) {
+						tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
+						field_it = fields.begin();
+						unsigned int i = 1;
+						while( field_it != fields.end() ) {
+							if( i < field_pos ) {
+								buffer << *field_it++ << default_field_separator;
+								++i;
+							} else {
+								try {
+									taxid = boost::lexical_cast< unsigned int >( *field_it );
+									node = interface.getNode( taxid );
+									if( node ) {
+										cout << buffer.str();
+										const TaxonNode* root = interface.getRoot();
+										for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
+											if ( it->data->mark_special ) {
+												cout << it->data->taxid << ';';
+											}
+										}
+										if ( node->data->mark_special ) {
+											cout << node->data->taxid << ';';
+										}
+										if( ! (++field_it)->empty() ) {
+											cout << default_field_separator << *field_it;
+										}
+											cout << endl;
+									} else {
+										cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
+									if ( invalid_replace ) {
+											cout << buffer.str() << invalid_replace_value;
+											if( ! (++field_it)->empty() ) {
+												cout << default_field_separator << *field_it;
+											}
+											cout << endl;
+										}
+									}
+								} catch( boost::bad_lexical_cast e ) {
+									cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
+									if ( invalid_replace ) {
+										cout << buffer.str() << invalid_replace_value;
+										if( ! (++field_it)->empty() ) {
+											cout << default_field_separator << *field_it;
+										}
+										cout << endl;
+									}
+								}
+								break;
+							}
+						}
+						fields.clear();
+						buffer.str("");
+						buffer.clear();
+					}
+				} else {
+					cerr << "unknown parameter for --show / -s" << endl;
+					cout << desc << endl;
+					return EXIT_FAILURE;
+				}
+			}
 		}
 	}
 
-	// tidy up and quit
-	delete tax;
 	return EXIT_SUCCESS;
 }

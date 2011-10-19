@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 #include <assert.h>
 #include <vector>
 #include <string>
@@ -14,6 +15,7 @@
 
 Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::string& names_filename, const std::vector< std::string >* ranks_to_mark ) {
 
+	std::cerr << "constructing taxonomy tree from NCBI dump files...";
 	Taxonomy* tax = new Taxonomy;
 	std::set< const TTPString* > specialranks;
 
@@ -79,7 +81,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	if( tmp_it != children.end() ) {
 		children.erase( tmp_it ); //because keys are sorted this is the pair (1,1)
 	} else {
-		std::cerr << "Could not find any nodes linking to the root, this will be quite a small taxonomy!";
+		std::cerr << " (could not find any nodes linking to the root, this will be quite a small taxonomy!)";
 	}
 
 	Taxon* tmptaxon = new Taxon( annotation[ node_taxid ] );
@@ -97,7 +99,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	Taxonomy::sibling_iterator sibling_node_it;
 	const Taxonomy::iterator root_it = node_it;
 
-	std::cout << std::setfill('-'); //DEBUG
+// 	std::cout << std::setfill('-'); //DEBUG
 
 	// depth-first construction
 	do {
@@ -163,13 +165,14 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 					}
 				} else {
 					// construction end reached
-
+					std::cerr << " done" << std::endl;
 					return tax; //bad style but efficient
 				}
 			} while( true );
 		}
 	} while( true ); //single exit condition is return
 
+	std::cerr << " done" << std::endl;
 	return tax;
 }
 
@@ -183,26 +186,37 @@ Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_t
 	}
 
 	const std::string ncbi_root_folder = env;
+	const std::string nodes_filename = ncbi_root_folder + "/nodes.dmp";
+	const std::string names_filename = ncbi_root_folder + "/names.dmp";
 
 	//TODO: check if files exist
-
-	return parseNCBIFlatFiles( ncbi_root_folder + "/nodes.dmp", ncbi_root_folder + "/names.dmp", ranks_to_mark );
+	if ( boost::filesystem::exists( nodes_filename ) ) {
+		if ( boost::filesystem::exists( names_filename ) ) {
+			return parseNCBIFlatFiles( nodes_filename, names_filename, ranks_to_mark );
+		} else {
+			std::cerr << " " << names_filename << "not found" << std::endl;
+		}
+	} else {
+		std::cerr << " " << nodes_filename << "not found" << std::endl;
+	}
+	return NULL;
 }
 
 
 
 const std::string extractFastaCommentField( const std::string& comment, const std::string& key ) {
+	const std::size_t key_length = key.size();
 	std::list< std::string > fields;
 	tokenizeSingleCharDelim( comment, fields, "|" ); //NCBI scheme
-	bool return_field = false;
-	for( std::list< std::string >::iterator field_it = fields.begin(); field_it != fields.end(); ++field_it ) {
-		if( return_field ) {
-			return *field_it;
-		}
 
-		if( *field_it == key ) {
-			return_field = true;
+	std::list< std::string >::iterator field_it = fields.begin();
+	while ( field_it != fields.end() ) {
+		if ( *field_it == key || ( field_it->size() > key_length && field_it->substr( field_it->size() - key_length, key_length ) == key ) ) {
+			++field_it;
+			break;
 		}
+		++field_it;
 	}
+	if ( field_it != fields.end() ) return *field_it;
 	return fields.back(); //default behavior if not found
 }

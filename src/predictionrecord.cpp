@@ -1,45 +1,38 @@
 #include <boost/lexical_cast.hpp>
 #include "predictionrecord.hh"
-#include "types.hh"
-#include "utils.hh"
 
 PredictionRecord* PredictionFileParser::next() {
 
-	std::vector< std::string > fields;
-	std::string line;
-	PredictionRecord* record = new PredictionRecord();
+		std::string line;
+	PredictionRecord* record = new PredictionRecord( tax_ );
 
 	while( std::getline( handle, line ) ) {
-		if( ignoreLine( line ) || maskedLine( line ) ) { continue; }
-
-		tokenizeSingleCharDelim( line, fields, default_field_separator, 3, false );
-		record->query_identifier = fields[0];
-		
-		try {
-			TaxonID taxid = boost::lexical_cast< TaxonID >( fields[1] );
-			const TaxonNode* node = taxinter.getNode( taxid );
-			if( node ) {
-				record->prediction_node = node;
-				return record;
-			} else {
-				std::cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy";
-				std::cerr << ", skipping record..." << std::endl;
-				std::cerr << node << " | " << node->data->taxid << std::endl;
-				fields.clear();
-			}
-		} catch( boost::bad_lexical_cast e ) {
-			std::cerr << "Could not parse sequence id field in line " << line << " from input";
-			std::cerr << ", skipping record..." << std::endl;
-			fields.clear();
-		}
+		if( record->parse( line ) ) return record;
 	}
-	
 	delete record;
 	return NULL;
-};
+}
 
 
 
 void PredictionFileParser::destroyRecord( const PredictionRecord* rec ) const {
 	delete rec;
-};
+}
+
+
+
+//overload ostream operator for class AlignmentRecord ->print()
+std::ostream& operator<<( std::ostream& strm, const PredictionRecord& prec ) {
+	prec.print( strm );
+	return strm;
+}
+
+
+
+//overload istream operator for class AlignmentRecord ->parse()
+std::istream& operator>>( std::istream& strm, PredictionRecord& prec ) { //TODO: what to do if return of parse() is false
+	std::string line;
+	std::getline( strm, line );
+	prec.parse( line );
+	return strm;
+}

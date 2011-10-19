@@ -15,8 +15,7 @@ void MyTaxonPredictionModel::loadModel( const std::string& filename ) {
 
 
 const TaxonNode* MyTaxonPredictionModel::predict( AlignmentRecord* record ) {
-		unsigned int taxid = record->reference_taxid;
-		const TaxonNode* node = taxinter.getNode( taxid );
+		const TaxonNode* node = record->getReferenceNode();
 
 		// generate path from root to leaf
 		std::stack< const TaxonNode* > working_list;
@@ -71,9 +70,9 @@ void MyTaxonPredictionModel2::loadModel( const std::string& filename ) {
 
 
 const TaxonNode* MyTaxonPredictionModel2::predict( AlignmentRecord* record ) {
-	const TaxonNode* node = taxinter.getNode( record->reference_taxid );
+	const TaxonNode* node record->getReferenceNode();
 	const TaxonNode* root_node = taxinter.getRoot();
-	float bitscore = record->bitscore;
+	float bitscore = record->getScore();
 
 	// traverse decision tree
 	while( node != root_node ) {
@@ -117,9 +116,9 @@ void MyTaxonPredictionModel3::loadModel( const std::string& filename ) {
 
 
 const TaxonNode* MyTaxonPredictionModel3::predict( AlignmentRecord* record ) {
-	const TaxonNode* node = taxinter.getNode( record->reference_taxid );
+	const TaxonNode* node = record->getReferenceNode();
 	const TaxonNode* root_node = taxinter.getRoot();
-	float bitscore = record->bitscore;
+	float bitscore = record->getScore();
 
 	// traverse decision tree
 	while( node != root_node ) {
@@ -131,7 +130,6 @@ const TaxonNode* MyTaxonPredictionModel3::predict( AlignmentRecord* record ) {
 		}
 		node = node->parent;
 	}
-// 	std::cerr << "predicting single node with rel. bitscore " << bitscore/max_bitscore << " at level " << node->data->annotation->rank << " (" << record->reference_taxid << ")" << std::endl;
 	return node;
 }
 

@@ -21,15 +21,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef types_hh_
 #define types_hh_
 
+#include <boost/cstdint.hpp>
 #include <vector>
 #include <list>
 #include <map>
 #include <string>
 
+// some integer type definitions using boost
+typedef int_least8_t small_int; // –128 to 127
+typedef int_least16_t medium_int; // –32,768 to 32,767
+typedef int_least32_t large_int; // –2,147,483,648 to 2,147,483,647
+typedef uint_least8_t small_unsigned_int; // 0 to 255
+typedef uint_least16_t medium_unsigned_int; // 0 to 65,535
+typedef uint_least32_t large_unsigned_int; // 0 to 4,294,967,295
+
+// basic mappings
 typedef std::string TTPString;
 typedef std::vector< TTPString > TTPStringVector;
 typedef std::vector< const TTPString > TTPConstStringVector;
 typedef std::vector< float > TTPFloatVector;
-typedef unsigned int TaxonID;
+typedef large_unsigned_int TaxonID; //maximum number at time of writing was 1,050,856
 
 #endif //types_hh_

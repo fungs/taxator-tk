@@ -69,7 +69,7 @@ int main( int argc, char** argv ) {
 		}
 
 		// test depth information
-		alltests = alltests && unittest_assert( taxinter.getPathLength( root_node, root_node ) == std::make_pair( 0, 0 ), "PATHLENGTH_ROOT_TO_ROOT" );
+		alltests = alltests && unittest_assert( taxinter.getPathLength( root_node, root_node ) == std::make_pair< small_unsigned_int, small_unsigned_int >( 0, 0 ), "PATHLENGTH_ROOT_TO_ROOT" );
 		alltests = alltests && unittest_assert( root_node->data->root_pathlength == 0, "PATHLENGTH_ROOT_TO_ROOT" );
 
 		for(int i=0; i < 1000; ) {

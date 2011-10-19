@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <list>
 #include <fstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/tuple/tuple.hpp>
 #include "constants.hh"
 
 //TODO: clean up template functions
@@ -74,7 +75,7 @@ void tokenizeSingleCharDelim(const std::string& str, ContainerT& tokens, const s
 		lastpos = pos + 1;
 	}
  	tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)stringlength - lastpos ) ); //append rest
-};
+}
 
 
 
@@ -109,7 +110,7 @@ void tokenizeMultiCharDelim(const std::string& str, ContainerT& tokens, const st
 		lastpos = pos + delimsize;
 	}
 	tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)stringlength - lastpos ) ); //append rest
-};
+}
 
 
 
@@ -119,6 +120,12 @@ void loadMapFromFile( const std::string& filename, std::map< KeyT, ValueT >& map
 	std::list< std::string > fields;
 	std::list< std::string >::iterator field_it;
 	std::ifstream file_handle( filename.c_str() );
+	
+	if( ! file_handle.good() ) {
+		std::cerr << "something wrong with file " << filename << std::endl;
+		file_handle.close();
+		return;
+	}
 
 	KeyT key;
 	ValueT value;
@@ -137,6 +144,23 @@ void loadMapFromFile( const std::string& filename, std::map< KeyT, ValueT >& map
 		}
 	}
 	file_handle.close();
+}
+
+
+
+template< typename ContainerT >
+typename ContainerT::iterator firstUnmaskedIter( ContainerT& cont ) {
+	typename ContainerT::iterator rec_it = cont.begin();
+	while ( rec_it != cont.end() && (*rec_it)->isFiltered() ) { ++rec_it; };
+	return rec_it;
+}
+
+
+template< typename TType, unsigned int position >
+struct compareTupleFirstLT { 
+	bool operator() ( const TType& a, const TType& b ) {
+		return boost::get<position>( a ) < boost::get<position>( b );
+	}
 };
 
 #endif // utils_hh_

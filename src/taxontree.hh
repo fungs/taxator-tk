@@ -47,9 +47,8 @@ class Taxon {
 		Taxon() : annotation( NULL ), mark_special( false ), is_unclassified( false ) {};
 		Taxon( TaxonAnnotation* taxanno ) : annotation( taxanno ), mark_special( false ), is_unclassified( false ) {};
 		~Taxon() {
-			TaxonAnnotation* delanno = annotation;
-				if( delanno ) { //delete object on heap
-					delete delanno;
+				if( annotation ) { //delete object on heap
+					delete annotation;
 				}
 		};
 		
@@ -59,10 +58,10 @@ class Taxon {
 		}
 		
 // 		Taxon( const Taxon& taxon);
-		unsigned int taxid;
-		unsigned int root_pathlength;
-		unsigned int leftvalue; //nested set value
-		unsigned int rightvalue; //nested set value
+		TaxonID taxid;
+		small_unsigned_int root_pathlength;
+		large_unsigned_int leftvalue; //nested set value
+		large_unsigned_int rightvalue; //nested set value
 		TaxonAnnotation* annotation;
 		bool mark_special;
 		bool is_unclassified;
@@ -97,7 +96,7 @@ class TaxonTree : public tree< Taxon* > {
 // 		void addDummyRankNodes( const std::vector< std::string >& ranks );
 		void setRankDistances( const std::vector< std::string >& ranks );
 		void recalcNestedSetInfo();
-		void addToIndex( unsigned int taxid, Node* node );
+		void addToIndex( TaxonID taxid, Node* node );
 		void recreateNodeIndex();
 		
 		// base class for path iterators (only forward)
@@ -167,7 +166,7 @@ class TaxonTree : public tree< Taxon* > {
 			}
 			
 		private:
-			const unsigned int stop_v; //leading value
+			const large_unsigned_int stop_v; //leading value
 		};
 		
 		class PathUpIterator : public PathIteratorBase { //iterator will go forever, if not checked for target

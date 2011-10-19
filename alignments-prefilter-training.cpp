@@ -18,29 +18,80 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include <iostream>
-#include <string>
+#include "src/alignmentrecord.hh"
+#include "src/alignmentsfilter.hh"
+#include "src/accessconv.hh"
+#include "src/utils.hh"
+#include "src/constants.hh"
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
-#include "src/alignmentrecord.hh"
-#include "src/alignmentsfilter.hh"
-#include "src/accessconv.hh"
-#include "src/utils.hh"
-#include "src/constants.hh"
-
-
+#include <boost/scoped_ptr.hpp>
+#include <iostream>
+#include <string>
 
 using namespace std;
 
 
 
+template< typename ALType >
+void doFiltering( AlignmentRecordFactory< ALType >& fac, boost::ptr_list< AlignmentsFilter< list< ALType* > > >& filters, bool mask_lines = false ) {
+	AlignmentFileParser< ALType > parser( cin, fac );
+	RecordSetGenerator< ALType > recgen( parser );
+	list< ALType* > recordset;
+	typename list< ALType* >::iterator rec_it;
+	typename boost::ptr_list< AlignmentsFilter< list< ALType* > > >::iterator filter_it;
+	ALType* record;
+	
+	if( mask_lines ) {	
+		while( recgen.notEmpty() ) {
+			recgen.getNext( recordset );
+
+			// apply all filters
+			filter_it = filters.begin();
+			while( filter_it != filters.end() ) {
+				filter_it++->filter( recordset );
+			}
+
+			// output lines not filtered
+			rec_it = recordset.begin();
+			while( rec_it != recordset.end() ) {
+				cout << **rec_it;
+				fac.destroy( *rec_it++ );
+			}
+			recordset.clear();
+		}
+	} else { //a little code duplication...
+		while( recgen.notEmpty() ) {
+			recgen.getNext( recordset );
+
+			// apply all filters
+			filter_it = filters.begin();
+			while( filter_it != filters.end() ) {
+				filter_it++->filter( recordset );
+			}
+
+			// output lines not filtered
+			rec_it = recordset.begin();
+			while( rec_it != recordset.end() ) {
+				record = *rec_it;
+				if ( ! record->isFiltered() ) cout << *record;
+				++rec_it;
+				fac.destroy( record );
+			}
+			recordset.clear();
+		}
+	}
+}
+
+
+
 int main( int argc, char** argv ) {
 
-	string ident_level, accessconverter_filename;
+	string ident_level, accessconverter_filename, regex_identifier;
 	vector< string > ranks;
 	bool delete_unmarked;
 
@@ -48,10 +99,10 @@ int main( int argc, char** argv ) {
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		( "help,h", "show help message")
-		( "filter-ident-level,i", po::value< string >( &ident_level ), "remove alignments that are equivalent with the query label on the given level (either 'seqid' or 'taxid')")
+		( "filter-ident-level,i", po::value< string >( &ident_level )->default_value( "taxid" ), "remove alignments that are equivalent with the query label on the given level (either 'seqid' or 'taxid')")
 		( "seqid-conv-file,g", po::value< string >( &accessconverter_filename ), "filename of seqid->taxid mappings" )
+		( "regex-identifier,x", po::value< string >( &regex_identifier ), "XXX-style regular expression for extracting the identifier from artificial sequence name" )
 		( "filter-unclassified,u", "remove queries that were sampled from unclassified organisms (determined by sequence identifier in header)" )
-		( "tag-essential,t", "tag alignment to be essential or in excess for the LCA classification algorithm" )
 		( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
 		( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions (if not set it defaults to major NCBI ranks)" )
 		( "mask-by-star,z", "instead of suppressing filtered alignments mask them by prefixing a star at the line start" );
@@ -66,12 +117,10 @@ int main( int argc, char** argv ) {
 	}
 
 	//parameter consistancy
-
 	if( ! vm.count( "ranks" ) ) { //set to fallback if not given
 		ranks = default_ranks;
 	}
 
-	bool tag_essential = vm.count( "tag-essential" );
 	bool filter_ident = vm.count( "filter-ident-level" );
 	bool mask_by_star = vm.count( "mask-by-star" );
 	bool filter_unclassified = vm.count( "filter-unclassified" );
@@ -85,105 +134,51 @@ int main( int argc, char** argv ) {
 		cerr << "Level for filtering can be either 'seqid' or 'taxid'" << endl;
 		return EXIT_FAILURE;
 	}
-
-	if( ( tag_essential || ( filter_ident && ident_level == "taxid" ) ) && ! vm.count( "seqid-conv-file" ) ) {
-		cerr << "For taxid filtering or essential tagging you must give a seqid->taxid mapping" << endl;
-		return EXIT_FAILURE;
+	
+	boost::scoped_ptr< Taxonomy > tax;
+	boost::scoped_ptr< StrIDConverter > seqid2taxid;
+	boost::ptr_list< AlignmentsFilter< list< AlignmentRecordTaxonomy* > > > filters_taxonomy;
+	boost::ptr_list< AlignmentsFilter< list< AlignmentRecord* > > > filters_regular;
+	
+	if ( filter_unclassified ) {
+		seqid2taxid.reset( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) ); //TODO: add caching parameter
+		tax.reset( loadTaxonomyFromEnvironment( &ranks ) );
+		
+		if( ! tax ) return EXIT_FAILURE;
+		
+		if( delete_unmarked ) tax->deleteUnmarkedNodes(); //should speed up the whole process of LCA finding
+		
+		filters_taxonomy.push_back( new RemoveUnclassifiedQueriesFilter< list< AlignmentRecordTaxonomy* > >( *seqid2taxid, tax.get(), regex_identifier ) );
 	}
-
-	StrIDConverter* accessconverter = NULL;
-	AlignmentFileParser* parser = NULL;
-	boost::ptr_list< AlignmentRecordSetFilter< list< AlignmentRecord* > > > filters;
-
-	if( ident_level == "taxid" || tag_essential || filter_unclassified ) {
-		accessconverter = loadStrIDConverterFromFile( accessconverter_filename, 1000 );
-		parser = new AlignmentFileParser( cin, accessconverter, true );
-	}
-
-	Taxonomy* tax = NULL;
-	if( filter_unclassified ) {
-		tax = loadTaxonomyFromEnvironment( &ranks );
-		if( !tax ) {
-			return EXIT_FAILURE;
-		}
-		filters.push_back( new RemoveUnclassifiedQueriesFilter< list< AlignmentRecord*> >(*accessconverter, tax ) );
-	}
-
+	
 	if( filter_ident ) {
-		if( ident_level == "taxid" ) {
-// 			cerr << "adding RemoveIdentTaxIDFilter" << endl;
-			filters.push_back( new RemoveIdentTaxIDFilter< list< AlignmentRecord* > >( *accessconverter ) );
-		} else { //this means filter on seqid level only
-			filters.push_back( new RemoveIdentSeqIDFilter< list< AlignmentRecord* > >() );
-		}
-	}
-
-	if( tag_essential ) {
-		Taxonomy* tax = loadTaxonomyFromEnvironment( &ranks );
-		if( ! tax ) {
-			filters.clear();
-			if( accessconverter ) {
-				delete accessconverter;
+		if ( ident_level == "taxid" ) {
+			if( ! seqid2taxid ) {
+				seqid2taxid.reset( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) ); //TODO: add caching parameter
 			}
-			if( parser ) {
-				delete parser;
-			}
-			return EXIT_FAILURE;
-		}
-		if( delete_unmarked ) {
-			tax->deleteUnmarkedNodes(); //should speed up the whole process of LCA finding
-		}
-// 		cerr << "adding TagEssentialFilter" << endl;
-		filters.push_back( new TagEssentialFilter< list< AlignmentRecord* > >( *accessconverter, tax ) );
-	}
-
-	if( ! parser ) { //in case not set, yet
-		parser = new AlignmentFileParser( cin, NULL, true );
-	}
-
-	//start applying the filters
-
-	RecordSetGenerator recgen( *parser );
-	list< AlignmentRecord* > recordset;
-	list< AlignmentRecord* >::iterator rec_it;
-	boost::ptr_list< AlignmentRecordSetFilter< list< AlignmentRecord* > > >::iterator filter_it;
-	AlignmentRecord* record;
-
-	while( recgen.notEmpty() ) {
-		recgen.getNext( recordset );
-
-		// apply all filters
-		filter_it = filters.begin();
-		while( filter_it != filters.end() ) {
-			filter_it++->filter( recordset );
-		}
-
-		// output lines not filtered
-		rec_it = recordset.begin();
-		while( rec_it != recordset.end() ) {
-			record = *rec_it;
-			if( ! record->mask ) {
-				cout << *record->raw_line << endl;
+			if ( filters_taxonomy.empty() ) {
+				filters_regular.push_back( new RemoveIdentTaxIDFilter< list< AlignmentRecord* > >( *seqid2taxid, regex_identifier ) );
 			} else {
-				if( mask_by_star ) {
-					cout << '*' << *record->raw_line << endl;
-				}
+				filters_taxonomy.push_back( new RemoveIdentTaxIDFilter< list< AlignmentRecordTaxonomy* > >( *seqid2taxid, regex_identifier ) );
 			}
-			++rec_it;
-			delete record; //clear memory again
+		} else { //ident_level == "seqid"
+			if ( filters_taxonomy.empty() ) {
+				filters_regular.push_back( new RemoveIdentSeqIDFilter< list< AlignmentRecord* > >( regex_identifier ) );
+			} else {
+				filters_taxonomy.push_back( new RemoveIdentSeqIDFilter< list< AlignmentRecordTaxonomy* > >( regex_identifier ) );
+			}
 		}
-		recordset.clear();
 	}
 
-	// delete filters (boost pointer list magic)
-	filters.clear();
-
-
-	//tidy up
-	if( accessconverter ) {
-		delete accessconverter;
+	if( filters_taxonomy.empty() ) {
+		AlignmentRecordFactory< AlignmentRecord > fac;
+		doFiltering( fac, filters_regular, mask_by_star );
+	} else {
+		assert( tax ); //check to be sure
+		assert( seqid2taxid ); //check to be sure
+		AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( *seqid2taxid, tax.get() );
+		doFiltering( fac, filters_taxonomy, mask_by_star );
 	}
-	delete parser;
-
+	
 	return EXIT_SUCCESS;
 }

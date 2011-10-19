@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <map>
 #include <list>
 #include "src/utils.hh"
@@ -61,20 +62,20 @@ int main( int argc, char** argv ) {
 
 	bool show_categories = vm.count( "show-categories" );
 
-	BaseLossFactory* factory = NULL;
+	boost::scoped_ptr< BaseLossFactory > factory( NULL );
 	// set error object according to parameters
 	if( loss_name == "l1" ) {
-		factory = new LossFactory< L1Loss >;
+		factory.reset( new LossFactory< L1Loss > );
 	} else {
-		factory = new LossFactory< L2Loss >;
+		factory.reset( new LossFactory< L2Loss > );
 	}
 
 	// parse line by line
 	string line;
 	list< string > fields;
 	list< string >::iterator field_it;
-	LossMap losses( factory );
-	BaseLoss* loss_all = (*factory)();
+	LossMap losses( *factory );
+	boost::scoped_ptr< BaseLoss > loss_all( (*factory)() );
 
 	while( getline( cin, line ) ) {
 		if( ignoreLine( line ) ) { continue; }
@@ -138,7 +139,5 @@ int main( int argc, char** argv ) {
 		cout << endl;
 	}
 
-	delete loss_all;
-	delete factory;
 	return EXIT_SUCCESS;
 }

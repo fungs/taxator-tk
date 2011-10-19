@@ -4,8 +4,8 @@
 
 
 
-const TaxonNode* TaxonomyInterface::getNode ( const unsigned int taxid ) const {
-	std::map< unsigned int, TaxonNode* >::const_iterator node_it = tax->taxid2node.find( taxid );
+const TaxonNode* TaxonomyInterface::getNode ( const TaxonID taxid ) const {
+	std::map< TaxonID, TaxonNode* >::const_iterator node_it = tax->taxid2node.find( taxid );
 	if( node_it == tax->taxid2node.end() ) {
 // 		std::cerr << "could not find node with TaxID " << taxid << " in taxonmy tree" << std::endl;
 		return NULL;
@@ -27,7 +27,7 @@ const TTPString TaxonomyInterface::getRank ( const TaxonNode* node ) const {
 
 
 
-const TTPString TaxonomyInterface::getRank ( const unsigned int taxid ) const {
+const TTPString TaxonomyInterface::getRank ( const TaxonID taxid ) const {
 	return getNode( taxid )->data->annotation->rank;
 }
 
@@ -39,7 +39,7 @@ const TTPString TaxonomyInterface::getName ( const TaxonNode* node ) const {
 
 
 
-const TTPString TaxonomyInterface::getName ( const unsigned int taxid ) const {
+const TTPString TaxonomyInterface::getName ( const TaxonID taxid ) const {
 	return getNode( taxid )->data->annotation->name;
 }
 
@@ -52,7 +52,7 @@ bool TaxonomyInterface::isParentOf ( const TaxonNode* A, const TaxonNode* B ) co
 
 
 
-bool TaxonomyInterface::isParentOf ( const unsigned int A_taxid, const unsigned int B_taxid ) const {
+bool TaxonomyInterface::isParentOf ( const TaxonID A_taxid, const TaxonID B_taxid ) const {
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return isParentOf( A, B );
@@ -61,8 +61,8 @@ bool TaxonomyInterface::isParentOf ( const unsigned int A_taxid, const unsigned 
 
 
 const TaxonNode* TaxonomyInterface::getLCA ( const TaxonNode* A, const TaxonNode* B ) const {
-	unsigned int left_min = std::min( A->data->leftvalue, B->data->rightvalue );
-	unsigned int right_max = std::max( A->data->rightvalue, B->data->rightvalue );
+	large_unsigned_int left_min = std::min( A->data->leftvalue, B->data->rightvalue );
+	large_unsigned_int right_max = std::max( A->data->rightvalue, B->data->rightvalue );
 
 	const TaxonNode* lca = A;
 	while(  lca->data->leftvalue > left_min || lca->data->rightvalue < right_max ) {
@@ -74,7 +74,7 @@ const TaxonNode* TaxonomyInterface::getLCA ( const TaxonNode* A, const TaxonNode
 
 
 
-const TaxonNode* TaxonomyInterface::getLCA ( const unsigned int A_taxid, const unsigned int B_taxid ) const { //TODO: handle taxid not found
+const TaxonNode* TaxonomyInterface::getLCA ( const TaxonID A_taxid, const TaxonID B_taxid ) const { //TODO: handle taxid not found
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return getLCA( A, B );
@@ -91,7 +91,7 @@ const TaxonNode* TaxonomyInterface::getLCC ( const TaxonNode* A, const TaxonNode
 
 
 
-const TaxonNode* TaxonomyInterface::getLCC ( const unsigned int A_taxid, const unsigned int B_taxid ) const { //TODO: handle taxid not found
+const TaxonNode* TaxonomyInterface::getLCC ( const TaxonID A_taxid, const TaxonID B_taxid ) const { //TODO: handle taxid not found
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return getLCC( A, B );
@@ -99,15 +99,15 @@ const TaxonNode* TaxonomyInterface::getLCC ( const unsigned int A_taxid, const u
 
 
 
-std::pair< int, int > TaxonomyInterface::getPathLength ( const TaxonNode* A, const TaxonNode* B ) const {
+std::pair< small_unsigned_int, small_unsigned_int > TaxonomyInterface::getPathLength ( const TaxonNode* A, const TaxonNode* B ) const {
 	if( A == B ) {
-		return std::make_pair( 0, 0 );
+		return std::make_pair< small_unsigned_int, small_unsigned_int >( 0, 0 );
 	}
 	if( isParentOf( A, B ) ) {
-		return std::make_pair( getPathLengthToParent( B, A ), 0 );
+		return std::make_pair< small_unsigned_int, small_unsigned_int >( getPathLengthToParent( B, A ), 0 );
 	}
 	if( isParentOf( B, A ) ) {
-		return std::make_pair( 0, getPathLengthToParent( A, B ) );
+		return std::make_pair< small_unsigned_int, small_unsigned_int >( 0, getPathLengthToParent( A, B ) );
 	}
 
 	//get distances to LCA
@@ -117,7 +117,7 @@ std::pair< int, int > TaxonomyInterface::getPathLength ( const TaxonNode* A, con
 
 
 
-std::pair< int, int > TaxonomyInterface::getPathLength ( const unsigned int A_taxid, const unsigned int B_taxid ) const {
+std::pair< small_unsigned_int, small_unsigned_int > TaxonomyInterface::getPathLength ( const TaxonID A_taxid, const TaxonID B_taxid ) const {
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return getPathLength( A, B );
@@ -125,25 +125,25 @@ std::pair< int, int > TaxonomyInterface::getPathLength ( const unsigned int A_ta
 
 
 
-boost::tuple< int, int, int > TaxonomyInterface::getInterDistances( const TaxonNode* A, const TaxonNode* B ) const {
+boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > TaxonomyInterface::getInterDistances( const TaxonNode* A, const TaxonNode* B ) const {
 	if( A == B ) {
 		return boost::make_tuple( 0, A->data->root_pathlength, 0 );
-	}
-	if( isParentOf( A, B ) ) {
-		return boost::make_tuple( 0, A->data->root_pathlength ,getPathLengthToParent( B, A ) );
 	}
 	if( isParentOf( B, A ) ) {
 		return boost::make_tuple( getPathLengthToParent( A, B ), B->data->root_pathlength, 0 );
 	}
+	if( isParentOf( A, B ) ) {
+		return boost::make_tuple( 0, A->data->root_pathlength ,getPathLengthToParent( B, A ) );
+	}
 
 	//get distances to LCA
 	const TaxonNode* lca = getLCA( A, B );
-	return boost::make_tuple( getPathLengthToParent( B, lca ), lca->data->root_pathlength, getPathLengthToParent( A, lca ) );
+	return boost::make_tuple( getPathLengthToParent( A, lca ), lca->data->root_pathlength, getPathLengthToParent( B, lca ) );
 }
 
 
 
-boost::tuple< int, int, int > TaxonomyInterface::getInterDistances( const unsigned int A_taxid, const unsigned int B_taxid ) const {
+boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > TaxonomyInterface::getInterDistances( const TaxonID A_taxid, const TaxonID B_taxid ) const {
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return getInterDistances( A, B );
@@ -151,13 +151,13 @@ boost::tuple< int, int, int > TaxonomyInterface::getInterDistances( const unsign
 
 
 
-int TaxonomyInterface::getPathLengthToParent( const TaxonNode* A, const TaxonNode* B ) const {
+small_unsigned_int TaxonomyInterface::getPathLengthToParent( const TaxonNode* A, const TaxonNode* B ) const {
 	return A->data->root_pathlength - B->data->root_pathlength;
 }
 
 
 
-int TaxonomyInterface::getPathLengthToParent( unsigned int A_taxid, unsigned int B_taxid ) const {
+small_unsigned_int TaxonomyInterface::getPathLengthToParent( TaxonID A_taxid, TaxonID B_taxid ) const {
 	const TaxonNode* A = getNode(  A_taxid );
 	const TaxonNode* B = getNode(  B_taxid );
 	return getPathLengthToParent( A, B );
@@ -166,7 +166,7 @@ int TaxonomyInterface::getPathLengthToParent( unsigned int A_taxid, unsigned int
 
 const std::string& TaxonomyInterface::getNameAtRank( const TaxonNode* node, const std::string& rank ) const {
 	return getNameAtRank( node, &tax->getRankInternal( rank ) );
-};
+}
 
 
 
@@ -179,7 +179,7 @@ const std::string& TaxonomyInterface::getNameAtRank( const TaxonNode* node, cons
 		node = node->parent;
 	}
 	return node->data->annotation->name;
-};
+}
 
 
 
@@ -187,29 +187,29 @@ const TaxonNode* TaxonomyInterface::mapUnclassified( const TaxonNode* node ) con
 	const TaxonNode* root = getRoot();
 	for(; node->data->is_unclassified && node != root; node=node->parent ) {};
 	return node;
-};
+}
 
 
 
-const TaxonNode* TaxonomyInterface::mapUnclassified( unsigned int taxid ) const {
+const TaxonNode* TaxonomyInterface::mapUnclassified( TaxonID taxid ) const {
 	const TaxonNode* tmp = getNode( taxid );
 	if( tmp ) {
 		return mapUnclassified( tmp );
 	}
 	return NULL;
-};
+}
 
 
 
 TaxonTree::PathUpIterator TaxonomyInterface::traverseUp( const TaxonNode* node ) const {
 	return TaxonTree::PathUpIterator( node );
-};
+}
 
 
 
 bool TaxonomyInterface::isLeaf(const TaxonNode* node) const {
 	return ! node->first_child;
-};
+}
 
 
 

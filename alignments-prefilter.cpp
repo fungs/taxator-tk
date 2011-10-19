@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
+#include <boost/type_traits/remove_pointer.hpp>
+#include <boost/scoped_ptr.hpp>
 #include "src/alignmentrecord.hh"
 #include "src/alignmentsfilter.hh"
 
@@ -32,6 +34,48 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace std;
 
+template< typename AlignmentsFilterListType >
+void parseAndFilter( AlignmentsFilterListType& filters, bool mask = true ) {
+// 	template <template <typename> class Container, typename AlignmentRecordType>
+// 	void parseAndFilter( boost::ptr_list< AlignmentsFilter< Container::< AlignmentRecordType* > > >& filters, bool mask = true ) {
+	
+	// some type tricks
+	typedef typename boost::remove_pointer< typename AlignmentsFilterListType::value_type >::type AlignmentsFilterType; //expect stdcontainer
+	typedef typename AlignmentsFilterType::AlignmentRecordSetType AlignmentRecordSetType;
+	typedef typename boost::remove_pointer< typename AlignmentRecordSetType::value_type >::type AlignmentRecordType; //expect stdcontainer
+
+	typename AlignmentsFilterListType::iterator filter_it;
+	AlignmentRecordFactory< AlignmentRecordType > recfac;
+	AlignmentFileParser< AlignmentRecordType > parser( cin, recfac );
+	RecordSetGenerator< AlignmentRecordType > recgen( parser );
+	
+	AlignmentRecordSetType recordset;
+	typename AlignmentRecordSetType::iterator rec_it;
+	AlignmentRecordType* record;
+	
+	//apply list of filters to each record set
+	while( recgen.notEmpty() ) {
+		recgen.getNext( recordset );
+
+		// apply all filters
+		filter_it = filters.begin();
+		while( filter_it != filters.end() ) {
+// 			cerr << "applying filter: " << filter_it->getInfo() << endl;
+			filter_it++->filter( recordset );
+		}
+
+		rec_it = recordset.begin();
+		while( rec_it != recordset.end() ) {
+			record = *rec_it;
+			if( ( record->isFiltered() && mask ) || ! record->isFiltered() ) {
+				cout << *record;
+			}
+			++rec_it;
+			recfac.destroy( record ); //clear memory again
+		}
+		recordset.clear();
+	}
+}
 
 
 int main( int argc, char** argv ) {
@@ -67,29 +111,19 @@ int main( int argc, char** argv ) {
 	bool keep_best_per_gi = vm.count( "keep-best-per-ref" );
 	bool mask_by_star = vm.count( "mask-by-star" );
 
-	AlignmentFileParser parser( cin, NULL, true );
-	RecordSetGenerator recgen( parser );
-
 	typedef list< AlignmentRecord* > RecordSetType;
-	RecordSetType recordset;
-	RecordSetType::iterator rec_it;
-	AlignmentRecord* record;
-
-	boost::ptr_list< AlignmentRecordSetFilter< RecordSetType > > filters; //takes care of object destruction by itself
+	boost::ptr_list< AlignmentsFilter< RecordSetType > > filters; //takes care of object destruction by itself
 
 	// put filters in queue
 	if( keep_best_per_gi ) {
 		filters.push_back( new BestScorePerReferenceSeqIDFilter< RecordSetType >() );
 	}
-
 	if( sort_by_bitscore ) {
 		filters.push_back( new SortByBitscoreFilter< RecordSetType >() );
 	}
-
 	if( minpid > 0.0 ) {
 		filters.push_back( new MinPIDFilter< RecordSetType >( minpid ) );
 	}
-
 	if( maxevalue > 0 ) {
 		filters.push_back( new MaxEvalueMinScoreTopPercentFilter< RecordSetType >( minscore, toppercent, maxevalue ) );
 	} else {
@@ -97,44 +131,14 @@ int main( int argc, char** argv ) {
 			filters.push_back( new MinScoreTopPercentFilter< RecordSetType >( minscore, toppercent ) );
 		}
 	}
-
 	if( numbestbitscore ) {
 		filters.push_back( new NumBestBitscoreFilter< RecordSetType >( numbestbitscore ) );
 	}
-
 	if( minsupport ) {
 	  filters.push_back( new MinSupportFilter< RecordSetType >( minsupport ) );
 	}
 
-	boost::ptr_list< AlignmentRecordSetFilter< RecordSetType > >::iterator filter_it;
-
-	//apply list of filters to each record set
-
-	while( recgen.notEmpty() ) {
-		recgen.getNext( recordset );
-
-		// apply all filters
-		filter_it = filters.begin();
-		while( filter_it != filters.end() ) {
-// 			cerr << "applying filter: " << filter_it->getInfo() << endl;
-			filter_it++->filter( recordset );
-		}
-
-		rec_it = recordset.begin();
-		while( rec_it != recordset.end() ) {
-			record = *rec_it;
-			if( ! record->mask ) {
-				cout << *record->raw_line << endl;
-			} else {
-				if( mask_by_star ) {
-					cout << '*' << *record->raw_line << endl;
-				}
-			}
-			++rec_it;
-			delete record; //clear memory again
-		}
-		recordset.clear();
-	}
+	parseAndFilter( filters, mask_by_star );
 
 	// delete filters (boost pointer list magic)
 	filters.clear();

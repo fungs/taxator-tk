@@ -24,11 +24,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <cmath>
+#include "src/predictionrecord.hh"
 #include "src/taxonomyinterface.hh"
 #include "src/ncbidata.hh"
 #include "src/utils.hh"
 #include "src/constants.hh"
+#include "src/types.hh"
 
 
 
@@ -40,7 +43,6 @@ int main( int argc, char** argv ) {
 	vector< string > ranks;
 	bool delete_unmarked, rank_distances;
 	string predictionsfile, correctionsfile;
-	bool single_mode = true;
 
 	namespace po = boost::program_options;
 	po::options_description desc("Allowed options");
@@ -61,8 +63,11 @@ int main( int argc, char** argv ) {
 		return EXIT_FAILURE;
 	}
 
-	if( ! vm.count( "ranks" ) ) { //set to fallback if not given
-		ranks = default_ranks;
+	if( ! vm.count( "ranks" ) ) ranks = default_ranks;
+	
+	if( ! vm.count( "corrections-file" ) ) {
+		cout << "You need to specify a file with correct taxa for distance calculation." << endl;
+		return EXIT_FAILURE;
 	}
 
 	istream* predictions = NULL;
@@ -72,15 +77,9 @@ int main( int argc, char** argv ) {
 		predictions = &cin;
 	}
 
-	if( vm.count( "corrections-file" ) ) {
-		single_mode = false;
-	}
-
 	// create taxonomy
-	Taxonomy* tax = loadTaxonomyFromEnvironment( &ranks );
-	if( !tax ) {
-		return EXIT_FAILURE;
-	}
+ 	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );
+	if( ! tax ) return EXIT_FAILURE;
 
 	if( delete_unmarked ) {
 		tax->deleteUnmarkedNodes();
@@ -89,72 +88,67 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	TaxonomyInterface interface( tax );
-	int a, b, c;
+	TaxonomyInterface interface( tax.get() );
+	small_unsigned_int a1, b1, c1, a2, b2, c2;
 
-	if( single_mode ) {
-		// parse line by line
-		string line;
-		list< string > fields;
-		list< string >::iterator field_it;
-		unsigned int query_taxid, prediction_taxid;
+	ifstream corrections( correctionsfile.c_str() );
+	string line1, line2;
+	list< string > fields;
+	list< string >::iterator field_it;
+	unsigned int correct_taxid;
+	PredictionRecord prec( tax.get() );
 
-		while( getline( *predictions, line ) ) {
-			if( ignoreLine( line ) ) { continue; }
-
-			tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
+	if ( getline( *predictions, line1 ) && getline( corrections, line2 ) ) {
+		do {
+			if ( ignoreLine( line1 ) ) {
+				if ( getline( *predictions, line1 ) ) continue;
+				break;
+			}
+			
+			if ( ignoreLine( line2 ) ) {
+				if ( getline( corrections, line2 ) ) continue;
+				break;
+			}
+			
+			if ( ! prec.parse( line1 ) ) {
+				if ( getline( *predictions, line1 ) && getline( corrections, line2 ) ) continue;
+				cerr << "could not parse prediction record" << endl;
+				break;
+			}
+			
+			tokenizeSingleCharDelim( line2, fields, default_field_separator, 2 );
 			field_it = fields.begin();
-
+			const string& qid = *field_it++;
 			try {
-				const string& qid = *field_it;
-				query_taxid = boost::lexical_cast< unsigned int >( *field_it++ );
-				prediction_taxid = boost::lexical_cast< unsigned int >(  *field_it );
-				boost::tie( a, b, c ) = interface.getInterDistances( query_taxid, prediction_taxid );
-				cout << qid << default_field_separator << a << default_field_separator << b << default_field_separator << c << endl;
+				correct_taxid = boost::lexical_cast< unsigned int >( *field_it );
 			} catch( boost::bad_lexical_cast e ) {
-				cerr << "Could not parse line in input: " << line << endl;
+				cerr << "could not parse taxid in input line: '" << line2 << "' in file '" << correctionsfile << "'" << endl;
+				fields.clear();
+				continue;
 			}
+			
+			const TaxonNode* correct_node = interface.getNode( correct_taxid ); //TODO: test for NULL
+			if ( ! correct_node ) {
+				cerr << "could not find taxid '" << correct_taxid << "' in taxonomy" << endl;
+				if ( getline( *predictions, line1 ) && getline( corrections, line2 ) ) continue;
+				break;
+			}
+			
+			boost::tie( a1, b1, c1 ) = interface.getInterDistances( correct_node, prec.lower_node );
+			boost::tie( a2, b2, c2 ) = interface.getInterDistances( correct_node, prec.upper_node );
+			
+			small_unsigned_int rangesize = prec.lower_node == prec.upper_node ? 0 : interface.getPathLengthToParent( prec.lower_node, prec.upper_node );
+			
+			cout << qid << default_field_separator << static_cast<int>( a1 ) << default_field_separator << static_cast<int>( c2 ) << default_field_separator << static_cast<int>( rangesize ) << endl;
+			
 			fields.clear();
-		}
-	} else {
-		ifstream corrections( correctionsfile.c_str() );
-		string line1, line2;
-		list< string > fields1, fields2;
-		list< string >::iterator field_it1, field_it2;
-		unsigned int query_taxid, prediction_taxid;
-
-		while( getline( *predictions, line1 ) && getline( corrections, line2 ) ) {
-			if( ignoreLine( line1 ) || ignoreLine( line2 ) ) {
-				continue;
-			}
-			tokenizeSingleCharDelim( line1, fields1, default_field_separator, 2 );
-			field_it1 = fields1.begin();
-			try {
-				prediction_taxid = boost::lexical_cast< unsigned int >(  *++field_it1 );
-			} catch( boost::bad_lexical_cast e ) {
-				cerr << "Could not parse line in input: " << line1 << " in file '" << predictionsfile << "'" << endl;
-				fields1.clear();
-				continue;
-			}
-			tokenizeSingleCharDelim( line2, fields2, default_field_separator, 2 );
-			field_it2 = fields2.begin();
-			try {
-				const string& qid = *field_it2++;
-				query_taxid = boost::lexical_cast< unsigned int >( *field_it2 );
-				boost::tie( a, b, c ) = interface.getInterDistances( query_taxid, prediction_taxid );
-				cout << qid << default_field_separator << a << default_field_separator << b << default_field_separator << c << endl;
-			} catch( boost::bad_lexical_cast e ) {
-				cerr << "Could not parse line in input: " << line2 << " in file '" << correctionsfile << "'" << endl;
-			}
-			fields1.clear();
-			fields2.clear();
-		}
+			if ( !( getline( *predictions, line1 ) && getline( corrections, line2 ) ) ) break; 
+		} while ( true );
 	}
-
+	
 	// tidy up and quit
-	if( predictions != &cin ) {
+	if( predictions != &cin ) { //TODO: use auto_ptr?
 		delete predictions;
 	}
-	delete tax;
 	return EXIT_SUCCESS;
 }

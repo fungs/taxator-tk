@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class BaseLoss {
 	public:
-		BaseLoss( unsigned int size ) : values( size, 0.0 ) {};
+		BaseLoss( unsigned int size ) : values_( size, 0.0 ) {};
 		virtual void add( const int a, const int b, const int c) = 0;
 
 		virtual void add( const boost::tuple< int, int, int >& bt ) {
@@ -43,17 +43,17 @@ class BaseLoss {
 		virtual int support() = 0;
 
 		virtual void clear() {
-			for( std::vector< float >::iterator it = values.begin(); it != values.end(); ++it ) {
+			for( std::vector< float >::iterator it = values_.begin(); it != values_.end(); ++it ) {
 				*it = 0.0;
 			}
 		};
 
 		virtual unsigned int valNum() {
-			return values.size();
+			return values_.size() + 1;
 		};
 
 	protected:
-		std::vector< float > values;
+		std::vector< float > values_;
 };
 
 
@@ -80,38 +80,36 @@ class LossMap {
 		typedef std::map< std::string, BaseLoss* > MapType;
 		typedef MapType::iterator iterator;
 
-		LossMap( BaseLossFactory* fac ) : factory( *fac ) {};
+		LossMap( BaseLossFactory& fac ) : factory_( fac ) {};
 		BaseLoss& operator[]( const std::string& id ) {
-			iterator it = store.find( id );
-			if( it != store.end() ) {
+			iterator it = store_.find( id );
+			if( it != store_.end() ) {
 				return *it->second;
 			}
-			return *store.insert( std::make_pair( id, factory() ) ).first->second;
+			return *store_.insert( std::make_pair( id, factory_() ) ).first->second;
 		}
 
 		BaseLoss& front() {
-			return *store.begin()->second;
+			return *store_.begin()->second;
 		}
 
 		iterator begin() {
-			return store.begin();
+			return store_.begin();
 		}
 
 		iterator end() {
-			return store.end();
+			return store_.end();
 		}
 
 		~LossMap() {
-			//std::pair< std::string,BaseLoss* > p;
-			for( iterator it = store.begin(); it != store.end(); ++it ) {
+			for( iterator it = store_.begin(); it != store_.end(); ++it ) {
 				delete it->second;
 			}
-
 		}
 
 	private:
-		MapType store; //destroys ojects by itself
-		BaseLossFactory& factory;
+		MapType store_;
+		BaseLossFactory& factory_;
 };
 
 
@@ -121,8 +119,9 @@ class L1Loss : public BaseLoss {
 		L1Loss( const float al = 0.5) : BaseLoss( 3 ), count( 0 ), alpha( al ), oneminusalpha( 1.0 - al ) {};
 
 		virtual void add( const int a, const int b, const int c ) {
-			values[0] += a;
-			values[1] += c;
+			values_[0] += a;
+			values_[1] += b;
+			values_[2] += c;
 			++count;
 		};
 
@@ -132,12 +131,14 @@ class L1Loss : public BaseLoss {
 		};
 
 		virtual std::vector< float > get() {
-			std::vector< float > ret( values.size() );
-			float tmp_a = values[0] / float( count );
-			float tmp_c = values[1] / float( count );
+			std::vector< float > ret( 4 );
+			float tmp_a = values_[0] / float( count );
+			float tmp_b = values_[1] / float( count );
+			float tmp_c = values_[2] / float( count );
 			ret[0] = tmp_a;
-			ret[1] = tmp_c;
-			ret[2] = 2.0 * (alpha*tmp_a + oneminusalpha*tmp_c);
+			ret[1] = tmp_b;
+			ret[2] = tmp_c;
+			ret[3] = 2.0 * (alpha*tmp_a + oneminusalpha*tmp_b);
 			return ret;
 		};
 
@@ -156,8 +157,9 @@ class L2Loss : public BaseLoss {
 		L2Loss( const float al = 0.5) : BaseLoss( 3 ), count( 0 ), alpha( al ), oneminusalpha( 1.0 - al ) {};
 
 		virtual void add( const int a, const int b, const int c ) {
-			values[0] += a*a;
-			values[1] += c*c;
+			values_[0] += a*a;
+			values_[1] += b*b;
+			values_[2] += c*c;
 			++count;
 		};
 
@@ -167,12 +169,14 @@ class L2Loss : public BaseLoss {
 		};
 
 		virtual std::vector< float > get() {
-			std::vector< float > ret( values.size() );
-			float tmp_a = values[0] / float( count );
-			float tmp_c = values[1] / float( count );
+			std::vector< float > ret( 4 );
+			float tmp_a = values_[0] / float( count );
+			float tmp_b = values_[1] / float( count );
+			float tmp_c = values_[2] / float( count );
 			ret[0] = std::sqrt( tmp_a );
-			ret[1] = std::sqrt( tmp_c );
-			ret[2] = std::sqrt( 2.0 * (alpha*tmp_a + oneminusalpha*tmp_c) );
+			ret[1] = std::sqrt( tmp_b );
+			ret[2] = std::sqrt( tmp_c );
+			ret[3] = std::sqrt( 2.0 * (alpha*tmp_a + oneminusalpha*tmp_b) );
 			return ret;
 		};
 
