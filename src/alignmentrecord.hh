@@ -38,16 +38,16 @@ class AlignmentRecord {
 	public:
 		~AlignmentRecord() {};
 		inline const std::string& getQueryIdentifier() const { return query_identifier_; };
-		inline medium_unsigned_int getQueryStart() { return query_start_; };
-		inline medium_unsigned_int getQueryStop() { return query_stop_; };
-		inline medium_unsigned_int getQueryLength() { return query_length_; };
+		inline large_unsigned_int getQueryStart() { return query_start_; };
+		inline large_unsigned_int getQueryStop() { return query_stop_; };
+		inline large_unsigned_int getQueryLength() { return query_length_; };
 		inline const std::string& getReferenceIdentifier() const { return reference_identifier_; };
 		inline large_unsigned_int getReferenceStart() { return reference_start_; };
 		inline large_unsigned_int getReferenceStop() { return reference_stop_; };
 		inline float getScore() const { return score_; };
 		inline double getEValue() const { return evalue_; };
-		inline medium_unsigned_int getIdentities() { return identities_; };
-		inline medium_unsigned_int getAlignmentLength() { return alignment_length_; };
+		inline large_unsigned_int getIdentities() { return identities_; };
+		inline large_unsigned_int getAlignmentLength() { return alignment_length_; };
 		inline const std::string& getAlignmentCode() { return alignment_code_; };
 		inline bool isFiltered() const { return blacklist_this_; };
 		inline float getPID() const { return identities_/float( std::max( query_length_, alignment_length_ ) ); };
@@ -82,18 +82,18 @@ class AlignmentRecord {
 		virtual bool parse( const std::vector< std::string >& fields ) {
 			if ( fields.size() >= 12 ) {
 				try {
-					query_start_ = boost::lexical_cast< unsigned int >( fields[1] );
-					query_stop_ = boost::lexical_cast< unsigned int >( fields[2] );
+					query_start_ = boost::lexical_cast< large_unsigned_int >( fields[1] );
+					query_stop_ = boost::lexical_cast< large_unsigned_int >( fields[2] );
 
 					if( query_start_ > query_stop_ ) {
 						std::cerr << "reverse query positions are not allowed (only reference positions can be swapped to indicate the reverse complement, adjust your input file format)" << std::endl;
 						return false;
 					}
 					
-					query_length_ = boost::lexical_cast< unsigned int >( fields[3] );
+					query_length_ = boost::lexical_cast< large_unsigned_int >( fields[3] );
 					
-					reference_start_ = boost::lexical_cast< unsigned int >( fields[5] );
-					reference_stop_ = boost::lexical_cast< unsigned int >( fields[6] );
+					reference_start_ = boost::lexical_cast< large_unsigned_int >( fields[5] );
+					reference_stop_ = boost::lexical_cast< large_unsigned_int >( fields[6] );
 
 				} catch ( boost::bad_lexical_cast e ) {
 					std::cerr << "could not parse position number or query length" << std::endl;
@@ -115,14 +115,14 @@ class AlignmentRecord {
 				}
 				
 				try {
-					identities_ = boost::lexical_cast< unsigned int >( fields[9] );
+					identities_ = boost::lexical_cast< large_unsigned_int >( fields[9] );
 				} catch( boost::bad_lexical_cast e ) {
 					std::cerr << "could not identities" << std::endl;
 					return false;
 				}
 				
 				try {
-					alignment_length_ = boost::lexical_cast< unsigned int >( fields[10] );
+					alignment_length_ = boost::lexical_cast< large_unsigned_int >( fields[10] );
 				} catch( boost::bad_lexical_cast e ) {
 					std::cerr << "could not parse alignment length" << std::endl;
 					return false;
@@ -158,21 +158,21 @@ class AlignmentRecord {
 			     << identities_ << default_field_separator
 			     << alignment_length_ << default_field_separator
 			     << alignment_code_ << default_field_separator
-			     << std::endl;
+			     << endline;
 		}
 		
 	private:
 		std::string reference_identifier_;
 		std::string query_identifier_;
-		medium_unsigned_int query_start_;
-		medium_unsigned_int query_stop_;
-		medium_unsigned_int query_length_;
+		large_unsigned_int query_start_;
+		large_unsigned_int query_stop_;
+		large_unsigned_int query_length_;
 		large_unsigned_int reference_start_;
 		large_unsigned_int reference_stop_;
 		float score_;
 		double evalue_;
-		medium_unsigned_int identities_;
-		medium_unsigned_int alignment_length_;
+		large_unsigned_int identities_;
+		large_unsigned_int alignment_length_;
 		std::string alignment_code_;
 		bool blacklist_this_;
 };
@@ -391,8 +391,8 @@ void deleteRecords( ContainerT& recordset ) {
 
 
 
-template< typename ContainerT >
-void separateAlignmentsByRange( ContainerT& recordset, std::queue< ContainerT >& workload ) {
+template< typename ContainerT, typename QueueLikeContainer >
+void separateAlignmentsByRange( ContainerT& recordset, QueueLikeContainer& workload ) {
 	
 	if ( recordset.empty() ) return;
 	
@@ -400,7 +400,7 @@ void separateAlignmentsByRange( ContainerT& recordset, std::queue< ContainerT >&
 	
 	// walk over original recordset and determine split point(s)
 	std::size_t i = 0;
-	std::vector< boost::tuple< medium_unsigned_int, medium_unsigned_int, AlignmentRecordTypePtr > > ranges( recordset.size() ); //temporary space
+	std::vector< boost::tuple< large_unsigned_int, large_unsigned_int, AlignmentRecordTypePtr > > ranges( recordset.size() ); //temporary space
 	for( typename ContainerT::const_iterator it = recordset.begin(); it != recordset.end(); ++it ) {
 		ranges[i++] = boost::make_tuple( (*it)->getQueryStart(), (*it)->getQueryStop(), *it );
 	}
@@ -412,10 +412,10 @@ void separateAlignmentsByRange( ContainerT& recordset, std::queue< ContainerT >&
 	// push into queue as separate sets to be treated independently by prediction algorithm
 	ContainerT rset;
 	
-	medium_unsigned_int start = boost::get<0>( ranges[0] );
-	medium_unsigned_int stop = boost::get<1>( ranges[0] );
-	medium_unsigned_int rstart = start;
-	medium_unsigned_int rstop = stop;
+	large_unsigned_int start = boost::get<0>( ranges[0] );
+	large_unsigned_int stop = boost::get<1>( ranges[0] );
+	large_unsigned_int rstart = start;
+	large_unsigned_int rstop = stop;
 	rset.push_back( boost::get<2>( ranges[0] ) );
 	
 	for ( i = 1; i < ranges.size(); ++i ) {

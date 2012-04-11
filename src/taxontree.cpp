@@ -7,22 +7,22 @@
 TaxonTree::~TaxonTree() {
 	//delete all taxons and annotations
 	for( iterator node_it = this->begin(); node_it != this->end(); ++node_it ) {
-		delete *node_it;;
+		delete *node_it;
 	}
 }
 
 
 
 void TaxonTree::addToIndex( unsigned int taxid , TaxonTree::Node* node ) {
-	taxid2node[ taxid ] = node;
+	taxid2node_[ taxid ] = node;
 }
 
 
 
 void TaxonTree::recreateNodeIndex() {
-	taxid2node.clear();
+	taxid2node_.clear();
 	for( iterator node_it = this->begin(); node_it != this->end(); ++node_it ) {
-		taxid2node.insert( std::make_pair( (*node_it)->taxid, node_it.node ) );
+		taxid2node_.insert( std::make_pair( (*node_it)->taxid, node_it.node ) );
 	}
 }
 
@@ -30,16 +30,16 @@ void TaxonTree::recreateNodeIndex() {
 
 // constant in time as apposed to size(), I think
 int TaxonTree::indexSize() const { //returns only real nodes (no dummies)
-	return taxid2node.size();
+	return taxid2node_.size();
 }
 
 
 
 const std::string& TaxonTree::getRankInternal ( const std::string& rankname ) const {
 
-	std::set< std::string >::const_iterator rank_it = ranks.find( rankname );
-	if( rank_it == ranks.end() ) {
-		return rank_not_found;
+	std::set< std::string >::const_iterator rank_it = ranks_.find( rankname );
+	if( rank_it == ranks_.end() ) {
+		return rank_not_found_;
 	}
 	return *rank_it;
 }
@@ -47,7 +47,7 @@ const std::string& TaxonTree::getRankInternal ( const std::string& rankname ) co
 
 
 const std::string& TaxonTree::insertRankInternal ( const std::string& rankname ) {
-	return *ranks.insert( rankname ).first;
+	return *ranks_.insert( rankname ).first;
 }
 
 
@@ -58,7 +58,7 @@ void TaxonTree::deleteUnmarkedNodes() {
 	while( node_it != this->end() ) {
 		Taxon* deltaxon = *node_it;
 		if( ! deltaxon->mark_special ) {
-			taxid2node.erase( (*node_it)->taxid ); //delete from index
+			taxid2node_.erase( (*node_it)->taxid ); //delete from index
 			reparent( iterator( node_it.node->parent ), node_it ); //move children
 			node_it = erase( node_it ); //erase node
 			delete deltaxon; //clear heap
@@ -71,16 +71,16 @@ void TaxonTree::deleteUnmarkedNodes() {
 
 
 
-void TaxonTree::setRankDistances( const std::vector< std::string >& ranks ) {
+void TaxonTree::setRankDistances( const std::vector< std::string >& ranklist ) {
 	//will only work if all possible ranks are contained in the given vector and are in the right order
 
 	//build index structures
-	int ranks_num = ranks.size();
-	std::vector< const TTPString* > ranknames( ranks_num );
+	int ranks_num = ranklist.size();
+	std::vector< const std::string* > ranknames( ranks_num );
 	std::map< const std::string*, int > rank2pos;
 // 	std::cerr << "normalizing distances for ranks: ";
 	for( int i = 0; i < ranks_num; ++i ) { //fill array with internal names in correct order
-		const std::string& rankname = getRankInternal( ranks[ i ] );
+		const std::string& rankname = getRankInternal( ranklist[ i ] );
 // 		std::cerr << rankname << ", ";
 		ranknames[ i ] = &rankname;
 		rank2pos[ &rankname ] = i;
@@ -141,6 +141,16 @@ void TaxonTree::setRankDistances( const std::vector< std::string >& ranks ) {
 			}
 		}
 	}
+}
+
+
+
+void TaxonTree::setMaxDepth() {
+	small_unsigned_int tmp = 0;
+	for ( leaf_iterator it = begin_leaf(); it != end_leaf(); ++it ) {
+		tmp = std::max( tmp, (*it)->root_pathlength );
+	}
+	max_depth_ = tmp;
 }
 
 

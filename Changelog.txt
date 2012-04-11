@@ -1,0 +1,8 @@
+This file only lists major changes and bug fixes for each version
+
+v. 0.2 taxator-tk
+=================
+
+* predictions-filter for combination of predictions by mutiple methods/experts
+  and to clean up the predictions of natural samples where we require a certain
+  number of read for each taxonomic group to be considered

@@ -22,7 +22,7 @@ else()
   message( FATAL_ERROR "Unable to find a Boost version. Did you set BOOST_ROOT?" )
 endif()
 include_directories( "includes-external" )
-set(CMAKE_CXX_FLAGS "-g -Wall -pedantic -Wno-long-long -Wno-variadic-macros")
+set(CMAKE_CXX_FLAGS "-g -Wall -pedantic -Wno-long-long -Wno-variadic-macros") #add -fopenmp for OpenMP
 
 # set(CMAKE_CXX_FLAGS "-m32")
 
@@ -52,11 +52,11 @@ target_link_libraries( alignments-prefilter boost_program_options boost_system )
 
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
 add_executable( predictor predictor.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/sqlite3pp.cpp src/taxonpredictionmodel.cpp src/predictionrecord.cpp )
-target_link_libraries( predictor sqlite3 boost_program_options boost_filesystem )
+target_link_libraries( predictor sqlite3 boost_program_options boost_filesystem boost_thread )
 
 # apply filtering to predictions file
-#add_executable( predictions-filter predictions-filter.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
-#target_link_libraries( predictions-filter boost_program_options boost_filesystem )
+add_executable( predictions-filter predictions-filter.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
+target_link_libraries( predictions-filter boost_program_options boost_filesystem )
 
 # measures the prediction error in terms of tree path distances
 add_executable( prediction2distances prediction2distances.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
@@ -69,3 +69,7 @@ target_link_libraries( prediction-error boost_program_options )
 # filter alignments (supervised mode, needed for benchmarks only)
 add_executable( alignments-prefilter-training alignments-prefilter-training.cpp src/accessconv.cpp src/sqlite3pp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/alignmentrecord.cpp )
 target_link_libraries( alignments-prefilter-training boost_program_options sqlite3 boost_filesystem boost_system boost_regex )
+
+#debugging
+add_executable( testpredictionrecord testpredictionrecord.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
+target_link_libraries( testpredictionrecord boost_filesystem )

@@ -21,12 +21,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef taxontree_hh_
 #define taxontree_hh_
 
+#include "types.hh"
+#include "tree.hh"
+#include <boost/tuple/tuple.hpp>
 #include <map>
 #include <vector>
 #include <iostream>
-#include <boost/tuple/tuple.hpp>
-#include "types.hh"
-#include "tree.hh"
+#include <string>
 #include <stack>
 
 
@@ -34,10 +35,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 class TaxonAnnotation {
 		// contains all information like name, synonyms, rank etc.
 	public:
-		TaxonAnnotation( const TTPString& rankname ) : rank( rankname ) {};
-		TaxonAnnotation( const TTPString& rankname, const TTPString& taxonname ) : rank( rankname ), name( taxonname ) {};
-		const TTPString& rank;
-		TTPString name;
+		TaxonAnnotation( const std::string& rankname ) : rank( rankname ) {};
+		TaxonAnnotation( const std::string& rankname, const std::string& taxonname ) : rank( rankname ), name( taxonname ) {};
+		const std::string& rank;
+		std::string name;
 	};
 
 
@@ -71,12 +72,6 @@ class Taxon {
 
 typedef tree_node_<Taxon*> TaxonNode;
 
-// class TaxonNode : public tree_node_< Taxon* > {
-// 	inline bool isLeaf( const TaxonNode* node ) const {
-// 		return node->first_child;
-// 	}
-// };
-
 
 
 class TaxonomyInterface;
@@ -86,7 +81,7 @@ class TaxonomyInterface;
 class TaxonTree : public tree< Taxon* > {
 	friend class TaxonomyInterface;
 	public:
-		TaxonTree() : rank_not_found( *ranks.insert( "" ).first ) {};
+		TaxonTree() : rank_not_found_( *ranks_.insert( "" ).first ) {};
  		~TaxonTree();
 		typedef tree_node Node;
 		int indexSize() const;
@@ -95,6 +90,8 @@ class TaxonTree : public tree< Taxon* > {
 		void deleteUnmarkedNodes();
 // 		void addDummyRankNodes( const std::vector< std::string >& ranks );
 		void setRankDistances( const std::vector< std::string >& ranks );
+		void setMaxDepth( small_unsigned_int depth ) { max_depth_ = depth; };
+		void setMaxDepth();
 		void recalcNestedSetInfo();
 		void addToIndex( TaxonID taxid, Node* node );
 		void recreateNodeIndex();
@@ -214,9 +211,10 @@ class TaxonTree : public tree< Taxon* > {
 		};
 
 	private:
-		std::set< std::string > ranks;
-		const std::string& rank_not_found;
-		std::map< unsigned int, Node* > taxid2node; //use boost::ptr_map<> -> no destructor needed
+		std::set< std::string > ranks_;
+		const std::string& rank_not_found_;
+		std::map< unsigned int, Node* > taxid2node_; //use boost::ptr_map<> -> no destructor needed, hash map is faster
+		small_unsigned_int max_depth_;
 };
 
 

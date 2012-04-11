@@ -5,8 +5,8 @@
 
 
 const TaxonNode* TaxonomyInterface::getNode ( const TaxonID taxid ) const {
-	std::map< TaxonID, TaxonNode* >::const_iterator node_it = tax->taxid2node.find( taxid );
-	if( node_it == tax->taxid2node.end() ) {
+	std::map< TaxonID, TaxonNode* >::const_iterator node_it = tax->taxid2node_.find( taxid );
+	if( node_it == tax->taxid2node_.end() ) {
 // 		std::cerr << "could not find node with TaxID " << taxid << " in taxonmy tree" << std::endl;
 		return NULL;
 	}
@@ -21,25 +21,25 @@ const TaxonNode* TaxonomyInterface::getRoot() const {
 
 
 
-const TTPString TaxonomyInterface::getRank ( const TaxonNode* node ) const {
+const std::string& TaxonomyInterface::getRank ( const TaxonNode* node ) const {
 	return node->data->annotation->rank;
 }
 
 
 
-const TTPString TaxonomyInterface::getRank ( const TaxonID taxid ) const {
+const std::string& TaxonomyInterface::getRank ( const TaxonID taxid ) const {
 	return getNode( taxid )->data->annotation->rank;
 }
 
 
 
-const TTPString TaxonomyInterface::getName ( const TaxonNode* node ) const {
+const std::string& TaxonomyInterface::getName ( const TaxonNode* node ) const {
 	return node->data->annotation->name;
 }
 
 
 
-const TTPString TaxonomyInterface::getName ( const TaxonID taxid ) const {
+const std::string& TaxonomyInterface::getName ( const TaxonID taxid ) const {
 	return getNode( taxid )->data->annotation->name;
 }
 

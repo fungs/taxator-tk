@@ -134,10 +134,10 @@ int main( int argc, char** argv ) {
 				break;
 			}
 			
-			boost::tie( a1, b1, c1 ) = interface.getInterDistances( correct_node, prec.lower_node );
-			boost::tie( a2, b2, c2 ) = interface.getInterDistances( correct_node, prec.upper_node );
+			boost::tie( a1, b1, c1 ) = interface.getInterDistances( correct_node, prec.getLowerNode() );
+			boost::tie( a2, b2, c2 ) = interface.getInterDistances( correct_node, prec.getUpperNode() );
 			
-			small_unsigned_int rangesize = prec.lower_node == prec.upper_node ? 0 : interface.getPathLengthToParent( prec.lower_node, prec.upper_node );
+			small_unsigned_int rangesize = prec.getLowerNode() == prec.getUpperNode() ? 0 : interface.getPathLengthToParent( prec.getLowerNode(), prec.getUpperNode() );
 			
 			cout << qid << default_field_separator << static_cast<int>( a1 ) << default_field_separator << static_cast<int>( c2 ) << default_field_separator << static_cast<int>( rangesize ) << endl;
 			

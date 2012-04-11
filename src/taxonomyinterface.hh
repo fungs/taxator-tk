@@ -33,11 +33,12 @@ class TaxonomyInterface {
 
 		const TaxonNode* getNode( const TaxonID taxid ) const;
 		const TaxonNode* getRoot() const;
+		small_unsigned_int getMaxDepth() { return tax->max_depth_; };
 
-		const TTPString getRank( const TaxonNode* node ) const ;
-		const TTPString getRank( const TaxonID taxid ) const;
-		const TTPString getName( const TaxonNode* node ) const;
-		const TTPString getName( const TaxonID taxid ) const;
+		const std::string& getRank( const TaxonNode* node ) const ;
+		const std::string& getRank( const TaxonID taxid ) const;
+		const std::string& getName( const TaxonNode* node ) const;
+		const std::string& getName( const TaxonID taxid ) const;
 
 		bool isParentOf( const TaxonNode* A, const TaxonNode* B ) const;
 		bool isParentOf( const TaxonID A_taxid, const TaxonID B_taxid ) const;

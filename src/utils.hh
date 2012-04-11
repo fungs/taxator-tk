@@ -21,14 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef utils_hh_
 #define utils_hh_
 
+#include "constants.hh"
+#include "types.hh"
+#include <boost/lexical_cast.hpp>
+#include <boost/tuple/tuple.hpp>
 #include <iostream>
 #include <map>
 #include <string>
 #include <list>
 #include <fstream>
-#include <boost/lexical_cast.hpp>
-#include <boost/tuple/tuple.hpp>
-#include "constants.hh"
+
+
 
 //TODO: clean up template functions
 
@@ -161,6 +164,45 @@ struct compareTupleFirstLT {
 	bool operator() ( const TType& a, const TType& b ) {
 		return boost::get<position>( a ) < boost::get<position>( b );
 	}
+};
+
+
+
+// provides memory efficient storage of query sequences via reference counting
+template< typename UIntType = small_unsigned_int > //default maximum 256 references!
+class ReferencedStringStore {
+	public:
+		ReferencedStringStore() : last_( id2counter_.end() ) {}
+		
+		const std::string& add( const std::string& id ) {
+			if ( &id != &last_->first ) {
+				last_ = id2counter_.find( id );
+				if ( last_ == id2counter_.end() ) last_ = id2counter_.insert( std::make_pair( id, 0 ) ).first;
+			}
+
+			last_->second += 1;
+			return last_->first;
+		}
+		
+		bool remove( const std::string& id ) {
+			if ( &id != &last_->first ) {
+				typename std::map< const std::string, UIntType >::iterator it = id2counter_.find( id );
+				if ( it == id2counter_.end() || &id != &it->first ) return false;
+				last_ = it;
+			}
+			
+			if ( last_->second > 0 ) {
+				last_->second -= 1;
+			} else {
+				id2counter_.erase( last_ );
+				last_ = id2counter_.end();
+			}
+			return true;
+		}
+		
+	private:
+		typename std::map< const std::string, UIntType > id2counter_; //max. 256 references
+		typename std::map< const std::string, UIntType >::iterator last_; //save some time
 };
 
 #endif // utils_hh_
