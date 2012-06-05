@@ -79,6 +79,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		void setSignalStrength( float f ) { signal_strength_ = f; }
 		
 		void setNodeRange( const TaxonNode* lower_node, medium_unsigned_int lower_node_support, const TaxonNode* upper_node, medium_unsigned_int upper_node_support ) {
+			assert( lower_node == upper_node || taxinter_.isParentOf( upper_node, lower_node ) );
 			lower_node_ = lower_node;
 			upper_node_ = upper_node;
 			taxon_support_ = std::vector< medium_unsigned_int >( lower_node->data->root_pathlength - upper_node->data->root_pathlength + 1, upper_node_support );
@@ -200,9 +201,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		void printFeatureSeqLen( std::ostream& strm ) const { strm << "seqlen=" << query_length_; }
 		void printFeatureIVal( std::ostream& strm ) const { strm << "ival=" << interpolation_value_; }
 		void printFeatureTax( std::ostream& strm ) const {
-			assert( lower_node_ );
-			assert( upper_node_ );
-			assert( ! taxon_support_.empty() );
+			assert( lower_node_ && upper_node_ && ! taxon_support_.empty() );
 			
 			strm << "tax=";
 			medium_unsigned_int last_support = 0;
@@ -273,7 +272,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 					taxon_support_.reserve( tmp_taxon_support.size() );
 					std::copy( tmp_taxon_support.begin(), tmp_taxon_support.end(), std::back_inserter( taxon_support_ ) );
 					
-					assert( lower_node_->data->root_pathlength - upper_node_->data->root_pathlength + 1 == taxon_support_.size() );
+					assert( lower_node_->data->root_pathlength - upper_node_->data->root_pathlength + 1 == static_cast<small_unsigned_int>( taxon_support_.size() ) );
 					return true;
 				}
 			} catch( boost::bad_lexical_cast e ) {

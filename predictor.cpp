@@ -176,7 +176,7 @@ void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, St
 
 
 void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, uint number_threads ) {
-	if ( number_threads != 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, number_threads );
+	if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, number_threads );
 	doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments );
 }
 
@@ -188,7 +188,7 @@ int main( int argc, char** argv ) {
 	string accessconverter_filename, algorithm, query_filename, db_filename;
 	bool delete_unmarked, split_alignments;
 	uint nbest, minsupport, number_threads;
-	float toppercent, minscore;
+	float toppercent, minscore, bandwidth;
 	double maxevalue;
 
 	namespace po = boost::program_options;
@@ -204,6 +204,7 @@ int main( int argc, char** argv ) {
 	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "parameter for n-best LCA classification" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
 	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering)" )
+	( "bandwidth,w", po::value< float >( &bandwidth )->default_value( 0.05 ), "define band to compensate optimistic pairwise alignment scores (larger -> less specific but less errors)" )
 	( "query-sequence-file,q", po::value< string >( &query_filename ), "fasta file to query sequences (respect order of alignments file!)" )
 	( "ref-sequence-file,b", po::value< string >( &db_filename ), "fasta file to DB sequences" )
 	( "ignore-unclassified,i", "alignments for partly unclassified taxa are not considered" )
@@ -271,7 +272,7 @@ int main( int argc, char** argv ) {
 									if( algorithm == "query-best-lca" ) {
 										doPredictions( &QueryBestLCAPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
 									} else {
-										if( algorithm == "test" ) {
+										if( algorithm == "rpa" ) {
 											typedef RandomSeqStorRO< seqan::String< seqan::Dna5 > > DBStorType;
 											typedef RandomSeqStorRO< seqan::String< seqan::Dna5 > > QStorType;
 // 											typedef SequentialSeqStorRO< seqan::Dna5String > QStorType;
@@ -285,12 +286,12 @@ int main( int argc, char** argv ) {
 											measure_db_loading.stop();
 											
 											std::ofstream prediction_debug_output( "prediction.log" );
-											doPredictions( &TestPM< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, db_storage, toppercent, prediction_debug_output ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+											doPredictions( &RPAPredictionModel< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, db_storage, bandwidth, toppercent, prediction_debug_output ), *seqid2taxid, tax.get(), split_alignments, number_threads );
 										} else {
 											if( algorithm == "dummy" ) {
 												doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
 											} else {
-												cout << "classification algorithm can either be: lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
+												cout << "classification algorithm can either be: rpa, lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
 												return EXIT_FAILURE;
 											}
 										}

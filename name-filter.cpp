@@ -42,12 +42,16 @@ int main( int argc, char** argv ) {
 
 	string show_what, invalid_replace_value;
 	unsigned int field_pos;
+	vector< string > ranks;
+	bool allnodes = false;
 
 	namespace po = boost::program_options;
 	po::options_description desc("Allowed options");
 	desc.add_options()
 	( "help,h", "show help message")
 	( "field,f", po::value< unsigned int >( &field_pos )->default_value( 1 ), "column number to use" )
+	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "select ranks to be considered; if not set, default ranks will be used" )
+	( "allnodes,a", "if set, all nodes will be used, not only at selected ranks" )
 	( "set-invalid-value,b", po::value< string >( &invalid_replace_value ),"replace all taxids that are invalid by this given value" )
 	( "show,s", po::value< string >( &show_what )->default_value( "name" ), "either 'name', 'rank', 'path' or 'taxid-path'" );
 
@@ -59,6 +63,11 @@ int main( int argc, char** argv ) {
 		cout << desc << endl;
 		return EXIT_SUCCESS;
 	}
+	
+	if( ! vm.count( "ranks" ) ) ranks = default_ranks;
+	
+	if( ! vm.count( "allnodes" ) ) allnodes = false;
+	else allnodes = true;
 
 	if( field_pos < 1 ) {
 	  cerr << "Field number index is 1-based" << endl;
@@ -68,7 +77,7 @@ int main( int argc, char** argv ) {
 	bool invalid_replace = vm.count( "set-invalid-value" );
 
 	// create taxonomy
-	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
+	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );
 	if( ! tax ) return EXIT_FAILURE;
 
 	TaxonomyInterface interface( tax.get() );
@@ -200,7 +209,7 @@ int main( int argc, char** argv ) {
 									cout << buffer.str();
 									const TaxonNode* root = interface.getRoot();
 									for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
-										if ( it->data->mark_special ) {
+										if ( allnodes || it->data->mark_special ) {
 											if( it->data->annotation ) {
 												cout << it->data->annotation->name << ';';
 											} else {
@@ -208,7 +217,7 @@ int main( int argc, char** argv ) {
 											}
 										}
 									}
-									if ( node->data->mark_special ) {
+									if ( allnodes || node->data->mark_special ) {
 										cout << node->data->annotation->name << ';';
 									}
 									if( ! (++field_it)->empty() ) {
@@ -260,11 +269,11 @@ int main( int argc, char** argv ) {
 										cout << buffer.str();
 										const TaxonNode* root = interface.getRoot();
 										for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
-											if ( it->data->mark_special ) {
+											if ( allnodes || it->data->mark_special ) {
 												cout << it->data->taxid << ';';
 											}
 										}
-										if ( node->data->mark_special ) {
+										if ( allnodes || node->data->mark_special ) {
 											cout << node->data->taxid << ';';
 										}
 										if( ! (++field_it)->empty() ) {
