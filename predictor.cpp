@@ -204,7 +204,7 @@ int main( int argc, char** argv ) {
 	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "parameter for n-best LCA classification" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
 	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering)" )
-	( "bandwidth,w", po::value< float >( &bandwidth )->default_value( 0.05 ), "define band to compensate optimistic pairwise alignment scores (larger -> less specific but less errors)" )
+	( "bandwidth,w", po::value< float >( &bandwidth )->default_value( 0.05 ), "define band to compensate optimistic pairwise alignment scores (larger -> less specific but fewer errors)" )
 	( "query-sequence-file,q", po::value< string >( &query_filename ), "fasta file to query sequences (respect order of alignments file!)" )
 	( "ref-sequence-file,b", po::value< string >( &db_filename ), "fasta file to DB sequences" )
 	( "ignore-unclassified,i", "alignments for partly unclassified taxa are not considered" )

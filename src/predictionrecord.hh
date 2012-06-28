@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef predictionrecord_hh_
 #define predictionrecord_hh_
 
+#include <boost/math/special_functions/fpclassify.hpp> // isnan
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -90,6 +91,10 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			medium_unsigned_int support = getQueryFeatureWidth();
 			setNodeRange( lower_node, support, upper_node, support );
 		}
+
+		void setNodeRange( const TaxonNode* lower_node, const TaxonNode* upper_node, medium_unsigned_int support ) {
+			setNodeRange( lower_node, support, upper_node, support );
+		}
 		
 		void setNodePoint( const TaxonNode* node, medium_unsigned_int support ) { setNodeRange( node, support, node, support ); } //alias for point estimate
 		
@@ -140,7 +145,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			}
 
 			try {
-				setSignalStrength( boost::lexical_cast< float >( fields[5] ) );
+				setSignalStrength( fields[5] == "." ? std::numeric_limits< float >::quiet_NaN() : boost::lexical_cast< float >( fields[5] ) );
 			} catch( boost::bad_lexical_cast e ) {
 				std::cerr << "could not parse signal strength (score field) in input" << std::endl;
 				return false;
@@ -195,7 +200,10 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		std::vector< medium_unsigned_int > taxon_support_; //internal encoding of support, TODO: change to small_unsigned_int?
 		
 		void printColumns1to8( std::ostream& strm ) const {
-			strm << *query_identifier_ << tab << "taxator-tk" << tab << "sequence_feature" << tab << query_feature_begin_ << tab << query_feature_end_ << tab << signal_strength_ << tab << '.' << tab << '.' << tab;
+			strm << *query_identifier_ << tab << "taxator-tk" << tab << "sequence_feature" << tab << query_feature_begin_ << tab << query_feature_end_ << tab;
+			if ( boost::math::isnan( signal_strength_ ) ) strm << '.';
+			else strm << signal_strength_;
+			strm << tab << '.' << tab << '.' << tab;
 		}
 		
 		void printFeatureSeqLen( std::ostream& strm ) const { strm << "seqlen=" << query_length_; }

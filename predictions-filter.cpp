@@ -48,7 +48,7 @@ int main ( int argc, char** argv ) {
 	bool delete_unmarked;
 	large_unsigned_int min_support_in_sample;
 	float signal_majority_per_sequence;
-	uint min_support_per_sequence;
+	medium_unsigned_int min_support_per_sequence;
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
 	namespace po = boost::program_options;
@@ -59,7 +59,7 @@ int main ( int argc, char** argv ) {
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( false ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" )
 	( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files" )
 	( "sample-min-support,m", po::value< large_unsigned_int >( &min_support_in_sample )->default_value( 0 ), "minimum support (in positions) for taxon for noise pruning" )
-	( "sequence-min-support,s", po::value< uint >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal on any sequence, if not met a fall-back on a more robust algorthm will be used" )
+	( "sequence-min-support,s", po::value< medium_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal on any sequence, if not met a fall-back on a more robust algorthm will be used" )
 	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .6 ), "majority fraction of support of any single sequence required for combination of different signals (> 0.5 to be stable)" )
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" );
 
@@ -266,7 +266,7 @@ int main ( int argc, char** argv ) {
 		}
 		
 		else if ( it->size() > 1 ) { //run combination algo
-			boost::scoped_ptr< PredictionRecordBinning > prec( combinePredictionRanges( *it, tax.get(), binning_debug_output ) );
+			boost::scoped_ptr< PredictionRecordBinning > prec( combinePredictionRanges( *it, tax.get(), signal_majority_per_sequence, min_support_per_sequence, binning_debug_output ) );
 			std::cout << *prec;
 		}
 	}
