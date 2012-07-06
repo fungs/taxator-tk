@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define taxontree_hh_
 
 #include "types.hh"
-#include "tree.hh"
+#include <tree.hh>
 #include <boost/tuple/tuple.hpp>
 #include <map>
 #include <vector>

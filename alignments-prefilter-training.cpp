@@ -102,7 +102,7 @@ int main( int argc, char** argv ) {
 		( "filter-ident-level,i", po::value< string >( &ident_level )->default_value( "taxid" ), "remove alignments that are equivalent with the query label on the given level (either 'seqid' or 'taxid')")
 		( "seqid-conv-file,g", po::value< string >( &accessconverter_filename ), "filename of seqid->taxid mappings" )
 		( "regex-identifier,x", po::value< string >( &regex_identifier ), "XXX-style regular expression for extracting the identifier from artificial sequence name" )
-		( "filter-unclassified,u", "remove queries that were sampled from unclassified organisms (determined by sequence identifier in header)" )
+		( "filter-unclassified,u", "remove alignments from queries sampled from unclassified organisms (determined by name of taxon)" )
 		( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
 		( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions (if not set it defaults to major NCBI ranks)" )
 		( "mask-by-star,z", "instead of suppressing filtered alignments mask them by prefixing a star at the line start" );
