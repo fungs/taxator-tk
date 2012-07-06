@@ -20,6 +20,7 @@ prediction2distances.cpp
 prediction-error.cpp
 rank-filter.cpp
 taxator.cpp
+unittest_ncbitaxonomy.cpp
 
 # taxator-tk classes and functions
 src/accessconv.cpp
