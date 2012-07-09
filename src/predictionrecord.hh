@@ -126,7 +126,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 				return false;
 			}
 			
-			if ( fields[1] != "taxator-tk" ) return false;
+			if ( fields[1].size() < 10  || fields[1].substr(0, 10) != "taxator-tk" ) std::cerr << "warning: gff3 produced by unknown algorithm" << std::endl;
 			
 			try {
 				setQueryFeatureBegin( boost::lexical_cast< large_unsigned_int >( fields[3] ) );
