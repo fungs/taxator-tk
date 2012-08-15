@@ -185,10 +185,10 @@ void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConve
 int main( int argc, char** argv ) {
 
 	vector< string > ranks;
-	string accessconverter_filename, algorithm, query_filename, db_filename;
+	string accessconverter_filename, algorithm, query_filename, db_filename, whitelist_filename;
 	bool delete_unmarked, split_alignments;
 	uint nbest, minsupport, number_threads;
-	float toppercent, minscore, bandwidth;
+	float toppercent, minscore;
 	double maxevalue;
 
 	namespace po = boost::program_options;
@@ -199,16 +199,16 @@ int main( int argc, char** argv ) {
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
 	( "algorithm,a", po::value< string >( &algorithm )->default_value( "lca" ), "set the algorithm that is used to predict taxonomic ids from alignments" )
-	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.3 ), "top percent parameter for MEGAN classification or parameter for extended-lca method" )
+	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.05 ), "RPA re-evaluation band or top percent parameter for LCA methods" )
 	( "minscore,m", po::value< float >( &minscore )->default_value( 0.0 ), "min score parameter for MEGAN classification" )
-	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "parameter for n-best LCA classification" )
+	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "n-best LCA classification parameter" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
-	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering)" )
-	( "bandwidth,w", po::value< float >( &bandwidth )->default_value( 0.05 ), "define band to compensate optimistic pairwise alignment scores (larger -> less specific but fewer errors)" )
+	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering) for MEGAN algorithm" )
+	( "db-whitelist,w", po::value< string >( &whitelist_filename ), "specifiy list of sequence identifiers in reference to be used to reduce memory footprint (RPA algorithm)" )
 	( "query-sequence-file,q", po::value< string >( &query_filename ), "fasta file to query sequences (respect order of alignments file!)" )
-	( "ref-sequence-file,b", po::value< string >( &db_filename ), "fasta file to DB sequences" )
-	( "ignore-unclassified,i", "alignments for partly unclassified taxa are not considered" )
-	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct pieces and treat each region separately (for algorithms where applicable)" )
+	( "ref-sequence-file,f", po::value< string >( &db_filename ), "fasta file to DB sequences" )
+	( "ignore-unclassified,i", "alignments for partly unclassified taxa will be ignored" )
+	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct segments and treat them separately (for algorithms where applicable)" )
 	( "processors,p", po::value< uint >( &number_threads )->default_value( 1 ), "sets number of threads, number > 2 will heavily profit from multi-core architectures, set to 0 for max. performance" );
 
 	po::variables_map vm;
@@ -275,18 +275,24 @@ int main( int argc, char** argv ) {
 										if( algorithm == "rpa" ) {
 											typedef RandomSeqStorRO< seqan::String< seqan::Dna5 > > DBStorType;
 											typedef RandomSeqStorRO< seqan::String< seqan::Dna5 > > QStorType;
-// 											typedef SequentialSeqStorRO< seqan::Dna5String > QStorType;
 											
 											QStorType query_storage( query_filename );
 
 											StopWatchCPUTime measure_db_loading( "loading reference db" );
+											boost::scoped_ptr< DBStorType > db_storage;
 											
 											measure_db_loading.start();
-											DBStorType db_storage( db_filename );
+											if ( vm.count( "db-whitelist" ) ) {
+												set< string > whitelist;
+												populateIdentSet( whitelist, whitelist_filename );
+												db_storage.reset( new DBStorType( db_filename, whitelist ) );
+											} else {
+												db_storage.reset( new DBStorType( db_filename ) );
+											}
 											measure_db_loading.stop();
 											
 											std::ofstream prediction_debug_output( "prediction.log" );
-											doPredictions( &RPAPredictionModel< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, db_storage, toppercent, prediction_debug_output ), *seqid2taxid, tax.get(), split_alignments, number_threads ); //TODO: repace toppercent parameter
+											doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, *db_storage, toppercent, prediction_debug_output ), *seqid2taxid, tax.get(), split_alignments, number_threads ); //TODO: reuse toppercent param?
 										} else {
 											if( algorithm == "dummy" ) {
 												doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );

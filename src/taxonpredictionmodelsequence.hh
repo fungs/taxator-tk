@@ -121,7 +121,7 @@ class SandwichPlacerAdaptive {
 			const TaxonNode* node = NULL;
 			
 			// put asymmetric band around pairwise score to compensate the optimistic value
-			const int qscore_ext = qscore*bandfactor_ + 1;
+			const int qscore_ext = qscore*bandfactor_;// + 1;
 			
 			// determine  lower node
 			data_type_::const_iterator it = data_.begin();
@@ -146,7 +146,7 @@ class SandwichPlacerAdaptive {
 			lgroup.getMajority( lnode, lscore, lsupport_ );
 			
 			// determine upper node
-			const int critical_ext = score*bandfactor_ + 1;
+			const int critical_ext = score*bandfactor_;// + 1;
 			
 			PathScoreCollection< false > ugroup;
 			do {
@@ -217,6 +217,7 @@ class SandwichPlacerAdaptive {
 			}
 			
 			double tau = kendall( scores, dists );
+			assert( ! boost::math::isnan( tau ) ); //TODO: remove
 			return static_cast< float >( tau );
 		};
 		
@@ -257,7 +258,7 @@ class SandwichPlacerAdaptive {
 // 							std::cerr << " found with score " << refscore << std::endl;
 							if ( refscore ) bandfactor = std::max( bandfactor, float( score )/float( refscore ) );
 // 							std::cerr << "growing band to " << bandfactor << std::endl;
-						} else std::cerr << std::endl;
+						} //else std::cerr << std::endl;
 					} while ( r-- );
 				}
 			}
@@ -276,8 +277,9 @@ class SandwichPlacerAdaptive {
 			prepared_ = true;
 		}
 		
-		double kendall( const std::vector<int>& X1, const std::vector<int>& X2 ) { //TODO: acknowledge contribution!
+		double kendall( const std::vector<int>& X1, const std::vector<int>& X2 ) { //TODO: acknowledge contribution!, use float?
 			assert( X1.size() == X2.size() );
+			assert( X1.size() );
 			std::size_t len = X1.size();
 			int m1 = 0, m2 = 0, s = 0, nPair;
 			std::size_t i, j;
@@ -314,6 +316,14 @@ class SandwichPlacerAdaptive {
 			nPair = len * (len - 1) / 2;
 			denominator1 = nPair - m1;
 			denominator2 = nPair - m2;
+			if ( !( denominator1 && denominator2 ) ) return 1.; //TODO: seems to be correct but does it make sense? -> rework signal score
+// 			if ( !( denominator1 && denominator2 ) ) {
+// 				std::cerr << "tau calculation failed: " << denominator1 << " | " << denominator2 << std::endl;
+// 				for(i = 0; i < len; i++) {
+// 					std::cerr << X1[i] << " " << X2[i] << std::endl;
+// 				}
+// 				return 1.;
+// 			}
 			return s / sqrt(denominator1) / sqrt(denominator2);
 		}
 		
@@ -355,8 +365,8 @@ class SandwichPlacer {
 			int score;
 			const TaxonNode* node = NULL;
 			
-			// put asymmetric band around pairwise score to compensate the optimistic value
-			const int qscore_ext = qscore*bandwidth_factor_ + 1;
+			// put asymmetric band around pairwise score to compensate for the optimistic value
+			const int qscore_ext = qscore*bandwidth_factor_; // + 1; //TODO: +1?
 			
 			// determine  lower node
 			data_type_::const_iterator it = data_.begin();
@@ -386,7 +396,7 @@ class SandwichPlacer {
 // 			std::cerr << "lower node is: " << lnode->data->annotation->name << std::endl;
 			
 			// determine upper node
-			const int critical_ext = score*bandwidth_factor_ + 1;
+			const int critical_ext = score*bandwidth_factor_; // + 1;
 			
 			PathScoreCollection< false > ugroup;
 			do {
@@ -463,7 +473,7 @@ class SandwichPlacer {
 			}
 			
 			double tau = kendall( scores, dists );
-			
+			assert( ! boost::math::isnan( tau ) ); //TODO: remove
 // 			{ //sorting TODO: remove
 // 				ordertype::iterator start_it = ordering.begin();
 // 				std::sort( start_it, ordering.end() );
@@ -527,6 +537,7 @@ class SandwichPlacer {
 			nPair = len * (len - 1) / 2;
 			denominator1 = nPair - m1;
 			denominator2 = nPair - m2;
+			if ( !( denominator1 && denominator2 ) ) return 1.; //TODO: seems to be correct but does it make sense? -> rework signal score
 			return s / sqrt(denominator1) / sqrt(denominator2);
 		}
 		
@@ -679,14 +690,13 @@ class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 				
 				int threshold = 1.*rrseqs_qscores[index_best]; //TODO: make parameter
 				std::list< uint >::iterator it = anchor_indices.begin();
-				while ( it != anchor_indices.end() ) { //restrict anchors
+				while ( it != anchor_indices.end() ) { //reduce number of anchors
 					if ( rrseqs_qscores[*it] > threshold ) it = anchor_indices.erase( it );
 					else ++it;
 				}
 				measure_reeval_alignment.stop();
 			}
 
-			SandwichPlacerAdaptive placer( this->taxinter_, n );
 			{ // place for each anchor
 				std::size_t anchornum = anchor_indices.size();
 				std::vector< const TaxonNode* > anchors_lnode;
@@ -698,6 +708,7 @@ class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 				float anchors_ival = 0.;
 				
 				while ( ! anchor_indices.empty() ) { // place using anchor
+					SandwichPlacerAdaptive placer( this->taxinter_, n );
 					uint& index_anchor = anchor_indices.front();
 				
 					// set anchor as reference in alignment
@@ -775,5 +786,297 @@ class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 			StopWatchCPUTime measure_sequence_retrieval;
 };
 
+
+
+template< typename ContainerT, typename QStorType, typename DBStorType >
+class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT > {
+	public:
+		DoubleAnchorRPAPredictionModel( const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float reeval_bandwidth = .1, std::ostream& debug_output = std::cerr ) :
+					TaxonPredictionModel< ContainerT >( tax ),
+					query_sequences_( q_storage ),
+					db_sequences_( db_storage ),
+					debug_output_( debug_output ),
+					reeval_bandwidth_factor_( 1. - reeval_bandwidth ), //TODO: check range
+					measure_placement_algorithm_( "placement algorithm" ),
+					measure_phase2_alignment_( "phase 2 alignments" ),
+					measure_phase3_alignment_( "phase 3 alignments" ),
+					measure_reeval_alignment_( "re-evaluation alignments" ),
+					measure_sequence_retrieval_( "sequence retrieval" )
+					{};
+
+		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+			this->initPredictionRecord( recordset, prec ); //set name and length
+			
+			// cannot be part of class because it is not thread-safe
+			boost::format db_seqname_fmt( "%d:%d@%s tax=%s" );
+			boost::format query_seqname_fmt( "%d:%d@%s len=%d" );
+
+			typename ContainerT::iterator rec_it = firstUnmaskedIter( recordset );
+			
+			if ( rec_it == recordset.end() ) {
+				TaxonPredictionModel< ContainerT >::setUnclassified( prec );
+				return;
+			}
+			
+			// set some shortcuts
+			const std::string& qid = (*rec_it)->getQueryIdentifier();
+			large_unsigned_int qrstart = (*rec_it)->getQueryStart();
+			large_unsigned_int qrstop = (*rec_it)->getQueryStop();
+			large_unsigned_int qlength = (*rec_it)->getQueryLength();
+			float qprevscore = (*rec_it)->getScore();
+			
+			// determine position range of query to consider
+			uint n = 0;
+			assert( qrstart <= qrstop );			++n;
+			while ( ++rec_it != recordset.end() ) {
+				
+				assert( (*rec_it)->getQueryStart() <= (*rec_it)->getQueryStop() );
+				
+				if ( ! (*rec_it)->isFiltered() ) {
+					qrstart = std::min( (*rec_it)->getQueryStart(), qrstart );
+					qrstop = std::max( (*rec_it)->getQueryStop(), qrstop );
+					qprevscore = std::max( qprevscore, (*rec_it)->getScore() );
+					++n;
+				}
+			}
+			
+			// lots of objects TODO: make use of C-style arrays
+// 			int extra_mismatches = qlength - qrstop + qrstart - 1;
+			const seqan::Dna5String qrseq = query_sequences_.getSequence( qid, qrstart, qrstop );
+			const std::string qrseqname = boost::str( query_seqname_fmt % qrstart % qrstop % qid % qlength );
+			std::vector< AlignmentRecordTaxonomy* > records_ordered;
+			std::vector< seqan::Dna5String > rrseqs_ordered; //TODO: boost ptr_container/seqan::StringSet/set to detect equal sequences
+			std::vector< std::string > rrseqs_ordered_names;
+			std::vector< int > rrseqs_qscores;
+			std::vector< int > rrseqs_matches;
+			records_ordered.reserve( n );
+			rrseqs_ordered.reserve( n );
+			rrseqs_matches.reserve( n );
+			rrseqs_qscores.reserve( n );
+			seqan::Align< seqan::Dna5String > aln1, aln2;
+			seqan::resize( seqan::rows( aln1 ), 2);
+			seqan::resize( seqan::rows( aln2 ), 2);
+			seqan::assignSource( seqan::row( aln1, 0 ), qrseq );
+			seqan::assignSource( seqan::row( aln2, 0 ), qrseq );
+			seqan::Align< seqan::Dna5String >* bestaln = &aln1;
+			seqan::Align< seqan::Dna5String >* aln = &aln2;
+			
+			{ // retrieving sequence blocks
+				measure_sequence_retrieval_.start();
+				rec_it = recordset.begin();
+				while ( rec_it != recordset.end() ) {
+					if ( ! (*rec_it)->isFiltered() ) {
+						records_ordered.push_back( *rec_it );
+						AlignmentRecordTaxonomy& rec = **rec_it;
+						const std::string& rid = rec.getReferenceIdentifier();
+						large_unsigned_int rstart = rec.getReferenceStart();
+						large_unsigned_int rstop = rec.getReferenceStop();
+						large_unsigned_int left_ext = rec.getQueryStart() - qrstart;
+						large_unsigned_int right_ext = qrstop - rec.getQueryStop();
+						
+						// cut out reference region
+						if( rstart <= rstop ) {
+							large_unsigned_int start = left_ext < rstart ? rstart - left_ext : 1;
+							large_unsigned_int stop = rstop + right_ext;
+							rrseqs_ordered.push_back( db_sequences_.getSequence( rid, start, stop ) ); //TODO: avoid copying
+							rrseqs_ordered_names.push_back( boost::str( db_seqname_fmt % start % stop % rid % rec.getReferenceNode()->data->taxid ) );
+						} else {
+							large_unsigned_int start = right_ext < rstop ? rstop - right_ext : 1;
+							large_unsigned_int stop = rstart + left_ext;
+							rrseqs_ordered.push_back( db_sequences_.getSequenceComplement( rid, start, stop ) ); //TODO: avoid copying
+							rrseqs_ordered_names.push_back( boost::str( db_seqname_fmt % stop % start % rid % rec.getReferenceNode()->data->taxid ) );
+						}
+					}
+					++rec_it;
+				}
+				measure_sequence_retrieval_.stop();
+			}
+
+			std::list< uint > anchor_indices_p1;
+			
+			{ // phase 1 (DB re-alignment within band)
+				measure_reeval_alignment_.start();
+				float dbalignment_score_threshold = reeval_bandwidth_factor_*qprevscore;
+				uint index_best = 0;
+				
+				for ( uint i = 0; i < n; ++i ) { //calculate scores for best-scoring references
+					if ( records_ordered[i]->getScore() >= dbalignment_score_threshold ) { //TODO: avoid equal sequences
+						anchor_indices_p1.push_back( i ); //TODO: move to if-statement
+						seqan::assignSource( seqan::row( *aln, 1 ), rrseqs_ordered[i] );
+						const int score = -seqan::globalAlignment( *aln, seqan::SimpleScore(), seqan::MyersHirschberg() );
+						const int matches = seqan::length( seqan::row( *aln, 0 ) ) - score;
+						rrseqs_qscores.push_back( score );
+						rrseqs_matches.push_back( matches );
+						
+						if ( score < rrseqs_qscores[index_best] || ( score == rrseqs_qscores[index_best] && matches > rrseqs_matches[index_best] ) ) {
+							index_best = i;
+							std::swap( aln, bestaln ); //swap trick
+						}
+					} else { //fill in some dummy values
+						rrseqs_qscores.push_back( std::numeric_limits< int >::max() );
+						rrseqs_matches.push_back( -1 );
+					}
+				}
+				
+				for ( std::list< uint >::iterator it = anchor_indices_p1.begin(); it != anchor_indices_p1.end(); ) { //reduce number of anchors
+					if ( rrseqs_qscores[*it] != rrseqs_qscores[index_best] || rrseqs_matches[*it] != rrseqs_matches[index_best] ) it = anchor_indices_p1.erase( it );
+					else ++it;
+				}
+				measure_reeval_alignment_.stop();
+			}
+			
+			std::vector< const TaxonNode* > anchors_lnode;
+			std::vector< const TaxonNode* > anchors_unode;
+			float anchors_taxsig = 1;
+			const medium_unsigned_int anchors_support = rrseqs_matches[anchor_indices_p1.front()]; //is all the same for anchors by definition
+			float anchors_ival = 0.;
+			const TaxonNode* lnode;
+			const TaxonNode* unode;
+			
+			std::set< uint > anchor_indices_p2;
+			
+			{ //phase 2 (best reference alignment)
+				const std::size_t anchornum_p1 = anchor_indices_p1.size();
+				anchors_lnode.reserve( anchornum_p1 ); //TODO: performance check
+				anchors_unode.reserve( anchornum_p1 + 1 ); //minimum
+				
+				while ( ! anchor_indices_p1.empty() ) { // place using anchor
+// 					SandwichPlacerAdaptive placer( this->taxinter_, n );
+					SandwichPlacer placer( this->taxinter_, 1., n );
+					std::list< boost::tuple< uint, int > > anchor_indices_p2_tmp;
+					uint& index_anchor = anchor_indices_p1.front();
+					const int& qscore = rrseqs_qscores[index_anchor];
+				
+					// set anchor as reference in alignment
+					placer.addSequence( 0, records_ordered[index_anchor]->getReferenceNode() );
+					seqan::assignSource( seqan::row( *aln, 1 ), rrseqs_ordered[ index_anchor ] ); // reuse *aln
+					
+					// align all others against anchor TODO: use cutoff for speedup
+					measure_phase2_alignment_.start();
+					int min_upper_score = std::numeric_limits< int >::max();
+					for( uint i = 0; i < n; ++i ) { //TODO: avoid identical sequences
+						int score;
+						if ( i == index_anchor ) score = 0;
+						else {
+							seqan::assignSource( seqan::row( *aln, 0 ), rrseqs_ordered[ i ] );
+							score = -seqan::globalAlignment( *aln, seqan::SimpleScore(), seqan::MyersHirschberg() ); //- extra_mismatches;
+						}
+						placer.addSequence( score, records_ordered[i]->getReferenceNode() ); //TODO: add only if not spurious (more robust adaptive band detection)
+						if ( score > qscore ) { //TODO: >=?
+							if ( score <= min_upper_score ) {
+// 								std::cerr << qscore << " < " << score << " < " << min_upper_score << std::endl;
+								if ( score < min_upper_score ) min_upper_score = score;
+								anchor_indices_p2_tmp.push_back( boost::make_tuple( i, score ) );
+							} else {
+							}
+						}
+					}
+					
+					//TODO: filter identical taxon hits because range will be identical
+					for ( std::list< boost::tuple< uint, int > >::iterator it = anchor_indices_p2_tmp.begin(); it != anchor_indices_p2_tmp.end(); ) { //reduce number of anchors
+						if ( it->get<1>() > min_upper_score ) {
+							it = anchor_indices_p2_tmp.erase( it );
+						}
+						else {
+							anchor_indices_p2.insert( it->get<0>() );
+							++it;
+						}
+					}
+
+					bool correct = true;
+					for ( std::list< boost::tuple< uint, int > >::iterator it = anchor_indices_p2_tmp.begin(); it != anchor_indices_p2_tmp.end(); ++it ) { //debug
+						if( it->get<1>() != min_upper_score ) {
+							correct = false;
+						}
+					}
+					assert( correct );
+					
+					measure_phase2_alignment_.stop();
+				
+					// taxonomic placement of query
+					measure_placement_algorithm_.start();
+					const float ival = placer.placeSequence( qscore, lnode, unode );
+					const float taxsig = placer.getTaxSignal( qscore );
+					
+					anchors_ival = std::max( ival, anchors_ival );
+					anchors_taxsig = std::min( taxsig, anchors_taxsig );
+					anchors_lnode.push_back( lnode );
+					anchors_unode.push_back( unode );
+					measure_placement_algorithm_.stop();
+					
+					anchor_indices_p1.pop_front();
+				}
+			}
+			
+			// avoid unneccessary computation if root node is reached
+			lnode = this->taxinter_.getLCA( anchors_unode );
+			anchors_unode.clear();
+			anchors_unode.push_back( lnode );
+
+			{ //phase 3 (stable upper node estimation alignment)
+			
+				for ( std::set< uint >::iterator it = anchor_indices_p2.begin(); it != anchor_indices_p2.end() && lnode != this->taxinter_.getRoot(); ++it ) { // place using anchor TODO: extend shortcut to phase 2
+					SandwichPlacerAdaptive placer( this->taxinter_, n );
+// 					SandwichPlacer placer( this->taxinter_, 1., n );
+					const uint& index_anchor = *it;
+					const int& qscore = rrseqs_qscores[index_anchor];
+				
+					// set anchor as reference in alignment
+					placer.addSequence( 0, records_ordered[index_anchor]->getReferenceNode() );
+					seqan::assignSource( seqan::row( *aln, 1 ), rrseqs_ordered[ index_anchor ] ); // reuse *aln
+					
+					if ( rrseqs_matches[index_anchor] == -1 ) { //need to align query against anchor
+						seqan::assignSource( seqan::row( *aln, 0 ), qrseq ); //TODO: re-use second alignment and avoid re-assingment
+						rrseqs_qscores[index_anchor] = -seqan::globalAlignment( *aln, seqan::SimpleScore(), seqan::MyersHirschberg() ); //- extra_mismatches;;
+						rrseqs_matches[index_anchor] = seqan::length( seqan::row( *aln, 0 ) ) - qscore;
+					}
+					
+					// align all others against anchor TODO: use cutoff for speedup
+					measure_phase3_alignment_.start();
+					for( uint i = 0; i < n; ++i ) { //TODO: avoid identical sequences
+						int score;
+						if ( i == index_anchor ) score = 0;
+						else {
+							seqan::assignSource( seqan::row( *aln, 0 ), rrseqs_ordered[ i ] );
+							score = -seqan::globalAlignment( *aln, seqan::SimpleScore(), seqan::MyersHirschberg() ); //- extra_mismatches;
+						}
+						placer.addSequence( score, records_ordered[i]->getReferenceNode() ); //TODO: add only if not spurious (more robust adaptive band detection)
+					}
+					measure_phase3_alignment_.stop();
+
+					assert( qscore != -1 );
+					
+					// taxonomic placement of query
+					measure_placement_algorithm_.start();
+					placer.placeSequence( qscore, lnode, unode );
+					anchors_unode.push_back( lnode );
+					measure_placement_algorithm_.stop();
+					
+// 					if ( lnode == this->taxinter_.getRoot() && ! anchor_indices_p2.empty() ) std::cerr << "early stage3 interruption: (" << anchor_indices_p2.size() << " anchors left)" << std::endl;
+				}
+			}
+			
+			prec.setSignalStrength( anchors_taxsig );
+			prec.setQueryFeatureBegin( qrstart );
+			prec.setQueryFeatureEnd( qrstop );
+			prec.setInterpolationValue( anchors_ival );
+			prec.setNodeRange( this->taxinter_.getLCA( anchors_lnode ), this->taxinter_.getLCA( anchors_unode ), anchors_support );
+		}
+
+	protected:
+		QStorType& query_sequences_;
+		const DBStorType& db_sequences_;
+		SortByBitscoreFilter< ContainerT > sort_;
+		compareTupleFirstLT< boost::tuple< int, uint >, 0 > tuple_1_cmp_le_;
+
+		private:
+			std::ostream& debug_output_;
+			const float reeval_bandwidth_factor_;
+			StopWatchCPUTime measure_placement_algorithm_;
+			StopWatchCPUTime measure_phase2_alignment_;
+			StopWatchCPUTime measure_phase3_alignment_;
+			StopWatchCPUTime measure_reeval_alignment_;
+			StopWatchCPUTime measure_sequence_retrieval_;
+};
 
 #endif // taxonpredictionmodelsequence_hh_

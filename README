@@ -1,8 +1,9 @@
 COMPILATION:
 ============
 
-You need to have a recent version of the Boost C++ libararies
-(www.boost.org) installed, basically the sub-part providing
+If you downloaded the source package, make sure you installed all needed
+software development packages. You need to have a recent version of the Boost
+C++ libararies (www.boost.org) installed, basically the sub-part providing
 "boost-program-options" (>= version 1.34), including the development header
 files.
 
@@ -18,7 +19,7 @@ On a Unix/Linux box type
 ./build.sh
 
 and all programs will be built in a sub-directory called "Build-ARCH" where
-ARCH is your computer architecture.
+ARCH is your computer architecture, e. g. Build-x86_64.
 
 --------------------------------------------------------------------------------
 
@@ -44,7 +45,7 @@ directly into the next program without the necessity to save the data on a slow
 disk storage. A binning process is as follows:
 
 --------------------------------------------------------------------------------
-|        ALIGN => CONVERT [=> PREFILTER] => PREDICT SEGMENTS [=> BINNING       |
+|        ALIGN => CONVERT [=> PREFILTER] => PREDICT SEGMENTS => BINNING       |
 --------------------------------------------------------------------------------
 
 (1) ALIGN: Align sample sequences against database.
@@ -53,9 +54,9 @@ The aligner can be replaced as long a conversion tool is provided that will
 convert the aligners output into the universal alignment format used in the
 pipeline. Aligners supported out-of-the-box are
 
-NCBI blastn
-NCBI blastx
-lastal
+- NCBI blastn
+- NCBI blastx
+- lastal
 
 --------------------------------------------------------------------------------
 
@@ -147,7 +148,7 @@ official NCBI FTP server. Example:
 
 mkdir ncbi_taxdump
 cd ncbi_taxdump
-path_where_you_unpacked_source/tools/download-ncbi-taxonomy-gimapping.sh
+path_unpacked_taxator-tk/tools/download-ncbi-taxonomy-gimapping.sh
 export TAXATORTK_NCBI_TAXONOMY=$PWD
 
 
@@ -240,12 +241,12 @@ possible to provide a real tool kit for building an analysis pipeline or to be
 integrated in such. The following considerations were taken:
 
 - the mapping from sequence identifiers to taxonomic IDs are usually small
-enough to be read into memory. I recommend to generate a custom mappings file
+enough to be read into memory. We recommend to generate a custom mappings file
 by filtering out all identifiers existing in the DB from the large mappings that
 you can usually download from FTP servers. If you want however, you can instead
 use the SQLite3 backend that is slower but does not flood you memory.
 
-- all tree operations implemented, especially the lowest common ancestor finding
+- all tree operations, especially the lowest common ancestor finding
 are implemented in constant time.
 
 - the taxonomy tree is read from the NCBI dump files that define the NCBI

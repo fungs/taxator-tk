@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <seqan/sequence.h>
 #include <seqan/file.h>
 #include <boost/progress.hpp>
+#include <set>
+#include <string>
 #include "ncbidata.hh"
 #include <assert.h>
 
@@ -44,12 +46,39 @@ class RandomSeqStorRO {
 				boost::progress_display eta( num_records - 1, std::cerr ); //progress bar
 				for( large_unsigned_int i = 0; i < num_records; ++i ) {
 					StorageStringType seq;
-					seqan::assignSeq( seq, db_sequences[i], format_ );				
+					seqan::assignSeq( seq, db_sequences[i], format_ );
 					std::string id;
 					seqan::assignSeqId( id, db_sequences[i], format_ );
 					id2pos_[ id ] = seqan::assignValueById( data_, seq );
 					++eta;
 				}
+			}
+			std::cerr << std::endl;
+		}
+
+		RandomSeqStorRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
+			std::cerr << "analyzing file '" << filename << "'... ";
+			seqan::MultiSeqFile db_sequences;
+			seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY );
+			seqan::split( db_sequences, format_ );
+			std::cerr << "done" << std::endl;
+			large_unsigned_int num_records = seqan::length( db_sequences );
+			large_unsigned_int effective_num_records = std::min< large_unsigned_int >( num_records, whitelist.size() );
+			std::cerr << "importing sequences from '" << filename << "' (total=" << effective_num_records << ")" << std::endl;
+			{
+				boost::progress_display eta( effective_num_records - 1, std::cerr ); //progress bar
+				for( large_unsigned_int i = 0; i < num_records; ++i ) {
+					StorageStringType seq;
+					seqan::assignSeq( seq, db_sequences[i], format_ );
+					std::string id;
+					seqan::assignSeqId( id, db_sequences[i], format_ );
+					
+					if ( whitelist.count( id ) ) {
+						id2pos_[ id ] = seqan::assignValueById( data_, seq );
+						++eta;
+					}
+				}
+				assert( seqan::length( data_ ) <= effective_num_records );
 			}
 			std::cerr << std::endl;
 		}
@@ -147,6 +176,17 @@ class SequentialSeqStorRO {
 		StringType last_entry_;
 		std::string last_id_;
 };
+
+
+
+void populateIdentSet( std::set< std::string >& whitelist, const std::string& filename ) {
+	std::ifstream flatfile( filename.c_str() );
+	std::string line;
+	while( std::getline( flatfile, line ) ) {
+		whitelist.insert( line ); //supposing that newline characters are stripped (UNIX)
+	}
+	flatfile.close();
+}
 
 
 
