@@ -57,7 +57,7 @@ int main ( int argc, char** argv ) {
 	desc.add_options()
 	( "help,h", "show help message" )
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
-	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( false ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" )
+	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" )
 	( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (instead of standard input)" )
 	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0.01" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "sequence-min-support,s", po::value< medium_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )

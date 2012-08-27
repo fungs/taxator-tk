@@ -93,6 +93,8 @@ class TaxonTree : public tree< Taxon* > {
 		void setMaxDepth( small_unsigned_int depth ) { max_depth_ = depth; };
 		void setMaxDepth();
 		void recalcNestedSetInfo();
+		void recalcDistToRoot();
+		void recalcDistToRoot( const iterator start );
 		void addToIndex( TaxonID taxid, Node* node );
 		void recreateNodeIndex();
 		

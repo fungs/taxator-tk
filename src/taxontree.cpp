@@ -52,9 +52,10 @@ const std::string& TaxonTree::insertRankInternal ( const std::string& rankname )
 
 
 
-void TaxonTree::deleteUnmarkedNodes() {
+void TaxonTree::deleteUnmarkedNodes() { //TODO: correct path_to_root: adjust at the end
 	std::cerr << "deleting nodes that are not marked...";
 	iterator node_it = ++( this->begin() ); //root node
+	
 	while( node_it != this->end() ) {
 		Taxon* deltaxon = *node_it;
 		if( ! deltaxon->mark_special ) {
@@ -66,6 +67,7 @@ void TaxonTree::deleteUnmarkedNodes() {
 			++node_it;
 		}
 	}
+	recalcDistToRoot( this->begin() ); //distances shrink
 	std::cerr << " done" << std::endl;
 }
 
@@ -157,4 +159,23 @@ void TaxonTree::setMaxDepth() {
 
 void TaxonTree::recalcNestedSetInfo() {
   //TODO: write
+}
+
+
+
+void TaxonTree::recalcDistToRoot() {
+	recalcDistToRoot( this->begin() ); //TODO: test if this works with nodes other than root
+}
+
+
+void TaxonTree::recalcDistToRoot( const iterator start ) {
+	pre_order_iterator node_it( start );
+	const small_unsigned_int start_depth = (*node_it)->root_pathlength;
+	if( start_depth == 0 ) ++node_it;
+	
+// 	while( (*node_it)->root_pathlength < start_depth ) {
+	while( node_it != this->end() ) {
+		(*node_it)->root_pathlength = node_it.node->parent->data->root_pathlength + 1;
+		++node_it;
+	}
 }
