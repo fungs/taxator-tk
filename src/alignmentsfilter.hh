@@ -817,6 +817,35 @@ const std::string RemoveUnclassifiedQueriesFilter< ContainerT >::description = "
 
 
 template< typename ContainerT >
+class TaxonMaskingFilter : public AlignmentsFilter< ContainerT > {
+	public:
+		TaxonMaskingFilter( StrIDConverter& staxon, StrIDConverter& rtaxon ) : staxon_( staxon ), rtaxon_( rtaxon ) {};
+		
+		void filter( ContainerT& recordset ) {
+			if( ! recordset.empty() ) {
+				typename ContainerT::iterator record_it = recordset.begin();
+        const TaxonID qtax = staxon_[ (*record_it)->getQueryIdentifier() ];
+				while( record_it != recordset.end() ) {
+					if( qtax == rtaxon_[ (*record_it)->getReferenceIdentifier() ] ) {
+						(*record_it)->filterOut();
+					}
+					++record_it;
+				}
+			}
+		}
+		
+	private:
+		StrIDConverter& staxon_;
+		StrIDConverter& rtaxon_;
+		static const std::string description;
+};
+
+template< typename ContainerT >
+const std::string TaxonMaskingFilter< ContainerT >::description = "TaxonMaskingFilter";
+
+
+
+template< typename ContainerT >
 class RemoveIdentSeqIDFilter : public AlignmentsFilter< ContainerT > {
 	public:
 		RemoveIdentSeqIDFilter( const std::string extract_re ) : identifier_regex_( extract_re ) {}; //TODO: catch boost::regex_error

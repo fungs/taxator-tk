@@ -45,8 +45,8 @@ add_executable( extract-fastacomment-ncbifield extract-fastacomment-ncbifield.cp
 target_link_libraries( extract-fastacomment-ncbifield boost_program_options boost_filesystem )
 
 # apply filtering to alignments file
-add_executable( alignments-prefilter alignments-prefilter.cpp src/alignmentrecord.cpp )
-target_link_libraries( alignments-prefilter boost_program_options boost_system )
+add_executable( alignments-prefilter alignments-prefilter.cpp src/alignmentrecord.cpp src/accessconv.cpp src/sqlite3pp.cpp )
+target_link_libraries( alignments-prefilter boost_program_options boost_system boost_filesystem sqlite3 )
 
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
 #add_executable( predictor predictor.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/sqlite3pp.cpp src/taxonpredictionmodel.cpp src/predictionrecord.cpp )

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <iostream>
+#include <string>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -83,6 +84,8 @@ int main( int argc, char** argv ) {
 	float minscore, toppercent, minpid;
 	double maxevalue;
 	unsigned int numbestbitscore, minsupport;
+	
+	std::string tax_map1_filename, tax_map2_filename;
 
 	namespace po = boost::program_options;
 	po::options_description desc("Allowed options");
@@ -96,6 +99,9 @@ int main( int argc, char** argv ) {
 		( "sort-bitscore,s", "sort alignments by decreasing bitscore" )
 		( "keep-best-per-ref,k", "for each combination of query and reference sequence id all but the best scoring alignment are removed" )
 		( "min-support,c", po::value< unsigned int >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering)" )
+		( "remove-ref-from-query-taxon,r", "remove alignments for labeled data to test different degrees of taxonomic distance" )
+		( "taxon-mapping-sample,x", po::value< std::string >( &tax_map1_filename ), "map sample identifier to taxon" )
+		( "taxon-mapping-reference,y", po::value< std::string >( &tax_map2_filename ), "map reference identifier to taxon" )
 		( "mask-by-star,z", "instead of suppressing filtered alignments mask them by prefixing a star at the line start" );
 
 	po::variables_map vm;
@@ -110,11 +116,26 @@ int main( int argc, char** argv ) {
 	bool sort_by_bitscore = vm.count( "sort-bitscore" );
 	bool keep_best_per_gi = vm.count( "keep-best-per-ref" );
 	bool mask_by_star = vm.count( "mask-by-star" );
+	bool remove_same_taxon = vm.count( "remove-ref-from-query-taxon" );
 
 	typedef list< AlignmentRecord* > RecordSetType;
 	boost::ptr_list< AlignmentsFilter< RecordSetType > > filters; //takes care of object destruction by itself
 
+	boost::scoped_ptr< StrIDConverter > seqid2taxid_sample;
+	boost::scoped_ptr< StrIDConverter > seqid2taxid_reference;
+
 	// put filters in queue
+	if( remove_same_taxon ) {
+		if( tax_map1_filename.empty() || tax_map2_filename.empty() ) {
+			cout << "'--remove-ref-from-query-taxon' requires two mapping files: '--taxon-mapping-sample' and '--taxon-mapping-reference'" << endl;
+			return EXIT_SUCCESS;
+		}
+		
+		seqid2taxid_sample.reset( loadStrIDConverterFromFile( tax_map1_filename ) );
+		seqid2taxid_reference.reset( loadStrIDConverterFromFile( tax_map2_filename, 1000 ) );
+		
+		filters.push_back( new TaxonMaskingFilter< RecordSetType >( *seqid2taxid_sample, *seqid2taxid_reference ) );
+	}
 	if( keep_best_per_gi ) {
 		filters.push_back( new BestScorePerReferenceSeqIDFilter< RecordSetType >() );
 	}
