@@ -1,0 +1,4 @@
+[Project]
+Manager=KDevCMakeManager
+Name=trunk
+VersionControl=svn
