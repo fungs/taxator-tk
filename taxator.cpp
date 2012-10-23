@@ -198,7 +198,7 @@ int main( int argc, char** argv ) {
 	( "seqid-conv-file,g", po::value< string >( &accessconverter_filename ), "filename of seqid->taxid mappings" )
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
-	( "algorithm,a", po::value< string >( &algorithm )->default_value( "lca" ), "set the algorithm that is used to predict taxonomic ids from alignments" )
+	( "algorithm,a", po::value< string >( &algorithm )->default_value( "rpa" ), "set the algorithm that is used to predict taxonomic ids from alignments" )
 	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.05 ), "RPA re-evaluation band or top percent parameter for LCA methods" )
 	( "minscore,m", po::value< float >( &minscore )->default_value( 0.0 ), "min score parameter for MEGAN classification" )
 	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "n-best LCA classification parameter" )
