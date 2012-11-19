@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <boost/tuple/tuple.hpp>
+#include <ostream>
 #include "types.hh"
 #include "alignmentrecord.hh"
 #include "taxonomyinterface.hh"
@@ -41,7 +42,7 @@ template< typename ContainerT >
 class TaxonPredictionModel {
 	public:
 		TaxonPredictionModel( const Taxonomy* tax ) : taxinter_( tax ), root_( taxinter_.getRoot() ) {};
-		virtual void predict( ContainerT& recordset, PredictionRecord& prec ) = 0;
+		virtual void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) = 0;
 	protected:
 		void initPredictionRecord( ContainerT& recordset, PredictionRecord& prec ) {
 			prec.initialize( recordset.front()->getQueryIdentifier(), recordset.front()->getQueryLength() );
@@ -62,7 +63,7 @@ class DummyPredictionModel : public TaxonPredictionModel< ContainerT > { //TODO:
 	public:
 		DummyPredictionModel( const Taxonomy* tax ) : TaxonPredictionModel< ContainerT >( tax ) {}
 
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			TaxonPredictionModel< ContainerT >::setUnclassified( prec );
 		};
@@ -74,7 +75,7 @@ template< typename ContainerT >
 class LCASimplePredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		LCASimplePredictionModel( const Taxonomy* tax ) : TaxonPredictionModel< ContainerT >( tax ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			std::list< const TaxonNode* > refnodes;
 			records2Nodes( recordset, refnodes );
@@ -94,7 +95,7 @@ class MeganLCAPredictionModel : public TaxonPredictionModel< ContainerT > { //TO
 		MeganLCAPredictionModel( const Taxonomy* tax, bool iuc, const float toppercent, const float minscore, const int minsupport, const double maxevalue, const float winscore = 0.0) : TaxonPredictionModel< ContainerT >( tax ),
 			msp( minsupport ), wsc( winscore ), ms_me_toppercent( minscore, maxevalue, toppercent ), ignore_unclassified( iuc ) {};
 		
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			ms_me_toppercent.filter( recordset );
 			std::list< const TaxonNode* > refnodes;
@@ -164,7 +165,7 @@ class ICMeganLCAPredictionModel : public TaxonPredictionModel< ContainerT > { //
 	public:
 		ICMeganLCAPredictionModel( const Taxonomy* tax, const float toppercent, const float minscore, const int minsupport, const double maxevalue, const float winscore = 0.0) : TaxonPredictionModel< ContainerT >( tax ),
 		msp( minsupport ), wsc( winscore ), ms_me_toppercent( minscore, maxevalue, toppercent ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			ms_me_toppercent.filter( recordset );
 			std::list< const TaxonNode* > refnodes;
@@ -188,7 +189,7 @@ template< typename ContainerT >
 class NBestLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		NBestLCAPredictionModel( const Taxonomy* tax, const int n = 1) : TaxonPredictionModel< ContainerT >( tax ), findnbest( n ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			findnbest.filter( recordset );
 			std::list< const TaxonNode* > refnodes;
@@ -209,7 +210,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class ClosestNodePredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ClosestNodePredictionModel( const Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			
 			// determine query label node
@@ -239,7 +240,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class CorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		CorrectionPredictionModel( const Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			
 			// determine query label node
@@ -293,7 +294,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class ICCorrectionPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ICCorrectionPredictionModel( const Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 
 			if( ! recordset.empty() ) {
@@ -407,7 +408,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class QueryBestLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		QueryBestLCAPredictionModel( const Taxonomy* tax, StrIDConverter* sidc ) : TaxonPredictionModel< ContainerT >( tax ), seqid2taxid( *sidc ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 			
 			// determine query label node
@@ -450,7 +451,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class ExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ExtLCAPredictionModel( const Taxonomy* tax, const float thresh, const float gam ) : TaxonPredictionModel< ContainerT >( tax ), threshold( thresh ), gamma( gam ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 
 			findbestscoring.filter( recordset );
@@ -493,7 +494,7 @@ template< typename ContainerT > //TODO: requires Container of AlignmentRecordTax
 class TestExtLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		TestExtLCAPredictionModel( const Taxonomy* tax, const float thresh, const float dlb , const float b ) : TaxonPredictionModel< ContainerT >( tax ), threshold( thresh ), distweight_factor( ( 1.0 - dlb )/float( default_ranks.size() ) ), beta( b ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 
 			sort.filter( recordset );
@@ -567,7 +568,7 @@ template< typename ContainerT >
 class ExtendedLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		ExtendedLCAPredictionModel( const Taxonomy* tax, const float t1, const float t2 ) : TaxonPredictionModel< ContainerT >( tax ), cleanse( tax, t1, t2 ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 
 			cleanse.filter( recordset );
@@ -594,7 +595,7 @@ template< typename ContainerT >
 class TopPercentOutlierLCAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
 		TopPercentOutlierLCAPredictionModel( const Taxonomy* tax, const float t1 = 1.0, const float t2 = 0.5, const unsigned int m = 3 ) : TaxonPredictionModel< ContainerT >( tax ), outlier( tax, t2, m ), min_top( 0.0, t1 ) {};
-		void predict( ContainerT& recordset, PredictionRecord& prec ) {
+		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec);
 
 			min_top.filter( recordset );

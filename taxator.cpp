@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/predictionrecord.hh"
 #include "src/profiling.hh"
 #include "src/boundedbuffer.hh"
-// #include "src/ostreamtwrapperts.hh"
+#include "src/concurrentoutstream.hh"
 
 
 
@@ -47,14 +47,12 @@ using namespace std;
 
 typedef list< AlignmentRecordTaxonomy* > RecordSetType;
 
-void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments = false ) {
+void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink ) {
 	AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 	AlignmentFileParser< AlignmentRecordTaxonomy > parser( cin, fac );
 	RecordSetGenerator< AlignmentRecordTaxonomy > recgen( parser );
 	
-	std::queue< RecordSetType > workload; //ready for parallelization
-
-	//run sequential code instead of parallel
+	std::queue< RecordSetType > workload;
 	RecordSetType tmprset;
 	PredictionRecord prec( tax );
 	
@@ -69,9 +67,9 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
 		// run
 		while ( ! workload.empty() ) {
 			RecordSetType& rset = workload.front();
-			predictor->predict( rset, prec );
-			deleteRecords( rset ); //tidy up
-			cout << prec << std::flush; //TODO: remove flush
+			predictor->predict( rset, prec, logsink );
+			deleteRecords( rset );
+			cout << prec;
 			workload.pop();
 		}
 	}
@@ -81,7 +79,12 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
 
 class BoostProducer {
 	public:
-		BoostProducer( BoundedBuffer< RecordSetType >& buffer, AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac, bool split_alignments ) : buffer_( buffer ), fac_( fac ), split_alignments_( split_alignments ) {}
+		BoostProducer( BoundedBuffer< RecordSetType >& buffer, AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac, bool split_alignments ) :
+			buffer_( buffer ),
+			fac_( fac ),
+			split_alignments_( split_alignments )
+			{}
+
 		void operator()() { produce(); }
 		
 	private:
@@ -111,21 +114,35 @@ class BoostProducer {
 
 class BoostConsumer {
 	public:
-		BoostConsumer( BoundedBuffer< RecordSetType >& buffer, TaxonPredictionModel< RecordSetType >* predictor, const Taxonomy* tax, std::ostream& strm ) : buffer_( buffer ), predictor_( *predictor ), tax_( tax ), strm_( strm ) {}
+		BoostConsumer( BoundedBuffer< RecordSetType >& buffer, TaxonPredictionModel< RecordSetType >* predictor, const Taxonomy* tax, ConcurrentOutStream& log, ConcurrentOutStream& output ) :
+			buffer_( buffer ),
+			predictor_( *predictor ),
+			tax_( tax ),
+			output_( output ),
+			log_( log ),
+			thread_count_( 0 )
+			{}
+			
 		void operator()() { consume(); }
 
 	private:
 		BoundedBuffer< RecordSetType >& buffer_;
 		TaxonPredictionModel< RecordSetType >& predictor_;
 		const Taxonomy* tax_;
-		std::ostream& strm_;
+		ConcurrentOutStream& output_;
+		ConcurrentOutStream& log_;
+		boost::mutex count_mutex_; //needed for concurrent thread count
+		uint thread_count_;
 		
 		void consume() {
-			std::ostringstream obuf;
 			PredictionRecord prec( tax_ );
 			
+			// determine count of this thread to index concurrent stream
+			boost::mutex::scoped_lock count_lock( count_mutex_ );
+			const uint this_thread = thread_count_++;
+			count_lock.unlock();
+			
 			while ( true ) {
-				// must be thread save!
 				RecordSetType rset;
 				try {
 					rset = buffer_.pop();
@@ -134,35 +151,40 @@ class BoostConsumer {
 				}
 				
 				// run prediction
-				predictor_.predict( rset, prec );
-				deleteRecords( rset ); //tidy up
+				predictor_.predict( rset, prec, log_( this_thread ) );
+				log_.flush( this_thread );
 				
-				// thread-safe output to ostream
-				obuf << prec;
-				strm_ << obuf.str(); // should be atomic under POSIX
-				obuf.str( "" ); //clear sstream
+				// output to stdout
+				output_( this_thread ) << prec;
+				output_.flush( this_thread );
+				
+				deleteRecords( rset );
 			}
 		}
 };
 
 
 
-void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, uint number_threads  ) {
+void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink, uint number_threads  ) {
 	AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 	
 	//adjust thread number
 	uint procs = boost::thread::hardware_concurrency();
 	if ( ! number_threads ) number_threads = procs;
-	else if ( procs ) number_threads = std::min( number_threads, procs ); 
+	else if ( procs ) number_threads = std::min( number_threads, procs );
 	
-	BoundedBuffer< RecordSetType > buffer( 3*(number_threads - 1) ); //hold three data chunks per consumer
+	--number_threads; //exclude the consumer thread
+	
+	BoundedBuffer< RecordSetType > buffer( 3*number_threads ); //hold three data chunks per consumer
+	ConcurrentOutStream output( std::cout, number_threads, 1000 ); //TODO: analyse number and increase buffer size
+	ConcurrentOutStream log( logsink, number_threads, 20000 );
 	
 	BoostProducer producer( buffer, fac, split_alignments );
-	BoostConsumer consumer( buffer, predictor, tax, std::cout );
+	BoostConsumer consumer( buffer, predictor, tax, log, output );
 	
 	// start the consumers that wait for data in buffer
 	boost::thread_group t_consumers;
-	for( uint i = 0; i < number_threads - 1; ++i ) t_consumers.create_thread( boost::ref( consumer ) );
+	for( uint i = 0; i < number_threads; ++i ) t_consumers.create_thread( boost::ref( consumer ) );
 	
 	producer(); //main thread is the producer that fills the buffer
 	
@@ -175,9 +197,10 @@ void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, St
 
 
 
-void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, uint number_threads ) {
-	if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, number_threads );
-	doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments );
+// TODO: use function template?
+void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink, uint number_threads ) {
+	if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, logsink, number_threads );
+	doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments, logsink );
 }
 
 
@@ -185,7 +208,7 @@ void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConve
 int main( int argc, char** argv ) {
 
 	vector< string > ranks;
-	string accessconverter_filename, algorithm, query_filename, db_filename, whitelist_filename;
+	string accessconverter_filename, algorithm, query_filename, db_filename, whitelist_filename, log_filename;
 	bool delete_unmarked, split_alignments;
 	uint nbest, minsupport, number_threads;
 	float toppercent, minscore;
@@ -209,7 +232,8 @@ int main( int argc, char** argv ) {
 	( "ref-sequence-file,f", po::value< string >( &db_filename ), "fasta file to DB sequences" )
 	( "ignore-unclassified,i", "alignments for partly unclassified taxa will be ignored" )
 	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct segments and treat them separately (for algorithms where applicable)" )
-	( "processors,p", po::value< uint >( &number_threads )->default_value( 1 ), "sets number of threads, number > 2 will heavily profit from multi-core architectures, set to 0 for max. performance" );
+	( "processors,p", po::value< uint >( &number_threads )->default_value( 1 ), "sets number of threads, number > 2 will heavily profit from multi-core architectures, set to 0 for max. performance" )
+	( "logfile,l", po::value< std::string >( &log_filename )->default_value( "prediction.log" ), "specify name of file for logging (appending lines)" );
 
 	po::variables_map vm;
 	po::store(po::command_line_parser( argc, argv ).options( desc ).run(), vm);
@@ -242,35 +266,37 @@ int main( int argc, char** argv ) {
 
 	boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
 	
+	std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
+	
 	// choose appropriate prediction model from command line parameters
 	{
 		if( algorithm == "lca" ) {
-			doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+			doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 		} else {
 			if( algorithm == "megan-lca" ) {
 				// check for parameters
-				doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+				doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 			} else {
 				if( algorithm == "ic-megan-lca" ) {
-					doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+					doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 				} else {
 					if( algorithm == "n-best-lca" ) {
-						doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+						doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 					} else { //the rest are hidden algorithms that use a known query taxid from the identifier
 						if( algorithm == "best-in-tree" ) {
 							tax->setRankDistances( ranks );
-							doPredictions( &ClosestNodePredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+							doPredictions( &ClosestNodePredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 						} else {
 							if( algorithm == "correction" ) {
 								tax->setRankDistances( ranks );
-								doPredictions( &CorrectionPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+								doPredictions( &CorrectionPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 							} else {
 								if( algorithm == "ic-correction" ) {
 									tax->setRankDistances( ranks );
-									doPredictions( &ICCorrectionPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+									doPredictions( &ICCorrectionPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 								} else {
 									if( algorithm == "query-best-lca" ) {
-										doPredictions( &QueryBestLCAPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+										doPredictions( &QueryBestLCAPredictionModel< RecordSetType >( tax.get(), seqid2taxid.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 									} else {
 										if( algorithm == "rpa" ) {
 											typedef RandomSeqStorRO< seqan::String< seqan::Dna5 > > DBStorType;
@@ -290,12 +316,10 @@ int main( int argc, char** argv ) {
 												db_storage.reset( new DBStorType( db_filename ) );
 											}
 											measure_db_loading.stop();
-											
-											std::ofstream prediction_debug_output( "prediction.log" );
-											doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, *db_storage, toppercent, prediction_debug_output ), *seqid2taxid, tax.get(), split_alignments, number_threads ); //TODO: reuse toppercent param?
+											doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, QStorType, DBStorType >( tax.get(), query_storage, *db_storage, toppercent ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads ); //TODO: reuse toppercent param?
 										} else {
 											if( algorithm == "dummy" ) {
-												doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, number_threads );
+												doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
 											} else {
 												cout << "classification algorithm can either be: rpa, lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
 												return EXIT_FAILURE;

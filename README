@@ -10,6 +10,8 @@ files.
 You also need a recent version of the SQLite (>= version 3) libraries
 (www.sqlite.org) which is used to load large mapping files without flooding
 your main memory. Compilation requires the sqlite3 development header files.
+Since this requirement is almost never used, it will probably be removed in the
+future.
 
 Finally, you will need the build management tool "cmake" >= version 2.6
 and the UNIX tools "make" and "uname" which should be contained in a standard
@@ -54,21 +56,21 @@ The aligner can be replaced as long a conversion tool is provided that will
 convert the aligners output into the universal alignment format used in the
 pipeline. Aligners supported out-of-the-box are
 
-- NCBI blastn
-- NCBI blastx
-- lastal
+- NCBI blastn (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
+- NCBI blastx (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
+- lastal (http://last.cbrc.jp)
 
 --------------------------------------------------------------------------------
 
 (2) CONVERT:   Transform alignment into universal TAB-separated format.
 
-The intermediate format is quite simple, a tab-separated text file.
+The intermediate format is quite simple: a tab-separated text file.
 We provide scripts for use with "NCBI BLAST" (blastn or blastx using XML output)
 and "LAST" (using maf output) in the alignment phase.
 
 blastxml2alignments.py:
 Blast+ XML output converter (use "-outfmt 5"). Check out the options using the
-"-h" option of blastn/blastx.
+"-h" option of blastn or blastx.
 
 lastmaf2alignments.py:
 LAST MAF format converter (use "-f 1"). This version now works with the main
@@ -77,15 +79,16 @@ stream version of LAST. As a limitation of the MAF format used by LAST
 and query sequences must not contain white spaces or the first white space
 separated part must be uniquely trackable for you because the rest will be
 discarded when reporting the alignments. LAST output is not sorted by query
-identifier, so you must run through "sort" after conversion to intermediate
-format. The UNIX sort command like sort from the GNU coreutils is usually
-sufficient for this.
+identifier, so you must the output of the conversion script through "sort".
+The UNIX sort command like sort from the GNU coreutils is usually sufficient
+for doing this.
 
 --------------------------------------------------------------------------------
 
 (3) PREFILTER: Apply e. g. quality restriction filters to exclude bad
-               alignments. This step is optional and ususally not but can help
-               you to implement your quality policies or reduce run-time.
+               alignments. This step is optional and ususally not needed but
+               can help you to implement your quality policies or reduce the
+               run-time.
 
 alignment-prefilter:
 Support some filtering schemes based on absolute and relative score values or
@@ -166,17 +169,14 @@ lastal -f 1 DATABASE mysample.fna | last2alignments.py | sort | taxator -a n-bes
 
 (b)
 # Do a BLAST-MEGAN-style classification with blastn alignments and with a
-top-percent filter value of 30 % and a minimum E-value of 0.01.
-
+# top-percent filter value of 30 % and a minimum E-value of 0.01.
 blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna | blastxml2alignments.py | taxator -a megan-lca -t 0.3 -e 0.01 -g gitaxid.mapping
 
-# In this case it is better to restict the evalue directly in the BLAST search.
-
+# But in this case it is better to restict the evalue directly in the BLAST search.
 blastn -task blastn -db DATABASE -outfmt 5 -query mysample.fna -evalue 0.01 | taxator -a megan-lca -t 0.3 -g gitaxid.mapping
 
 (c)
 # If you want to save the alignments with LAST compressed and in sorted order
-
 lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort | gzip > dump.alignments.gz
 
 # and continue with a RPA prediction and saving the predictions into a file
@@ -192,18 +192,15 @@ rank-filter -r phylum -f 2 < dump.predictions | name-filter -f 2 -s name
 (e)
 # Using e-values with LAST is more tricky because it requires a second binary.
 # This didn't seem to have a strong effect on classification though.
-
 lastal -f 1 DATABASE mysample.fna | lastex -z 1 DATABASE.prj mysample.prj - | lastmaf2alignments.py | sort | ...
 
 (f)
 # There is a downstream tool called binner that will use the segment predictions
 # to bin a sample
-
 binner < dump.predictions > dump.binning
 
 (g)
 # Putting together above commands one could write the following workflow
-
 lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort > sample.alignments
 taxator -g gitaxid.mapping -a rpa [missing options] -q query.fna -b reference.fna -g gitaxid.mapping < sample.alignments > sample.predictions
 binner < sample.predictions > sample.binning
@@ -216,7 +213,7 @@ RECOMMENDATION
 For comparable settings, use BLAST and LAST with the same scoring scheme, use
 BLAST raw scores for classification instead of bitscores. If you want to have
 precise scores, you need to recalculate the BLAST raw scores (implemented in the
-conversion script "blastxml2alignments.py"), because recent BLAST versions do
+conversion script "blastxml2alignments.py"), because recent BLAST+ versions do
 not give precise scores as LAST does. The LAST aligner does not produce E-values
 (only through separate program).
 
@@ -225,11 +222,13 @@ not give precise scores as LAST does. The LAST aligner does not produce E-values
 TAXONOMIC PLACEMENT ALGORITHMS
 ==============================
 
-lca:
+lca:       Use the Lowest Common Ancestor (LCA) of all reference taxa of the
+           alignments.
 
-megan-lca:
+megan-lca: Use the LCA of taxa of only the x% best matching references.
 
-rpa:
+rpa:       Use the LCA of taxa of a dynamic set of reference taxa as determined
+           by ordering of pairwise scores of global alignments.
 
 --------------------------------------------------------------------------------
 
@@ -253,7 +252,7 @@ are implemented in constant time.
 taxonomy each time a module is loaded. This overhead may be reduced in future
 versions.
 
-- the RPA algorithms depends on sequence random access and thus loads the query
+- the RPA algorithm depends on sequence random access and thus loads the query
 and reference in memory to be as fast as possible at the moment. This can
 require large amounts of memory for reference collections like RefSeq and can
 usually only be done on server hardware. We work towards efficient on-disk
