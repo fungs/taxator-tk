@@ -92,7 +92,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	tmptaxon->leftvalue = lrvalue_counter;
 
 	// check wether to mark the node as special
-	if( specialranks.find( &(tmptaxon->annotation->rank) ) != specialranks.end() ) {
+	if( specialranks.count( &(tmptaxon->annotation->rank) ) ) {
 		tmptaxon->mark_special = true;
 	}
 

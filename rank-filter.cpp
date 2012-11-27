@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <set>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
@@ -39,30 +41,31 @@ using namespace std;
 
 
 int main( int argc, char** argv ) {
-	std::string rank_name, invalid_replace_value;
+	string invalid_replace_value;
+	vector< string > rank_names;
 	unsigned int field_pos;
 
 	namespace po = boost::program_options;
 	po::options_description desc("Allowed options");
 	desc.add_options()
 	( "help,h", "show help message")
-	( "keep-not-rank,k", "unmappable taxids stay the same (otherwise mapped to root node = 1)" )
-	( "keep-not-taxid,t", "taxonomic IDs not found will be kept (otherwise line is skipped)" )
-	( "set-invalid-value,b", po::value< string >( &invalid_replace_value ),"replace all taxids that are invalid by this given value" )
+	( "keep-not-rank,k", "unmappable taxids remain (otherwise mapped to root)" )
+	( "keep-not-taxid,t", "unknown taxonomic IDs are kept (otherwise skipped)" )
+	( "set-invalid-value,b", po::value< string >( &invalid_replace_value ),"replace unknown taxids by this given value" )
 	( "field,f", po::value< unsigned int >( &field_pos )->default_value( 1 ), "input column number to use" )
-	( "rank,r", po::value< string >( &rank_name ), "traverse taxonomy up to this rank" );
+	( "ranks,r", po::value< vector< string > >( &rank_names )->multitoken(), "traverse taxonomy up to one of these rank (space separated list)" );
 
 	po::variables_map vm;
 	po::store(po::command_line_parser( argc, argv ).options( desc ).run(), vm);
 	po::notify(vm);
 
 	// command line arguments
-	if( ! vm.count( "rank" ) ) {
+	if( ! vm.count( "ranks" ) ) {
 		cout << desc << endl;
 		return EXIT_SUCCESS;
 	}
 
-  if( ! vm.count( "rank" ) ) {
+  if( ! vm.count( "ranks" ) ) {
 		cout << desc << endl;
 		return EXIT_FAILURE;
 	}
@@ -81,11 +84,12 @@ int main( int argc, char** argv ) {
 	if( ! tax ) return EXIT_FAILURE;
 	TaxonomyInterface interface( tax.get() );
 
-	// string reference comparison is fastest
-	const string& rank = tax->getRankInternal( rank_name );
-
-	if( rank.empty() ) {
-		cerr << "Rank '" << rank_name << "' not found in taxonomy, expect identity mapping..." << endl;
+	//TODO: change code to use set of ranks, not single rank to traverse
+	set< const string* > ranks; 
+	for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
+		const string& rank = tax->getRankInternal( *it );
+		if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
+		else ranks.insert( &rank );
 	}
 
 	// parse line by line
@@ -114,7 +118,7 @@ int main( int argc, char** argv ) {
           //cerr << "Converted without exception!" << endl;
           node = interface.getNode( taxid );
           if( node ) {
-            while( ! node->data->annotation || ( &(node->data->annotation->rank) != &rank && node != rootnode ) ) {
+            while( ! node->data->annotation || ( ! ranks.count( &(node->data->annotation->rank) ) && node != rootnode ) ) {
               node = node->parent;
             }
             if( keep_not_rank && node == rootnode ) {
