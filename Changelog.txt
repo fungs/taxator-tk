@@ -1,8 +1,22 @@
 This file only lists major changes and bug fixes for each version
 
+v. 0.3 taxator-tk
+=================
+
+* bug fix for noise filtering in binner
+* tools reduced to a core set around taxator (previously predictor) and binner
+  (prevously predictions-filter)
+* multi-threading support in taxator
+* binner supports user defined identity constrains at fixed ranks
+
 v. 0.2 taxator-tk
 =================
 
 * predictions-filter for combination of predictions by mutiple methods/experts
   and to clean up the predictions of natural samples where we require a certain
   number of read for each taxonomic group to be considered
+
+v. 0.1 taxator-tk
+=================
+
+* functional framework with support for various LCA methods and fast aligners

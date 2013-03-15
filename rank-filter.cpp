@@ -102,7 +102,7 @@ int main( int argc, char** argv ) {
 	const TaxonNode* node;
 
 	while( getline( cin, line ) ) {
-		if( ignoreLine( line ) ) { continue; }
+		if( ignoreLine( line ) ) continue;
 
 		tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 		field_it = fields.begin();

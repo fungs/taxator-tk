@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define predictionrecord_hh_
 
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
+#include <boost/concept_check.hpp>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -35,8 +36,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class PredictionRecordBase { //TODO: rename to something like feature
 	public:
-		PredictionRecordBase( const Taxonomy* tax ) : query_identifier_ ( NULL ), query_length_( 0 ), lower_node_( NULL ), upper_node_( NULL ), interpolation_value_( -1. ), signal_strength_( 0. ), taxinter_( tax ) {};
+		PredictionRecordBase( const Taxonomy* tax ) : query_length_( 0 ), lower_node_( NULL ), upper_node_( NULL ), interpolation_value_( -1. ), signal_strength_( 0. ), taxinter_( tax ) {};
+		
 		virtual ~PredictionRecordBase() {}
+		
+		PredictionRecordBase( const PredictionRecordBase& rec ) : taxinter_( rec.taxinter_ ) {}
 
 		void initialize( const std::string& query_identifier, large_unsigned_int query_length ) { initialize( query_identifier, query_length, 0, query_length ); }
 		
@@ -48,7 +52,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		}
 		
 		//pure getters
-		const std::string& getQueryIdentifier() const { return *query_identifier_; }
+		virtual const std::string& getQueryIdentifier() const = 0;
 		large_unsigned_int getQueryLength() const { return query_length_; }
 		large_unsigned_int getQueryFeatureBegin() const { return query_feature_begin_; }
 		large_unsigned_int getQueryFeatureEnd() const { return query_feature_end_; }
@@ -188,7 +192,6 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		}
 		
 	protected:
-		const std::string* query_identifier_;
 		large_unsigned_int query_length_;
 		large_unsigned_int query_feature_begin_;
 		large_unsigned_int query_feature_end_;
@@ -200,7 +203,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		std::vector< medium_unsigned_int > taxon_support_; //internal encoding of support, TODO: change to small_unsigned_int?
 		
 		void printColumns1to8( std::ostream& strm ) const {
-			strm << *query_identifier_ << tab << "taxator-tk" << tab << "sequence_feature" << tab << query_feature_begin_ << tab << query_feature_end_ << tab;
+			strm << getQueryIdentifier() << tab << "taxator-tk" << tab << "sequence_feature" << tab << query_feature_begin_ << tab << query_feature_end_ << tab;
 			if ( boost::math::isnan( signal_strength_ ) ) strm << '.';
 			else strm << signal_strength_;
 			strm << tab << '.' << tab << '.' << tab;
@@ -223,7 +226,8 @@ class PredictionRecordBase { //TODO: rename to something like feature
 				--i;
 				++pit;
 			}
-			strm << pit->data->taxid << ':' << taxon_support_[i];
+			strm << pit->data->taxid;
+			if ( taxon_support_[i] != last_support ) strm << ':' << taxon_support_[i];
 		}
 		
 		virtual bool parseKeyValue( const std::string& key, const std::string& value ) {
@@ -295,28 +299,42 @@ class PredictionRecordBase { //TODO: rename to something like feature
 
 class PredictionRecordSaveMem : public PredictionRecordBase {
 	public:
-		PredictionRecordSaveMem( const Taxonomy* tax, ReferencedStringStore<>& qid_store ) : PredictionRecordBase( tax ), qid_store_( qid_store ) {};
+		PredictionRecordSaveMem( const Taxonomy* tax, ReferencedStringStore<>& qid_store ) : PredictionRecordBase( tax ), qid_store_( qid_store ), query_identifier_( NULL ) {};
+		
 		~PredictionRecordSaveMem() { qid_store_.remove( *query_identifier_ ); }
+		
+		PredictionRecordSaveMem( const PredictionRecordSaveMem& rec ) : PredictionRecordBase( rec ), qid_store_( rec.qid_store_ ) { query_identifier_ = &qid_store_.add( *rec.query_identifier_ ); }
+		
 		void setQueryIdentifier( const std::string& id ) {
 			if ( query_identifier_ ) qid_store_.remove( *query_identifier_ );
 			query_identifier_ = &qid_store_.add( id );
 		}
 		
+		const std::string& getQueryIdentifier() const { return *query_identifier_; }
+		
 	private:
 		ReferencedStringStore<>& qid_store_;
+		const std::string* query_identifier_;
 };
 
 
 
 class PredictionRecord : public PredictionRecordBase {
 	public:
-		PredictionRecord ( const Taxonomy* tax ) : PredictionRecordBase( tax ) {}
-		~PredictionRecord() {	if( query_identifier_ ) delete query_identifier_; }
+		PredictionRecord ( const Taxonomy* tax ) : PredictionRecordBase( tax ), query_identifier_( NULL ) {}
+
+		~PredictionRecord() { if( query_identifier_ ) delete query_identifier_; }
+		
+		PredictionRecord( const PredictionRecord& rec ) : PredictionRecordBase( rec ) { query_identifier_ = new std::string( *rec.query_identifier_ ); }
+		
+		const std::string& getQueryIdentifier() const { return *query_identifier_; }
 
 		void setQueryIdentifier( const std::string& id ) {
 			if ( query_identifier_ ) delete query_identifier_;
 			query_identifier_ = new const std::string( id );
 		}
+	private:
+		const std::string* query_identifier_;
 };
 
 
@@ -352,5 +370,8 @@ std::ostream& operator<<( std::ostream& strm, const PredictionRecordBase& prec )
 
 std::istream& operator>>( std::istream& strm, PredictionRecordBase& prec );
 
+
+class GFF3Header {};
+std::ostream& operator<<( std::ostream& strm, const GFF3Header& );
 
 #endif // predictionrecord_hh_

@@ -36,6 +36,6 @@ const char default_comment_symbol = '#';
 const char default_mask_symbol = '*';
 const std::string empty_string;
 
-const std::string ENVVAR_TAXONOMY_ROOT = "TAXATORTK_NCBI_ROOT";
+const std::string ENVVAR_TAXONOMY_NCBI = "TAXATORTK_TAXONOMY_NCBI";
 
 #endif //constants_hh_

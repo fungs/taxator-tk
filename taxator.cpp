@@ -55,6 +55,9 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
 	std::queue< RecordSetType > workload;
 	RecordSetType tmprset;
 	PredictionRecord prec( tax );
+
+	//print GFF3Header
+	std::cout << GFF3Header();
 	
 	while( recgen.notEmpty() ) {
 		
@@ -168,6 +171,9 @@ class BoostConsumer {
 void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink, uint number_threads  ) {
 	AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 	
+	//print GFF3Header
+	std::cout << GFF3Header();
+	
 	//adjust thread number
 	uint procs = boost::thread::hardware_concurrency();
 	if ( ! number_threads ) number_threads = procs;
@@ -269,6 +275,7 @@ int main( int argc, char** argv ) {
 	std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
 	
 	// choose appropriate prediction model from command line parameters
+	//TODO: restructure (keep only needed), don't take adresse of temporary (even though IMO this is ok here), remove warning and error suppression compiler flags
 	{
 		if( algorithm == "lca" ) {
 			doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );

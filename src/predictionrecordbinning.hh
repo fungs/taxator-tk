@@ -23,14 +23,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "predictionrecord.hh"
 
-class PredictionRecordBinning : public PredictionRecordBase {
+class PredictionRecordBinning : public PredictionRecordBase { //TODO: copy constructor not working correctly, gives segfault
 	public:
 		enum BinningType { none, single, direct, fallback };
 		
-		PredictionRecordBinning( const Taxonomy* tax ) : PredictionRecordBase( tax ), binning_type_( none ) {}
+		PredictionRecordBinning( const Taxonomy* tax ) : PredictionRecordBase( tax ), binning_type_( none ), query_identifier_( NULL ) {}
+		
 		~PredictionRecordBinning() {	if( query_identifier_ ) delete query_identifier_; }
 		
-		void setQueryIdentifier( const std::string& id ) {
+		PredictionRecordBinning( const PredictionRecordBinning& rec ) : PredictionRecordBase( rec ), binning_type_( rec.binning_type_ ) { query_identifier_ = new std::string( *(rec.query_identifier_) ); }
+		
+		virtual const std::string& getQueryIdentifier() const { return *query_identifier_; }
+		
+		virtual void setQueryIdentifier( const std::string& id ) {
 			if ( query_identifier_ ) delete query_identifier_;
 			query_identifier_ = new const std::string( id );
 		}
@@ -67,6 +72,7 @@ class PredictionRecordBinning : public PredictionRecordBase {
 		
 	private:
 		BinningType binning_type_;
+		const std::string* query_identifier_;
 };
 
 #endif // predictionrecordbinning_hh_

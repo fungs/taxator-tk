@@ -92,6 +92,7 @@ int main( int argc, char** argv ) {
 
 	if ( show_what == "name" ) {
 		while( getline( cin, line ) ) {
+			if ( ignoreLine( line ) ) continue;
 			tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 			field_it = fields.begin();
 			unsigned int i = 1;
@@ -143,6 +144,7 @@ int main( int argc, char** argv ) {
 	} else {
 		if( show_what == "rank" ) {
 			while( getline( cin, line ) ) {
+				if ( ignoreLine( line ) ) continue;
 				tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 				field_it = fields.begin();
         unsigned int i = 1;
@@ -194,6 +196,7 @@ int main( int argc, char** argv ) {
 		} else {
 			if ( show_what == "path" ) {
 				while( getline( cin, line ) ) {
+					if ( ignoreLine( line ) ) continue;
 					tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 					field_it = fields.begin();
 					unsigned int i = 1;
@@ -254,6 +257,7 @@ int main( int argc, char** argv ) {
 			} else {
 				if ( show_what == "taxid-path" ) {
 						while( getline( cin, line ) ) {
+						if ( ignoreLine( line ) ) continue;
 						tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
 						field_it = fields.begin();
 						unsigned int i = 1;

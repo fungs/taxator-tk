@@ -15,13 +15,11 @@
 
 Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::string& names_filename, const std::vector< std::string >* ranks_to_mark ) {
 
-	std::cerr << "constructing taxonomy tree from NCBI dump files...";
 	Taxonomy* tax = new Taxonomy;
 	std::set< const std::string* > specialranks;
 
 	if( ranks_to_mark ) {
 		for( std::vector< std::string >::const_iterator rank_it = ranks_to_mark->begin(); rank_it != ranks_to_mark->end(); ++rank_it ) {
-// 			std::cerr << "inserting special rank: " << *rank_it << std::endl;
 			specialranks.insert( &(tax->insertRankInternal( *rank_it )) );
 		}
 	}
@@ -101,16 +99,11 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	Taxonomy::sibling_iterator sibling_node_it;
 	const Taxonomy::iterator root_it = node_it;
 
-// 	std::cout << std::setfill('-'); //DEBUG
-
 	// depth-first construction
 	do {
 
 		// set node's leftvalue
 		(*node_it)->leftvalue = ++lrvalue_counter;
-// 		std::cout << "*" << std::setw( depth_counter ) << "*" << (*node_it)->annotation->name << std::endl;
-
-		// check whether to set as node to unclassified
 
 		// get children
 		children_range = children.equal_range( node_taxid );
@@ -141,9 +134,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 				child_node_it = tax->prepend_child( node_it, tmptaxon );
 				tax->addToIndex( node_taxid, child_node_it.node );
 
-// 				std::cout << "new child: " << tmptaxon->annotation->name << "; taxid: " << node_taxid << std::endl;
 			}
-			//children.erase( children_range.first, children_range.second ); //balanced tree is better to clear at destruction time
 
 			assert( node_it != child_node_it ); //DEBUG
 
@@ -157,55 +148,49 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 				if( node_it != root_it ) {
 					sibling_node_it = node_it.node->next_sibling;
 					if( sibling_node_it != tax->end( sibling_node_it ) ) { //this should really work on the root
-// 						std::cout << "walking to next sibling: " << std::endl;
-						node_it = sibling_node_it;
+						node_it = sibling_node_it; //walking to next sibling
 						node_taxid = (*node_it)->taxid;
 						break;
 					} else {
 						node_it = node_it.node->parent;
-// 						std::cout << "walking up to parent: " << (*node_it)->annotation->name << std::endl;
-						--depth_counter;
+						--depth_counter; //walking up to parent
 					}
 				} else {
-					// construction end reached
 					tax->setMaxDepth( max_depth );
-// 					tax->setMaxDepth();
-					std::cerr << " done" << std::endl;
 					return tax; //bad style but efficient
 				}
 			} while( true );
 		}
 	} while( true ); //single exit condition is return
 
-	std::cerr << " done" << std::endl;
 	tax->setMaxDepth( max_depth );
-// 	tax->setMaxDepth();
 	return tax;
 }
 
 
 
 Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_to_mark ) {
-	char* env = getenv( ENVVAR_TAXONOMY_ROOT.c_str() );
+	char* env = getenv( ENVVAR_TAXONOMY_NCBI.c_str() ); //TODO: portability
 	if( env == NULL ) {
-		std::cerr << "Specify the folder containing the NCBI taxonomy dump files as " << ENVVAR_TAXONOMY_ROOT << " environment variable" << std::endl;
+		std::cerr << "Specify the folder containing the NCBI taxonomy dump files as " << ENVVAR_TAXONOMY_NCBI << " environment variable" << std::endl;
 		return NULL;
 	}
 
 	const std::string ncbi_root_folder = env;
-	const std::string nodes_filename = ncbi_root_folder + "/nodes.dmp";
-	const std::string names_filename = ncbi_root_folder + "/names.dmp";
 
-	if ( boost::filesystem::exists( nodes_filename ) ) {
-		if ( boost::filesystem::exists( names_filename ) ) {
-			return parseNCBIFlatFiles( nodes_filename, names_filename, ranks_to_mark );
-		} else {
-			std::cerr << " " << names_filename << "not found" << std::endl;
-		}
-	} else {
-		std::cerr << " " << nodes_filename << "not found" << std::endl;
+	const std::string nodes_filename = ncbi_root_folder + "/nodes.dmp";
+	if ( ! boost::filesystem::exists( nodes_filename ) ) {
+		std::cerr << " \"" << nodes_filename << "\" not found" << std::endl;
+		return NULL;
 	}
-	return NULL;
+	
+	const std::string names_filename = ncbi_root_folder + "/names.dmp";
+	if ( ! boost::filesystem::exists( names_filename ) ) {
+		std::cerr << " \"" << names_filename << "\" not found" << std::endl;
+		return NULL;
+	}
+	
+	return parseNCBIFlatFiles( nodes_filename, names_filename, ranks_to_mark );
 }
 
 

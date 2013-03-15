@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <list>
 #include <fstream>
+#include <limits>
 
 
 
@@ -169,10 +170,10 @@ struct compareTupleFirstLT {
 
 
 // provides memory efficient storage of query sequences via reference counting
-template< typename UIntType = small_unsigned_int > //default maximum 256 references!
+template< typename UIntType = small_unsigned_int > //default maximum 256 references per unique string!
 class ReferencedStringStore {
 	public:
-		ReferencedStringStore() : last_( id2counter_.end() ) {}
+		ReferencedStringStore() : last_( id2counter_.end() ), max_capacity_( std::numeric_limits<UIntType>::max() ) {}
 		
 		const std::string& add( const std::string& id ) {
 			if ( &id != &last_->first ) {
@@ -180,6 +181,7 @@ class ReferencedStringStore {
 				if ( last_ == id2counter_.end() ) last_ = id2counter_.insert( std::make_pair( id, 0 ) ).first;
 			}
 
+			assert( last_->second < max_capacity_ );
 			last_->second += 1;
 			return last_->first;
 		}
@@ -203,6 +205,7 @@ class ReferencedStringStore {
 	private:
 		typename std::map< const std::string, UIntType > id2counter_; //max. 256 references
 		typename std::map< const std::string, UIntType >::iterator last_; //save some time
+		const UIntType max_capacity_;
 };
 
 #endif // utils_hh_

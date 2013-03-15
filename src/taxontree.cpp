@@ -53,7 +53,6 @@ const std::string& TaxonTree::insertRankInternal ( const std::string& rankname )
 
 
 void TaxonTree::deleteUnmarkedNodes() { //TODO: correct path_to_root: adjust at the end
-	std::cerr << "deleting nodes that are not marked...";
 	iterator node_it = ++( this->begin() ); //root node
 	
 	while( node_it != this->end() ) {
@@ -68,7 +67,6 @@ void TaxonTree::deleteUnmarkedNodes() { //TODO: correct path_to_root: adjust at 
 		}
 	}
 	recalcDistToRoot( this->begin() ); //distances shrink
-	std::cerr << " done" << std::endl;
 }
 
 

@@ -36,10 +36,6 @@ typedef uint_least16_t medium_unsigned_int; // 0 to 65,535
 typedef uint_least32_t large_unsigned_int; // 0 to 4,294,967,295
 
 // basic mappings
-// typedef std::string TTPString;
-// typedef std::vector< TTPString > TTPStringVector;
-// typedef std::vector< const TTPString > TTPConstStringVector;
-// typedef std::vector< float > TTPFloatVector;
 typedef large_unsigned_int TaxonID; //maximum number at time of writing was 1,050,856
 
 #endif //types_hh_

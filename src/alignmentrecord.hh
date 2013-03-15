@@ -36,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class AlignmentRecord {
 	public:
-		~AlignmentRecord() {};
+		virtual ~AlignmentRecord() {};
 		inline const std::string& getQueryIdentifier() const { return query_identifier_; };
 		inline large_unsigned_int getQueryStart() { return query_start_; };
 		inline large_unsigned_int getQueryStop() { return query_stop_; };
@@ -414,7 +414,7 @@ void separateAlignmentsByRange( ContainerT& recordset, QueueLikeContainer& workl
 	
 	large_unsigned_int start = boost::get<0>( ranges[0] );
 	large_unsigned_int stop = boost::get<1>( ranges[0] );
-	large_unsigned_int rstart = start;
+// 	large_unsigned_int rstart = start;
 	large_unsigned_int rstop = stop;
 	rset.push_back( boost::get<2>( ranges[0] ) );
 	
@@ -424,11 +424,10 @@ void separateAlignmentsByRange( ContainerT& recordset, QueueLikeContainer& workl
 		stop = boost::get<1>( ranges[i] );
 		
 		if ( start > rstop ) { //split point detected
-// 			std::cerr << "range from " << rstart << " to " << rstop << " with " << rset.size() << " alignments" << std::endl;
 			workload.push( rset ); //copy pointer list to working queue
 			rset.clear();
 			rstop = stop;
-			rstart = start;
+// 			rstart = start;
 		} else {
 			rstop = std::max( rstop, stop );
 		}
@@ -437,7 +436,6 @@ void separateAlignmentsByRange( ContainerT& recordset, QueueLikeContainer& workl
 	}
 	
 	if ( ! rset.empty() ) {
-// 		std::cerr << "range from " << rstart << " to " << rstop << " with " << rset.size() << " alignments" << std::endl;
 		workload.push( rset );
 	}
 }

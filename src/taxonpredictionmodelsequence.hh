@@ -37,10 +37,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sequencestorage.hh"
 #include "profiling.hh"
 
-#include <locale>
-
-static std::locale loc;
-static const std::collate< char >& coll = std::use_facet< std::collate< char > >( loc );
+// #include <locale>
+// static std::locale loc;
+// static const std::collate< char >& coll = std::use_facet< std::collate< char > >( loc );
 
 // helper class
 template< bool smallerscore = true >
@@ -317,13 +316,6 @@ class SandwichPlacerAdaptive {
 			denominator1 = nPair - m1;
 			denominator2 = nPair - m2;
 			if ( !( denominator1 && denominator2 ) ) return 1.; //TODO: seems to be correct but does it make sense? -> rework signal score
-// 			if ( !( denominator1 && denominator2 ) ) {
-// 				std::cerr << "tau calculation failed: " << denominator1 << " | " << denominator2 << std::endl;
-// 				for(i = 0; i < len; i++) {
-// 					std::cerr << X1[i] << " " << X2[i] << std::endl;
-// 				}
-// 				return 1.;
-// 			}
 			return s / sqrt(denominator1) / sqrt(denominator2);
 		}
 		
@@ -450,8 +442,6 @@ class SandwichPlacer {
 			
 			// create ordering of scores according to taxonomy
 			typedef std::vector< boost::tuple< int, int > > ordertype;
-// 			ordertype ordering; //TODO: remove
-// 			ordering.reserve( data_.size() ); //TODO: remove
 			std::vector< int > scores, dists;
 			scores.reserve( data_.size() );
 			dists.reserve( data_.size() );
@@ -465,7 +455,6 @@ class SandwichPlacer {
 				node = anchor;
 				bool uppermode = false;
 				while ( true ) {
-// 					ordering.push_back( boost::make_tuple( -(node->data->root_pathlength), score ) ); //TODO: remove
 					if ( score > placescore ) {
 						if ( uppermode ) break;
 						placescore = score*bandwidth_factor_;

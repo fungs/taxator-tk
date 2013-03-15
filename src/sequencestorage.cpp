@@ -1,6 +1,7 @@
+#include <assert.h>
 #include "sequencestorage.hh"
 #include "ncbidata.hh"
-#include <assert.h>
+
 
 RandomMMSeqStorRO::RandomMMSeqStorRO( const std::string& filename ) {
 	seqan::MultiSeqFile db_sequences;

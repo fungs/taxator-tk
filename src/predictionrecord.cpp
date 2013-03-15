@@ -16,3 +16,10 @@ std::istream& operator>>( std::istream& strm, PredictionRecordBase& prec ) { //T
 	prec.parse( line );
 	return strm;
 }
+
+
+
+std::ostream& operator<<( std::ostream& strm, const GFF3Header& ) {
+	strm << "##gff-version 3" << std::endl;
+	return strm;
+}

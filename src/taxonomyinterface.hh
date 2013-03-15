@@ -29,13 +29,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class TaxonomyInterface {
 	public:
-		TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {}; //TODO: make all inline or define in header
+		TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {} //TODO: make all inline or define in header
+		
+		TaxonomyInterface( const TaxonomyInterface& taxinter ) : tax( taxinter.tax ) {}
 
 		const TaxonNode* getNode( const TaxonID taxid ) const;
 		const TaxonNode* getRoot() const;
-		small_unsigned_int getMaxDepth() { return tax->max_depth_; };
+		small_unsigned_int getMaxDepth() { return tax->max_depth_; }
 
-		const std::string& getRank( const TaxonNode* node ) const ;
+		const std::string& getRank( const TaxonNode* node ) const;
 		const std::string& getRank( const TaxonID taxid ) const;
 		const std::string& getName( const TaxonNode* node ) const;
 		const std::string& getName( const TaxonID taxid ) const;
