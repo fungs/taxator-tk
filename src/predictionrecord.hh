@@ -351,7 +351,7 @@ class PredictionFileParser {
 			PredictionRecordType* rec = new PredictionRecordType( tax_ );
 			std::string line;
 			while( std::getline( handle, line ) ) {
-				if( rec->parse( line ) ) return rec;
+				if( !ignoreLine( line ) && rec->parse( line ) ) return rec;
 			}
 			destroyRecord( rec );
 			return NULL;

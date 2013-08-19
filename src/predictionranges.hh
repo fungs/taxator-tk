@@ -209,7 +209,7 @@ PredictionRecordBinning* combinePredictionRanges( const ContainerT& predictions,
 		prec->setBinningType( PredictionRecordBinning::direct );
 		
 		const TaxonNode* const lower_node = path[ lower_direct_node_index ].get<0>();
-		const medium_unsigned_int lower_node_support = path[ lower_direct_node_index ].get<1>();
+		const medium_unsigned_int lower_node_support = path[ lower_direct_node_index ].get<2>(); //return total support (like fallback mode)
 		
 		
 		{
@@ -219,7 +219,7 @@ PredictionRecordBinning* combinePredictionRanges( const ContainerT& predictions,
 
 			for ( int j = lower_direct_node_index; j >= 0; --j ) {
 				if ( path[j].get<1>() >= direct_support_thresh ) {
-					upper_node_support = path[j].get<1>();
+					upper_node_support = path[j].get<2>(); //return total support (like fallback mode)
 					upper_node = path[j].get<0>();
 					upper_direct_node_index = j;
 					if ( path[j].get<3>() ) break;

@@ -48,7 +48,7 @@ TrainingRecord* TrainingFileParser::next() { //TODO: increase performance by avo
 		try {
 			record->bitscore = boost::lexical_cast< float >( *field_it++ );
 		} catch( boost::bad_lexical_cast e ) {
-			std::cerr << "Could not parse bitscore field from input in line \"" << line << "\", skipping record..." << std::endl;
+			std::cerr << "Could not parse score field from input in line \"" << line << "\", skipping record..." << std::endl;
 			fields.clear();
 			delete record;
 			continue;

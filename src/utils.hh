@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <list>
 #include <fstream>
 #include <limits>
+#include <assert.h>
 
 
 

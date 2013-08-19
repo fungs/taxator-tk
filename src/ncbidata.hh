@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ncbidata_hh_
 
 #include "taxontree.hh"
-#include "sqlite3pp.hh"
 #include "utils.hh"
 
 

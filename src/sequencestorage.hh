@@ -102,6 +102,7 @@ class RandomSeqStorRO {
 			const StorageStringType& db_seq = getSequence ( id );
 			if ( &db_seq != &empty_string_ ) {
 				stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
+				if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
 				CopyStringType seq = seqan::infix ( db_seq, start - 1, stop );
 				assert( seqan::length( seq ) == (stop - start + 1) );
 				return seq;
@@ -113,6 +114,7 @@ class RandomSeqStorRO {
 			const StorageStringType& db_seq = getSequence ( id );
 			if ( &db_seq != &empty_string_ ) {
 				stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
+				if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
 				CopyStringType seq = seqan::ModifiedString< seqan::ModifiedString< CopyStringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> ( seqan::infix ( db_seq, start - 1, stop ) );
 				assert( seqan::length( seq ) == (stop - start + 1) );
 				return seq;

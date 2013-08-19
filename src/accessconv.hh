@@ -30,7 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
-#include "sqlite3pp.hh"
 #include "constants.hh"
 #include "types.hh"
 #include "utils.hh"
@@ -47,81 +46,81 @@ class AccessIDConverter {
 
 
 
-template< typename TypeT >
-class AccessIDConverterSQLite : public AccessIDConverter< TypeT > {
-	public:
-		AccessIDConverterSQLite( const std::string& database_filename ) {
-      db = new sqlite3pp::database( database_filename.c_str() );
-      initialization_error = db->error_code();
-    };
+// template< typename TypeT >
+// class AccessIDConverterSQLite : public AccessIDConverter< TypeT > {
+// 	public:
+// 		AccessIDConverterSQLite( const std::string& database_filename ) {
+//       db = new sqlite3pp::database( database_filename.c_str() );
+//       initialization_error = db->error_code();
+//     };
+// 
+// 		~AccessIDConverterSQLite() {
+// 		  delete db;
+//     };
+// 
+// 		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range)*/ {
+//       const std::string sql_statement = boost::str( boost::format("select ncbi_taxon_id from ncbi_gitaxid_mapping where ncbi_gi = %1%" ) % acc );
+//       sqlite3pp::query qry( *db, sql_statement.c_str() );
+//       sqlite3pp::query::iterator q_it = qry.begin();
+//       if( q_it == qry.end() ) {
+//         throw std::out_of_range( sql_statement );
+//       }
+// 
+//       return q_it->get< int >( 0 );
+//     };
+// 
+// 		bool fail( bool print_message = false ) {
+// 		  bool code = db->error_code();
+//       if( code && print_message ) {
+//         std::cerr << db->error_msg() << std::endl;
+//         return true;
+//       }
+//       return false;
+//     };
+// 		
+//  	private:
+// 		sqlite3pp::database* db;
+// 		bool initialization_error;
+// };
 
-		~AccessIDConverterSQLite() {
-		  delete db;
-    };
-
-		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range)*/ {
-      const std::string sql_statement = boost::str( boost::format("select ncbi_taxon_id from ncbi_gitaxid_mapping where ncbi_gi = %1%" ) % acc );
-      sqlite3pp::query qry( *db, sql_statement.c_str() );
-      sqlite3pp::query::iterator q_it = qry.begin();
-      if( q_it == qry.end() ) {
-        throw std::out_of_range( sql_statement );
-      }
-
-      return q_it->get< int >( 0 );
-    };
-
-		bool fail( bool print_message = false ) {
-		  bool code = db->error_code();
-      if( code && print_message ) {
-        std::cerr << db->error_msg() << std::endl;
-        return true;
-      }
-      return false;
-    };
-		
- 	private:
-		sqlite3pp::database* db;
-		bool initialization_error;
-};
 
 
-
-template< typename TypeT >
-class AccessIDConverterSQLiteCache : public AccessIDConverterSQLite< TypeT > {
-	public:
-		AccessIDConverterSQLiteCache( const std::string& database_filename, unsigned int cachesize = 0 ) : AccessIDConverterSQLite< TypeT >( database_filename ), last_lookup( std::make_pair(TypeT(),0) ) {}; //TODO: initialize differently
-
-		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ {
-      // check for repeated lookup
-      if( acc == last_lookup.first ) {
-        return last_lookup.second;
-      }
-
-      // search in cache
-      typename std::map< TypeT, TaxonID >::iterator cache_it = cache.find( acc );
-      if( cache_it != cache.end() ) { //if found in cache
-        return cache_it->second;
-      }
-
-      // fall back on subclass operator[]
-      TaxonID taxid = AccessIDConverterSQLite< TypeT >::operator[]( acc ); //can throw exception if not found
-
-      // update cache
-      if( max_cache_size && history.size() >= max_cache_size ) {
-        cache.erase( history.back() );
-        history.pop();
-      }
-
-      history.push( cache.insert( std::make_pair( acc, taxid ) ).first );
-      return taxid;
-		}
-		
-	private:
-		unsigned int max_cache_size;
-		typename std::pair< TypeT, TaxonID > last_lookup; //constant lookup time
-		typename std::map< TypeT, TaxonID > cache; //logarithmic lookup time (in memory)
-		typename std::queue< typename std::map< TypeT, TaxonID >::iterator > history;
-};
+// template< typename TypeT >
+// class AccessIDConverterSQLiteCache : public AccessIDConverterSQLite< TypeT > {
+// 	public:
+// 		AccessIDConverterSQLiteCache( const std::string& database_filename, unsigned int cachesize = 0 ) : AccessIDConverterSQLite< TypeT >( database_filename ), last_lookup( std::make_pair(TypeT(),0) ) {}; //TODO: initialize differently
+// 
+// 		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ {
+//       // check for repeated lookup
+//       if( acc == last_lookup.first ) {
+//         return last_lookup.second;
+//       }
+// 
+//       // search in cache
+//       typename std::map< TypeT, TaxonID >::iterator cache_it = cache.find( acc );
+//       if( cache_it != cache.end() ) { //if found in cache
+//         return cache_it->second;
+//       }
+// 
+//       // fall back on subclass operator[]
+//       TaxonID taxid = AccessIDConverterSQLite< TypeT >::operator[]( acc ); //can throw exception if not found
+// 
+//       // update cache
+//       if( max_cache_size && history.size() >= max_cache_size ) {
+//         cache.erase( history.back() );
+//         history.pop();
+//       }
+// 
+//       history.push( cache.insert( std::make_pair( acc, taxid ) ).first );
+//       return taxid;
+// 		}
+// 		
+// 	private:
+// 		unsigned int max_cache_size;
+// 		typename std::pair< TypeT, TaxonID > last_lookup; //constant lookup time
+// 		typename std::map< TypeT, TaxonID > cache; //logarithmic lookup time (in memory)
+// 		typename std::queue< typename std::map< TypeT, TaxonID >::iterator > history;
+// };
 
 
 
@@ -135,7 +134,7 @@ class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
 		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ {
       typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find( acc );
       if( it == accessidconv.end() ) {
-				std::cerr << "sequence accession key \"" << acc << "\" not found" << std::endl;
+				//std::cerr << "sequence accession key \"" << acc << "\" not found" << std::endl;
         throw std::out_of_range( boost::lexical_cast<std::string>( acc ) );
       }
       return it->second;
@@ -187,11 +186,11 @@ AccessIDConverter< TypeT >* loadAccessIDConverterFromFile( const std::string& fi
 	}
 	
 	std::cerr << "loading accession to taxonomic id converter file...";
-  if( filename.substr( filename.size() - 9 ) == ".sqlitedb" ) {
-    accidconv = new AccessIDConverterSQLiteCache< TypeT >( filename, cachesize );
-  } else {
+//   if( filename.substr( filename.size() - 9 ) == ".sqlitedb" ) {
+//     accidconv = new AccessIDConverterSQLiteCache< TypeT >( filename, cachesize );
+//   } else {
     accidconv = new AccessIDConverterFlatfileMemory< TypeT >( filename );
-  }
+//   }
   std::cerr << " done" << std::endl;
   return accidconv;
 }
@@ -200,9 +199,9 @@ AccessIDConverter< TypeT >* loadAccessIDConverterFromFile( const std::string& fi
 // converts general string sequence identifier to taxonomic id
 typedef AccessIDConverter< std::string > StrIDConverter;
 
-typedef AccessIDConverterSQLite< std::string > StrIDConverterSQLite;
+// typedef AccessIDConverterSQLite< std::string > StrIDConverterSQLite;
 
-typedef AccessIDConverterSQLiteCache< std::string > StrIDConverterSQLiteCache;
+// typedef AccessIDConverterSQLiteCache< std::string > StrIDConverterSQLiteCache;
 
 typedef AccessIDConverterFlatfileMemory< std::string > StrIDConverterFlatfileMemory;
 

@@ -56,7 +56,6 @@ int main ( int argc, char** argv ) {
 	po::options_description visible_options ( "Allowed options" );
 	visible_options.add_options()
 	( "help,h", "show help message" )
-	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0.01" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "sequence-min-support,s", po::value< medium_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
 	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
 	( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
@@ -66,6 +65,7 @@ int main ( int argc, char** argv ) {
 
 	po::options_description hidden_options("Hidden options");
 	hidden_options.add_options()
+	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" );
 	
@@ -315,12 +315,14 @@ int main ( int argc, char** argv ) {
 			map< const string*, float >::const_iterator find_it;
 			const TaxonNode* predict_node = root_node;
 			const TaxonNode* target_node = prec->getUpperNode();
+			const float rank_pid = prec->getSupportAt( target_node )/seqlen;
 			Taxonomy::CPathDownIterator pit = taxinter.traverseDown<Taxonomy::CPathDownIterator>( target_node );
 			do {
 				pit++;
 				find_it = pid_per_rank.find( &(pit->data->annotation->rank) );
 				if ( find_it != pid_per_rank.end() ) min_pid = max( min_pid, find_it->second );
-				if ( prec->getSupportAt( &*pit )/seqlen < min_pid ) break;
+				binning_debug_output << "constraint ctrl: " << rank_pid << " >= " << min_pid << " ?" << endl;
+				if ( rank_pid < min_pid ) break;
 				predict_node = &*pit;
 			} while ( pit != target_node );
 			std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << endline;

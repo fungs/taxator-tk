@@ -83,7 +83,7 @@ int main( int argc, char** argv ) {
 
 	float minscore, toppercent, minpid;
 	double maxevalue;
-	unsigned int numbestbitscore, minsupport;
+	unsigned int numbestscore, minsupport;
 	
 	std::string tax_map1_filename, tax_map2_filename;
 
@@ -95,8 +95,8 @@ int main( int argc, char** argv ) {
 		( "min-pid,p", po::value< float >( &minpid )->default_value( 0.0 ), "set minimal PID to consider" )
 		( "top-percent,t", po::value< float >( &toppercent )->default_value( 1.0 ), "set top-percent filter value" )
 		( "max-evalue,e", po::value< double >( &maxevalue )->default_value( -1.0 ), "set maximum evalue for filtering" )
-		( "best-alignments,b", po::value< unsigned int >( &numbestbitscore )->default_value( 0 ), "set number of top bitscore alignments to consider (after toppercent filter)" )
-		( "sort-bitscore,s", "sort alignments by decreasing bitscore" )
+		( "best-alignments,b", po::value< unsigned int >( &numbestscore )->default_value( 0 ), "set number of top score alignments to consider (after toppercent filter)" )
+		( "sort-score,s", "sort alignments by decreasing score" )
 		( "keep-best-per-ref,k", "for each combination of query and reference sequence id all but the best scoring alignment are removed" )
 		( "min-support,c", po::value< unsigned int >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering)" )
 		( "remove-ref-from-query-taxon,r", "remove alignments for labeled data to test different degrees of taxonomic distance" )
@@ -113,7 +113,7 @@ int main( int argc, char** argv ) {
 		return EXIT_SUCCESS;
 	}
 
-	bool sort_by_bitscore = vm.count( "sort-bitscore" );
+	bool sort_by_score = vm.count( "sort-score" );
 	bool keep_best_per_gi = vm.count( "keep-best-per-ref" );
 	bool mask_by_star = vm.count( "mask-by-star" );
 	bool remove_same_taxon = vm.count( "remove-ref-from-query-taxon" );
@@ -139,7 +139,7 @@ int main( int argc, char** argv ) {
 	if( keep_best_per_gi ) {
 		filters.push_back( new BestScorePerReferenceSeqIDFilter< RecordSetType >() );
 	}
-	if( sort_by_bitscore ) {
+	if( sort_by_score ) {
 		filters.push_back( new SortByBitscoreFilter< RecordSetType >() );
 	}
 	if( minpid > 0.0 ) {
@@ -152,8 +152,8 @@ int main( int argc, char** argv ) {
 			filters.push_back( new MinScoreTopPercentFilter< RecordSetType >( minscore, toppercent ) );
 		}
 	}
-	if( numbestbitscore ) {
-		filters.push_back( new NumBestBitscoreFilter< RecordSetType >( numbestbitscore ) );
+	if( numbestscore ) {
+		filters.push_back( new NumBestBitscoreFilter< RecordSetType >( numbestscore ) );
 	}
 	if( minsupport ) {
 	  filters.push_back( new MinSupportFilter< RecordSetType >( minsupport ) );

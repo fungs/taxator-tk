@@ -824,10 +824,22 @@ class TaxonMaskingFilter : public AlignmentsFilter< ContainerT > {
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
 				typename ContainerT::iterator record_it = recordset.begin();
-        const TaxonID qtax = staxon_[ (*record_it)->getQueryIdentifier() ];
+				TaxonID qtax;
+				try {
+					qtax = staxon_[ (*record_it)->getQueryIdentifier() ];
+				} catch ( std::out_of_range ) {
+					std::cerr << "No mapping for query identifier \"" << (*record_it)->getQueryIdentifier() << "\", masking all alignments..." << std::endl;
+					while( record_it != recordset.end() ) (*record_it++)->filterOut();
+					return;
+				}
 				while( record_it != recordset.end() ) {
-					if( qtax == rtaxon_[ (*record_it)->getReferenceIdentifier() ] ) {
+					try {
+						if( qtax == rtaxon_[ (*record_it)->getReferenceIdentifier() ] ) {
+							(*record_it)->filterOut();
+						}
+					} catch ( std::out_of_range ) {
 						(*record_it)->filterOut();
+						std::cerr << "No mapping for reference identifier \"" << (*record_it)->getReferenceIdentifier() << "\", masking alignment..." << std::endl;
 					}
 					++record_it;
 				}

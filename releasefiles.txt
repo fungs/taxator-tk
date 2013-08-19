@@ -5,19 +5,16 @@
 build.sh
 Changelog.txt
 CMakeLists.txt
-cmake-modules/FindSqlite3.cmake
+#cmake-modules/FindSqlite3.cmake
 gpl-3.0.txt
 README
 
 # taxator-tk executables
 acc2taxid.cpp
-alignments-prefilter.cpp
-alignments-prefilter-training.cpp
+alignments-filter.cpp
 binner.cpp
 extract-fastacomment-ncbifield.cpp
 name-filter.cpp
-prediction2distances.cpp
-prediction-error.cpp
 rank-filter.cpp
 taxator.cpp
 unittest_ncbitaxonomy.cpp
@@ -29,6 +26,7 @@ src/alignmentrecord.cpp
 src/alignmentrecord.hh
 src/alignmentsfilter.hh
 src/boundedbuffer.hh
+src/concurrentoutstream.hh
 src/constants.hh
 src/fastnodemap.hh
 src/losses.hh
