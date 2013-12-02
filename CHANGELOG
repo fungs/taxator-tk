@@ -1,8 +1,19 @@
 This file only lists major changes and bug fixes for each version
 
+v. 1.2 taxator-tk
+=================
+* code cleanup
+* indexed FASTA access (now runs on computers with much less RAM)
+* code speedup by factor of two
+* clean up command line options
+
+v. 1.1 taxator-tk
+=================
+* publication release, many functionality added
+* evaluations done on this version
+
 v. 0.3 taxator-tk
 =================
-
 * bug fix for noise filtering in binner
 * tools reduced to a core set around taxator (previously predictor) and binner
   (prevously predictions-filter)
@@ -11,12 +22,10 @@ v. 0.3 taxator-tk
 
 v. 0.2 taxator-tk
 =================
-
 * predictions-filter for combination of predictions by mutiple methods/experts
   and to clean up the predictions of natural samples where we require a certain
   number of read for each taxonomic group to be considered
 
 v. 0.1 taxator-tk
 =================
-
 * functional framework with support for various LCA methods and fast aligners
