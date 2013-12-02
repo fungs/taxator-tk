@@ -46,84 +46,6 @@ class AccessIDConverter {
 
 
 
-// template< typename TypeT >
-// class AccessIDConverterSQLite : public AccessIDConverter< TypeT > {
-// 	public:
-// 		AccessIDConverterSQLite( const std::string& database_filename ) {
-//       db = new sqlite3pp::database( database_filename.c_str() );
-//       initialization_error = db->error_code();
-//     };
-// 
-// 		~AccessIDConverterSQLite() {
-// 		  delete db;
-//     };
-// 
-// 		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range)*/ {
-//       const std::string sql_statement = boost::str( boost::format("select ncbi_taxon_id from ncbi_gitaxid_mapping where ncbi_gi = %1%" ) % acc );
-//       sqlite3pp::query qry( *db, sql_statement.c_str() );
-//       sqlite3pp::query::iterator q_it = qry.begin();
-//       if( q_it == qry.end() ) {
-//         throw std::out_of_range( sql_statement );
-//       }
-// 
-//       return q_it->get< int >( 0 );
-//     };
-// 
-// 		bool fail( bool print_message = false ) {
-// 		  bool code = db->error_code();
-//       if( code && print_message ) {
-//         std::cerr << db->error_msg() << std::endl;
-//         return true;
-//       }
-//       return false;
-//     };
-// 		
-//  	private:
-// 		sqlite3pp::database* db;
-// 		bool initialization_error;
-// };
-
-
-
-// template< typename TypeT >
-// class AccessIDConverterSQLiteCache : public AccessIDConverterSQLite< TypeT > {
-// 	public:
-// 		AccessIDConverterSQLiteCache( const std::string& database_filename, unsigned int cachesize = 0 ) : AccessIDConverterSQLite< TypeT >( database_filename ), last_lookup( std::make_pair(TypeT(),0) ) {}; //TODO: initialize differently
-// 
-// 		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ {
-//       // check for repeated lookup
-//       if( acc == last_lookup.first ) {
-//         return last_lookup.second;
-//       }
-// 
-//       // search in cache
-//       typename std::map< TypeT, TaxonID >::iterator cache_it = cache.find( acc );
-//       if( cache_it != cache.end() ) { //if found in cache
-//         return cache_it->second;
-//       }
-// 
-//       // fall back on subclass operator[]
-//       TaxonID taxid = AccessIDConverterSQLite< TypeT >::operator[]( acc ); //can throw exception if not found
-// 
-//       // update cache
-//       if( max_cache_size && history.size() >= max_cache_size ) {
-//         cache.erase( history.back() );
-//         history.pop();
-//       }
-// 
-//       history.push( cache.insert( std::make_pair( acc, taxid ) ).first );
-//       return taxid;
-// 		}
-// 		
-// 	private:
-// 		unsigned int max_cache_size;
-// 		typename std::pair< TypeT, TaxonID > last_lookup; //constant lookup time
-// 		typename std::map< TypeT, TaxonID > cache; //logarithmic lookup time (in memory)
-// 		typename std::queue< typename std::map< TypeT, TaxonID >::iterator > history;
-// };
-
-
-
 template< typename TypeT >
 class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
 	public:
@@ -147,7 +69,6 @@ class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
       std::string line;
       std::ifstream flatfile( flatfile_filename.c_str() );
       TypeT acc;
-      TaxonID taxid;
       while( std::getline( flatfile, line ) ) {
         if( ignoreLine( line ) ) { continue; }
         fields.clear();
@@ -157,17 +78,14 @@ class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
         try {
           acc = boost::lexical_cast< TypeT >( *field_it );
           ++field_it;
-          taxid = boost::lexical_cast< TaxonID >( *field_it );
+          TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
+					accessidconv[ acc ] = taxid;
         } catch( boost::bad_lexical_cast e ) {
           std::cerr << "Could not parse line: " << line << ", skipping..." << std::endl;
           std::cerr << "key:" << acc << std::endl;
-          std::cerr << "taxid:" << taxid << std::endl;
-          std::cerr << "error parsing: " << *field_it << std::endl;
+          std::cerr << "error parsing taxonomic ID: " << *field_it << std::endl;
           throw e;
-          continue;
         }
-
-        accessidconv[ acc ] = taxid;
       }
       flatfile.close();
 		};
@@ -186,11 +104,7 @@ AccessIDConverter< TypeT >* loadAccessIDConverterFromFile( const std::string& fi
 	}
 	
 	std::cerr << "loading accession to taxonomic id converter file...";
-//   if( filename.substr( filename.size() - 9 ) == ".sqlitedb" ) {
-//     accidconv = new AccessIDConverterSQLiteCache< TypeT >( filename, cachesize );
-//   } else {
-    accidconv = new AccessIDConverterFlatfileMemory< TypeT >( filename );
-//   }
+  accidconv = new AccessIDConverterFlatfileMemory< TypeT >( filename );
   std::cerr << " done" << std::endl;
   return accidconv;
 }
@@ -198,16 +112,11 @@ AccessIDConverter< TypeT >* loadAccessIDConverterFromFile( const std::string& fi
 
 // converts general string sequence identifier to taxonomic id
 typedef AccessIDConverter< std::string > StrIDConverter;
-
-// typedef AccessIDConverterSQLite< std::string > StrIDConverterSQLite;
-
-// typedef AccessIDConverterSQLiteCache< std::string > StrIDConverterSQLiteCache;
-
 typedef AccessIDConverterFlatfileMemory< std::string > StrIDConverterFlatfileMemory;
 
 
 // alias function (TODO: a function pointer might be better)
-StrIDConverter* loadStrIDConverterFromFile( const std::string& filename, unsigned int cachesize = 0 ); //TODO: remove depricated
+StrIDConverter* loadStrIDConverterFromFile( const std::string& filename, unsigned int cachesize = 0 );
 
 
 

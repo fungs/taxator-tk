@@ -23,7 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <seqan/sequence.h>
 #include <seqan/file.h>
+#include <seqan/seq_io.h>
 #include <boost/progress.hpp>
+#include <boost/concept_check.hpp>
+#include <boost/filesystem.hpp>
 #include <set>
 #include <string>
 #include "ncbidata.hh"
@@ -31,10 +34,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // This currently works with standard and packed strings
-template < typename StorageStringType = seqan::Dna5String, typename CopyStringType = seqan::Dna5String, typename Format = seqan::Fasta >
-class RandomSeqStorRO {
+template <typename WorkingStringType>
+class RandomSeqStoreROInterface {
 	public:
-		RandomSeqStorRO ( const std::string& filename ) : format_( Format() ) {
+		virtual const WorkingStringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const = 0;
+		virtual const WorkingStringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const = 0;
+		virtual ~RandomSeqStoreROInterface() {};
+};
+
+
+
+template < typename StorageStringType = seqan::Dna5String, typename WorkingStringType = seqan::Dna5String, typename Format = seqan::Fasta >
+class RandomInmemorySeqStoreRO : public RandomSeqStoreROInterface<WorkingStringType> {
+	public:
+		RandomInmemorySeqStoreRO ( const std::string& filename ) : format_( Format() ) {
 			std::cerr << "analyzing file '" << filename << "'... ";
 			seqan::MultiSeqFile db_sequences;
 			if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
@@ -59,7 +72,7 @@ class RandomSeqStorRO {
 			}
 		}
 
-		RandomSeqStorRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
+		RandomInmemorySeqStoreRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
 			std::cerr << "analyzing file '" << filename << "'... ";
 			seqan::MultiSeqFile db_sequences;
 			if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
@@ -94,39 +107,41 @@ class RandomSeqStorRO {
 			if( find_it != id2pos_.end() ) {
 				return seqan::value( data_, find_it->second );
 			}
-			std::cerr << "Could not find sequence with id " << id << " in RandomSeqStorRO" << std::endl;
+			std::cerr << "Could not find sequence with id " << id << " in RandomSeqStoreRO" << std::endl;
 			return empty_string_;
 		};
 		
-		const CopyStringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
+		const WorkingStringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
 			const StorageStringType& db_seq = getSequence ( id );
 			if ( &db_seq != &empty_string_ ) {
 				stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
 				if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
-				CopyStringType seq = seqan::infix ( db_seq, start - 1, stop );
+				WorkingStringType seq = seqan::infix ( db_seq, start - 1, stop );
 				assert( seqan::length( seq ) == (stop - start + 1) );
 				return seq;
 			}
 			return empty_string_;
 		};
 		
-		const CopyStringType getSequenceComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
+		const WorkingStringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
 			const StorageStringType& db_seq = getSequence ( id );
 			if ( &db_seq != &empty_string_ ) {
 				stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
 				if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
-				CopyStringType seq = seqan::ModifiedString< seqan::ModifiedString< CopyStringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> ( seqan::infix ( db_seq, start - 1, stop ) );
+				WorkingStringType cst = seqan::infix ( db_seq, start - 1, stop );
+				seqan::ModifiedString< seqan::ModifiedString< WorkingStringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> seq( cst );
+				// = seqan::ModifiedString< seqan::ModifiedString< WorkingStringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> ( seqan::infix ( db_seq, start - 1, stop ) );
 				assert( seqan::length( seq ) == (stop - start + 1) );
 				return seq;
 			}
 			return empty_string_;
 		};
 		
-		const CopyStringType getSequenceAuto ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
+		const WorkingStringType getSequenceAuto ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
 			if ( start < stop ) {
 				return getSequence( id, start, stop );
 			}
-			return getSequenceComplement( id, stop, start );
+			return getSequenceReverseComplement( id, stop, start );
 		};
 
 	protected:
@@ -139,9 +154,9 @@ class RandomSeqStorRO {
 
 
 template< typename StringType, bool skip = true, typename Format = seqan::Fasta >
-class SequentialSeqStorRO {
+class SequentialSeqStoreRO : public RandomSeqStoreROInterface<StringType> {
 	public:
-		SequentialSeqStorRO ( const std::string& filename ) : strm_( filename.c_str() ), format_( Format() ) {};
+		SequentialSeqStoreRO ( const std::string& filename ) : strm_( filename.c_str() ), format_( Format() ) {};
 		
 		const StringType& getSequence ( const std::string& id ) {
 			
@@ -167,15 +182,8 @@ class SequentialSeqStorRO {
 			return seqan::infix ( getSequence ( id ), start - 1, stop );
 		};
 		
-		const StringType getSequenceComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) {
+		const StringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) {
 			return seqan::ModifiedString< seqan::ModifiedString< StringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> ( seqan::infix ( getSequence ( id ), start, stop ) );
-		};
-		
-		const StringType getSequenceAuto ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) {
-			if ( start < stop ) {
-				return seqan::infix ( getSequence ( id ), start, stop );
-			}
-			return seqan::ModifiedString< seqan::ModifiedString< StringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> ( seqan::infix ( getSequence ( id ), stop, start + 1 ) );
 		};
 		
 	protected:
@@ -183,6 +191,75 @@ class SequentialSeqStorRO {
 		Format format_;
 		StringType last_entry_;
 		std::string last_id_;
+};
+
+
+
+template< typename StringType >
+class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
+	public:
+		RandomIndexedSeqstoreRO( const std::string& fasta_filename, const std::string& index_filename ) : index_filename_( index_filename ), write_on_exit_( false ) {
+			if ( ! boost::filesystem::exists( index_filename ) )  {
+				std::cerr << "Index \"" << index_filename << "\" for \"" << fasta_filename << "\" not found, building..." << std::endl;
+				if ( seqan::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
+					std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be built." << std::endl;
+				} else write_on_exit_ = true;
+				return;
+			}
+			
+			if ( seqan::read( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
+				std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be read." << std::endl;
+				//TODO: propagate error
+				return;
+			}
+			
+			//make a thread-safe lookup for identifiers, broken in SEQAN as of version 1.4.1
+			unsigned int idx = 0;
+			typedef seqan::Iterator<seqan::StringSet<seqan::CharString>, seqan::Rooted>::Type TStringSetIterator;
+			for (TStringSetIterator it = seqan::begin(index_.refNameStore); !seqan::atEnd(it); seqan::goNext(it)) {
+				refid2position_[*it] = idx++;
+			}
+		}
+		
+		const StringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
+			assert( start <= stop );
+			unsigned int seq_num;
+			StringType seq;
+			
+			/*if ( ! seqan::getIdByName( index_, id.c_str(), seq_num ) ) {
+				std::cerr << "Sequence " << id << " not found in sequence file." << std::endl; //TODO. propagate error
+				return seq;
+			}*/
+			std::map<seqan::CharString, unsigned int>::const_iterator it = refid2position_.find( id.c_str() );
+			if( it != refid2position_.end() ) seq_num = it->second;
+			else {
+				std::cerr << "Sequence " << id << " not found in sequence file." << std::endl; //TODO. propagate error
+				return seq;
+			}
+			
+			stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
+			seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+			assert( seqan::length( seq ) == (stop - start + 1) );
+			return seq;
+		}
+		
+		const StringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
+			assert( start <= stop );
+			StringType seq = getSequence( id , start, stop );
+			seqan::reverseComplement( seq );
+			return seq;
+		}
+		
+		~RandomIndexedSeqstoreRO() {
+			if ( write_on_exit_ && ! boost::filesystem::exists( index_filename_ ) )
+				if( seqan::write( index_, index_filename_.c_str() ) ) std::cerr << "ERROR: FASTA index could not be written to \"" << index_filename_ << "\"." << std::endl;
+		}
+	
+	protected:
+		const std::string index_filename_;
+		seqan::FaiIndex index_;
+		bool write_on_exit_;
+		std::map<seqan::CharString, unsigned int> refid2position_;
 };
 
 

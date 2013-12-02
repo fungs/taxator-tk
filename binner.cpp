@@ -46,7 +46,7 @@ int main ( int argc, char** argv ) {
 
 	vector< string > ranks, files;
 	bool delete_unmarked;
-	large_unsigned_int min_support_in_sample;
+	large_unsigned_int min_support_in_sample( 0 );
 	float signal_majority_per_sequence, min_support_in_sample_percentage( 0. );
 	string min_support_in_sample_str, log_filename;
 	medium_unsigned_int min_support_per_sequence;
@@ -56,15 +56,16 @@ int main ( int argc, char** argv ) {
 	po::options_description visible_options ( "Allowed options" );
 	visible_options.add_options()
 	( "help,h", "show help message" )
+	( "advanced-options", "show advanced program options" )
 	( "sequence-min-support,s", po::value< medium_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
 	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
 	( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
-	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set ranks at which to do predictions" )
 	( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (replaces standard input, use \"-\" to specify a combination of both)" )
 	( "logfile,l", po::value< std::string >( &log_filename )->default_value( "binning.log" ), "specify name of file for logging (appending lines)" );
 
 	po::options_description hidden_options("Hidden options");
 	hidden_options.add_options()
+	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set ranks at which to do predictions" )
 	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" );
@@ -78,7 +79,12 @@ int main ( int argc, char** argv ) {
 
 	if ( vm.count ( "help" ) ) {
 		cout << visible_options << endl;
-		return EXIT_FAILURE;
+		return EXIT_SUCCESS;
+	}
+	
+	if ( vm.count ( "advanced-options" ) ) {
+		cout << hidden_options << endl;
+		return EXIT_SUCCESS;
 	}
 
 	if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;

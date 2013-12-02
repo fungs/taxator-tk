@@ -783,7 +783,7 @@ const std::string BestScorePerReferenceTaxIDFilter< ContainerT >::description = 
 template< typename ContainerT >
 class RemoveUnclassifiedQueriesFilter : public AlignmentsFilter< ContainerT > {
 	public:
-		RemoveUnclassifiedQueriesFilter( StrIDConverter& accessconv, Taxonomy* tax, const std::string extract_re ) : identifier_regex_( extract_re ), seqid2taxid( accessconv ), taxinter( tax ) {
+		RemoveUnclassifiedQueriesFilter( StrIDConverter& accessconv, Taxonomy* tax, const std::string& extract_re ) : identifier_regex_( extract_re ), seqid2taxid( accessconv ), taxinter( tax ) {
 		}
 
 		void filter( ContainerT& recordset ) {
@@ -860,7 +860,7 @@ const std::string TaxonMaskingFilter< ContainerT >::description = "TaxonMaskingF
 template< typename ContainerT >
 class RemoveIdentSeqIDFilter : public AlignmentsFilter< ContainerT > {
 	public:
-		RemoveIdentSeqIDFilter( const std::string extract_re ) : identifier_regex_( extract_re ) {}; //TODO: catch boost::regex_error
+		RemoveIdentSeqIDFilter( const std::string& extract_re ) : identifier_regex_( extract_re ) {}; //TODO: catch boost::regex_error
 		
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
@@ -894,7 +894,7 @@ const std::string RemoveIdentSeqIDFilter< ContainerT >::description = "RemoveIde
 template< typename ContainerT >
 class RemoveIdentTaxIDFilter : public AlignmentsFilter< ContainerT > {
 	public:
-		RemoveIdentTaxIDFilter( StrIDConverter& accessconv, const std::string extract_re ) : identifier_regex_( extract_re ), seqid2taxid( accessconv ) {}; //TODO: catch boost::regex_error
+		RemoveIdentTaxIDFilter( StrIDConverter& accessconv, const std::string& extract_re ) : identifier_regex_( extract_re ), seqid2taxid( accessconv ) {}; //TODO: catch boost::regex_error
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
 				typename ContainerT::iterator record_it = recordset.begin();

@@ -33,7 +33,6 @@ class BoundedBuffer {
 			++m_unread_;
 			lock.unlock();
 			m_not_empty_.notify_one();
-// 			std::cerr << "push()" << std::endl;
 		}
 
 		value_type pop() {
@@ -42,8 +41,10 @@ class BoundedBuffer {
 			value_type retobj = m_container_[ --m_unread_ ];
 			lock.unlock();
 			m_not_full_.notify_one();
-			if ( empty() ) empty_.notify_all();
-// 			std::cerr << "pop()" << std::endl;
+			if ( empty() ) {
+// 				std::cerr << "slow input -> buffer underrun: thread waits..." << std::endl;
+				empty_.notify_all();
+			}
 			return retobj;
 		}
 		
