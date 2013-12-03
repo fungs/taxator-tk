@@ -40,7 +40,7 @@ add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp 
 target_link_libraries( alignments-filter ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
-add_executable( taxator taxator.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/taxonpredictionmodel.cpp src/predictionrecord.cpp )
+add_executable( taxator taxator.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/predictionrecord.cpp )
 #target_link_libraries( taxator boost_program_options boost_system boost_filesystem boost_thread )
 target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} )
 
