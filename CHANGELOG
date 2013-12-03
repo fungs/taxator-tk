@@ -1,11 +1,12 @@
 This file only lists major changes and bug fixes for each version
 
-v. 1.1 taxator-tk (=SVN r45)
+v. 1.1 taxator-tk (=SVN r48)
 ============================
 * code cleanup
 * indexed FASTA access (now runs on computers with much less RAM)
 * code speedup by factor of two
 * clean up command line options
+* improve packaging scripts
 
 v. 1.0 taxator-tk (=SVN r43)
 ============================
