@@ -6,8 +6,8 @@ build.sh
 CHANGELOG
 CMakeLists.txt
 README
-licenses/seqan license.txt
-licenses/boost software license-1.0.txt
+licenses/seqan_license.txt
+licenses/boost_software_license-1.0.txt
 licenses/gpl-3.0.txt
 
 # taxator-tk executables
