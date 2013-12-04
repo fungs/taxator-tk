@@ -24,7 +24,6 @@ unittest_ncbitaxonomy.cpp
 src/predictionrecord.hh
 src/fastnodemap.hh
 src/taxonpredictionmodel.hh
-src/sequencestorage.cpp
 src/taxonpredictionmodelsequence.hh
 src/tree.hh
 src/profiling.hh

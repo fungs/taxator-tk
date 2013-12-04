@@ -203,11 +203,9 @@ class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
 				std::cerr << "Index \"" << index_filename << "\" for \"" << fasta_filename << "\" not found, building..." << std::endl;
 				if ( seqan::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
 					std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be built." << std::endl;
+					return;
 				} else write_on_exit_ = true;
-				return;
-			}
-			
-			if ( seqan::read( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
+			} else if ( seqan::read( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
 				std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be read." << std::endl;
 				//TODO: propagate error
 				return;
