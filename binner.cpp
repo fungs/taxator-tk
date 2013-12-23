@@ -69,10 +69,10 @@ int main ( int argc, char** argv ) {
 	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" );
-	
+
 	po::options_description all_options;
 	all_options.add( visible_options ).add( hidden_options );
-	
+
 	po::variables_map vm;
 	po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
 	po::notify ( vm );
@@ -81,26 +81,26 @@ int main ( int argc, char** argv ) {
 		cout << visible_options << endl;
 		return EXIT_SUCCESS;
 	}
-	
+
 	if ( vm.count ( "advanced-options" ) ) {
 		cout << hidden_options << endl;
 		return EXIT_SUCCESS;
 	}
 
 	if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
-	
+
 	// interpret given sample support
 	if ( min_support_in_sample_str.find( '.' ) == std::string::npos ) min_support_in_sample = boost::lexical_cast< large_unsigned_int >( min_support_in_sample_str );
 	else min_support_in_sample_percentage = boost::lexical_cast< float >( min_support_in_sample_str );
-	
+
 	set< string > additional_files;
-	
+
 	// create taxonomy
 	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );
 	if( ! tax ) return EXIT_FAILURE;
 	if( ! ranks.empty() && delete_unmarked ) tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
 	TaxonomyInterface taxinter ( tax.get() );
-	
+
 	map< const string*, float > pid_per_rank;
 	if ( vm.count ( "identity-constrain" ) ) {
 		vector< string > fields;
@@ -120,9 +120,9 @@ int main ( int argc, char** argv ) {
 			fields.clear();
 		}
 	}
-	
+
 	//STEP 0: PARSING INPUT
-	
+
 	// setup parser for primary input file (that determines the output order)
 	boost::scoped_ptr< PredictionFileParser< PredictionRecordBinning > > parse;
 	if ( files.empty() ) {
@@ -143,12 +143,12 @@ int main ( int argc, char** argv ) {
 				}
 			}
 		}
-		
+
 		if ( ! parse ) {
 			cerr << "There was no valid input file" << endl;
 			return EXIT_FAILURE;
 		}
-		
+
 		// define additional input files
 		if ( file_it != files.end() ) {
 			const std::string& primary_file = *file_it;
@@ -167,7 +167,7 @@ int main ( int argc, char** argv ) {
 	// default output order corresponds to the first input file with additional records appended at the end
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > > predictions_per_query; //future owner of all dynamically allocated objects
  	predictions_per_query.reserve( num_queries_preallocation ); //avoid early re-allocation
-	
+
 	{
 		if ( additional_files.empty() ) { //parse only primary file (predictions for same sequences must be consecutive!)
 			const std::string* prev_name = &empty_string;
@@ -183,9 +183,9 @@ int main ( int argc, char** argv ) {
 				last_added_rec_list->push_back( rec ); //will take ownership of the record
 			}
 		} else { //parse additional
-			
+
 			std::map< string, boost::ptr_list< PredictionRecordBinning >* > records_by_queryid; //TODO: use save mem trick
-			
+
 			{ //parse primary in case of multiple files (with lookup!)
 				const std::string* prev_name = &empty_string;
 				boost::ptr_list< PredictionRecordBinning >* last_added_rec_list = NULL;
@@ -205,7 +205,7 @@ int main ( int argc, char** argv ) {
 					}
 				}
 			}
-			
+
 			// parse additional files
 			for (set< string >::const_iterator file_it = additional_files.begin(); file_it != additional_files.end(); ++file_it ) {
 				PredictionFileParser< PredictionRecordBinning > parse( *file_it, tax.get() );
@@ -224,9 +224,9 @@ int main ( int argc, char** argv ) {
 			}
 		}
 	}
-	
-	
-	
+
+
+
 	// STEP 1: RANGE PRUNING
 	// in this step the overall sample support for each node is recorded and each
 	// range is shrunk such that the remaining nodes have a minimum support (unit is bp)
@@ -240,14 +240,14 @@ int main ( int argc, char** argv ) {
 	for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator query_it = predictions_per_query.begin(); query_it != predictions_per_query.end(); ++query_it ) {
 		for ( boost::ptr_list< PredictionRecordBinning >::iterator prec_it = query_it->begin(); prec_it != query_it->end(); ++prec_it ) {
 			Taxonomy::PathUpIterator pit = taxinter.traverseUp( prec_it->getLowerNode() );
-			
+
 			// process lowest node
 			medium_unsigned_int total_node_support = prec_it->getSupportAt( &*pit );
 			minimum_support_found = std::min( minimum_support_found, total_node_support );
 			large_unsigned_int* value_found = support.find( &*pit );
 			if ( value_found ) *value_found += total_node_support;
 			else support[ &*pit ] = total_node_support;
-			
+
 			// process rest
 			if ( pit != root_node ) {
 				while ( ++pit != root_node ) {
@@ -263,10 +263,10 @@ int main ( int argc, char** argv ) {
 		}
 	}
 	std::cerr << " done: " << support.size() << " nested taxa with total support of " << support[ root_node ] << " bp" << std::endl;
-	
+
 	// if min_support_in_sample was given as fraction
 	if ( min_support_in_sample_percentage ) min_support_in_sample = support[ root_node ]*min_support_in_sample_percentage;
-	
+
 	// shrink ranges from lower end if support is smaller than the minimum required or if it does not comply with user-defined PID per rank.
 	std::cerr << "noise removal...";
 	std::set< const TaxonNode* > pruned_nodes;
@@ -275,32 +275,32 @@ int main ( int argc, char** argv ) {
 			for ( boost::ptr_list< PredictionRecordBinning >::iterator prec_it = query_it->begin(); prec_it != query_it->end(); ) {
 				const TaxonNode* lower_node = prec_it->getLowerNode();
 				const TaxonNode* upper_node = prec_it->getUpperNode();
-				
+
 				Taxonomy::PathUpIterator pit = taxinter.traverseUp( lower_node );
 				while ( pit != upper_node && support[ &*pit ] < min_support_in_sample ) {
 					pruned_nodes.insert( &*pit );
 					++pit;
 				}
-				
+
 				if ( pit == upper_node && support[ &*pit ] < min_support_in_sample ) { //remove whole range
 					pruned_nodes.insert( &*pit );
 					prec_it = query_it->erase( prec_it ); //TODO: mask instead of delete
 					continue;
 				}
-				
+
 				if ( pit != lower_node ) prec_it->pruneLowerNode( &*pit ); //prune
 				++prec_it;
 			}
 		}
 	}
 	std::cerr << " done: " << pruned_nodes.size() << " taxa were removed" << std::endl;
-	
+
 	// STEP 2: BINNING
 	// in this step multiple ranges are combined into a single range by combining
 	// evidence for sub-ranges. This algorithm considers only support. Signal
 	// strength and interpolation values are ignored. This heuristic seems quite
 	// robust
-	
+
 	std::cerr << "binning step... ";
 	std::ofstream binning_debug_output( log_filename.c_str() );
 	for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
@@ -331,9 +331,9 @@ int main ( int argc, char** argv ) {
 				if ( rank_pid < min_pid ) break;
 				predict_node = &*pit;
 			} while ( pit != target_node );
-			std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << endline;
+			std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << endline;
 		} else {
-			std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << endline;
+			std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << endline;
 		}
 	}
 	std::cerr << " done" << std::endl;

@@ -198,7 +198,7 @@ export TAXATORTK_TAXONOMY_NCBI=$PWD
 An environment variable is only persistent for the current session. It must be
 reset every time you are opening a new shell or command line terminal.
 
- Note:
+Note:
 Make sure you have a mapping file that maps each sequence in your sequence
 collection to a valid NCBI taxonomic identifier. I will provide such mappings
 for several RefSeq releases of microbial sequences. They can be found in the
@@ -207,7 +207,13 @@ It is crutial that the mapping exactly! maps the reference sequences names, as
 reported by the assembler, to taxonomic IDs, as specified in the taxonomy. It is
 quite easy to check which reference name cannot be mapped correctly by running
 the program name-filter with the list of reference names and looking for
-the reported errors("names-filter -f 1 < names.txt >/dev/null").
+the reported errors("name-filter -f 1 < names.txt >/dev/null").
+
+To make sure all ranks are mapped correctly you can use rank-filter with all needed
+ranks in argument -r:
+"rank-filter -f 2 -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax"
+If you want to check your mapping you could do:
+"rank-filter -f 2 -s rank < mapping_to_check.tax > output.txt"
 
 --------------------------------------------------------------------------------
 
