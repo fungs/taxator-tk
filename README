@@ -177,8 +177,12 @@ on the final binning results, suggesting that the algorithm is quite robust.
 Some extra tools:
 -----------------
 
-rank-filter:                    Traverses taxonomic ids up to a given rank.
-name-filter:                    Prints the name or rank name of a given taxon.
+taxknife:	Works on a given taxonomy.
+   
+	Modes:
+
+	"traverse"	Traverses taxonomic ids up to a given rank.
+	"names"		Prints the name or rank name of a given taxon.
 
 --------------------------------------------------------------------------------
 
@@ -206,14 +210,15 @@ RefSeq release catalogue but should be checked to match the actual taxonomy.
 It is crutial that the mapping exactly! maps the reference sequences names, as
 reported by the assembler, to taxonomic IDs, as specified in the taxonomy. It is
 quite easy to check which reference name cannot be mapped correctly by running
-the program name-filter with the list of reference names and looking for
-the reported errors("name-filter -f 1 < names.txt >/dev/null").
+the program taxknife in "names"-mode with the list of reference names and looking for
+the reported errors("taxknife names -f 1 < names.txt >/dev/null").
 
-To make sure all ranks are mapped correctly you can use rank-filter with all needed
+To make sure all ranks are mapped correctly you can use taxknife in "traverse"-mode with all needed
 ranks in argument -r:
-"rank-filter -f 2 -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax"
+"taxknife traverse-f 2 -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax"
+
 If you want to check your mapping you could do:
-"rank-filter -f 2 -s rank < mapping_to_check.tax > output.txt"
+"taxknife names -f 2 -s rank < mapping_to_check.tax > output.txt"
 
 --------------------------------------------------------------------------------
 
@@ -256,16 +261,16 @@ binner < my.predictions.gff3 -i genus:0.6 > my.tax
 
 (g)
 # Show the corresponding predictions with taxon names
-name-filter -f 2 -s name < my.tax
+taxknife names -f 2 -s name < my.tax
 
 # or if you want to show the names on the phylum level.
-rank-filter -r phylum -f 2 < my.tax | name-filter -f 2 -s name
+taxknife traverse -r phylum -f 2 < my.tax | taxknife names -f 2 -s name
 
 # to get a nice rank profile
-name-filter -f 2 -s rank < my.tax | sort | uniq -c
+taxknife names -f 2 -s rank < my.tax | sort | uniq -c
 
 # clean up you mapping so it only points to major ranks (recommended for taxator)
-rank-filter -f 2 -r "species genus family order class phylum superkingdom" < mapping.tax > mapping_cleaned.tax
+taxknife traverse -f 2 -r "species genus family order class phylum superkingdom" < mapping.tax > mapping_cleaned.tax
 
 (h)
 # restrict run time (50 works nice in general and avoids excessive aligning)
