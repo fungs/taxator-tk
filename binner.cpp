@@ -49,7 +49,7 @@ int main ( int argc, char** argv ) {
 	large_unsigned_int min_support_in_sample( 0 );
 	float signal_majority_per_sequence, min_support_in_sample_percentage( 0. );
 	string min_support_in_sample_str, log_filename;
-	medium_unsigned_int min_support_per_sequence;
+	large_unsigned_int min_support_per_sequence;
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
 	namespace po = boost::program_options;
@@ -57,7 +57,7 @@ int main ( int argc, char** argv ) {
 	visible_options.add_options()
 	( "help,h", "show help message" )
 	( "advanced-options", "show advanced program options" )
-	( "sequence-min-support,s", po::value< medium_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
+	( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
 	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
 	( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
 	( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (replaces standard input, use \"-\" to specify a combination of both)" )
@@ -233,7 +233,7 @@ int main ( int argc, char** argv ) {
 
 	//counting support of nodes
 	std::cerr << "analyzing sample composition by signal counting...";
-	medium_unsigned_int minimum_support_found = std::numeric_limits< medium_unsigned_int >::max();
+	large_unsigned_int minimum_support_found = std::numeric_limits< large_unsigned_int >::max();
 	const TaxonNode* const root_node = taxinter.getRoot();
 	FastNodeMap< large_unsigned_int > support( taxinter.getMaxDepth() );
 	large_unsigned_int& root_support = support[ root_node ];
@@ -242,7 +242,7 @@ int main ( int argc, char** argv ) {
 			Taxonomy::PathUpIterator pit = taxinter.traverseUp( prec_it->getLowerNode() );
 
 			// process lowest node
-			medium_unsigned_int total_node_support = prec_it->getSupportAt( &*pit );
+			large_unsigned_int total_node_support = prec_it->getSupportAt( &*pit );
 			minimum_support_found = std::min( minimum_support_found, total_node_support );
 			large_unsigned_int* value_found = support.find( &*pit );
 			if ( value_found ) *value_found += total_node_support;

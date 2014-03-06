@@ -836,7 +836,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			std::vector< seqan::Dna5String > rrseqs_ordered; //TODO: boost ptr_container/seqan::StringSet/set to detect equal sequences
 			std::vector< std::string > rrseqs_ordered_names;
 			std::vector< int > rrseqs_qscores;
-			std::vector< int > rrseqs_matches;
+			std::vector< large_unsigned_int > rrseqs_matches;
 			records_ordered.reserve( n );
 			rrseqs_ordered.reserve( n );
 			rrseqs_matches.reserve( n );
@@ -886,6 +886,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			}
 
 			std::set< uint > anchor_indices_p1;
+			large_unsigned_int anchors_support = 0;
 			
 			{ // phase 1 (DB re-alignment within band)
 				measure_reeval_alignment_.start();
@@ -901,10 +902,11 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 // 						std::cerr << "seq1: " << rrseqs_ordered[i] << std::endl;
 // 						std::cerr << "seq2: " << qrseq << std::endl;
 						const int score = -seqan::globalAlignmentScore( rrseqs_ordered[i], qrseq, seqan::MyersBitVector() );
-						const int matches = std::max( seqan::length( rrseqs_ordered[i] ), seqan::length( qrseq ) ) - score;
+						const large_unsigned_int matches = std::max( static_cast<large_unsigned_int>( std::max( seqan::length( rrseqs_ordered[i] ), seqan::length( qrseq ) ) - score ), records_ordered[i]->getIdentities() );
 // 						std::cerr << "score: " << score << " matches: " << matches << std::endl;
 						rrseqs_qscores.push_back( score );
 						rrseqs_matches.push_back( matches );
+						anchors_support = std::max( anchors_support, matches );
 						
 						if ( score < rrseqs_qscores[index_best] || ( score == rrseqs_qscores[index_best] && matches > rrseqs_matches[index_best] ) ) {
 							index_best = i;
@@ -913,7 +915,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 						++counter;
 					} else { //fill in some dummy values
 						rrseqs_qscores.push_back( std::numeric_limits< int >::max() );
-						rrseqs_matches.push_back( -1 );
+						rrseqs_matches.push_back( 0 );
 					}
 				}
 				
@@ -928,7 +930,6 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			std::vector< const TaxonNode* > anchors_lnode;
 			std::vector< const TaxonNode* > anchors_unode;
 			float anchors_taxsig = 1;
-			const medium_unsigned_int anchors_support = rrseqs_matches[*anchor_indices_p1.begin()]; //is all the same for anchors by definition
 			float anchors_ival = 0.;
 			const TaxonNode* lnode;
 			const TaxonNode* unode;
@@ -962,7 +963,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 						int score, matches;
 						if ( i == index_anchor ) score = 0;
 						else {
-							if ( rrseqs_qscores[index_anchor] == 0 && rrseqs_matches[i] != -1 ) { //use triangle relation to avoid alignment
+							if ( rrseqs_qscores[index_anchor] == 0 && rrseqs_matches[i] ) { //use triangle relation to avoid alignment
 								score = rrseqs_qscores[i];
 								matches = rrseqs_matches[i];
 							}
@@ -976,7 +977,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 								matches = std::max( seqan::length( rrseqs_ordered[ i ] ), seqan::length( rrseqs_ordered[ index_anchor ] ) ) - score;
 // 								std::cerr << "score: " << score << " matches: " << matches << std::endl;
 							
-								if ( rrseqs_qscores[index_anchor] == 0 && rrseqs_matches[i] != -1 ) { //update using triangle relation
+								if ( rrseqs_qscores[index_anchor] == 0 && rrseqs_matches[i] ) { //update using triangle relation
 									rrseqs_qscores[i] = score;
 									rrseqs_matches[i] = matches;
 								}
@@ -1048,7 +1049,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 					placer.addSequence( 0, records_ordered[index_anchor]->getReferenceNode() );
 // 					seqan::assignSource( seqan::row( *aln, 1 ), rrseqs_ordered[ index_anchor ] ); // reuse *aln1
 					
-					if ( rrseqs_matches[index_anchor] == -1 ) { //need to align query against anchor
+					if ( ! rrseqs_matches[index_anchor] ) { //need to align query against anchor
 // 						seqan::assignSource( seqan::row( *aln, 0 ), qrseq );
 // 						std::cerr << "aligning two sequences globally:" << std::endl;
 // 						std::cerr << "seq1: " << rrseqs_ordered[index_anchor] << std::endl;

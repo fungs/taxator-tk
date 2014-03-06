@@ -58,9 +58,9 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		large_unsigned_int getQueryFeatureEnd() const { return query_feature_end_; }
 		large_unsigned_int getQueryFeatureWidth() const { return query_feature_end_ - query_feature_begin_ + 1; }
 		
-		medium_unsigned_int getSupportAt( const TaxonNode* node ) const { return getSupportAt( node->data->root_pathlength ); } //TODO: range check
+		large_unsigned_int getSupportAt( const TaxonNode* node ) const { return getSupportAt( node->data->root_pathlength ); } //TODO: range check
 		
-		medium_unsigned_int getSupportAt( small_unsigned_int depth ) const {
+		large_unsigned_int getSupportAt( small_unsigned_int depth ) const {
 // 			std::cerr << "taxon support size is: " << taxon_support_.size() << std::endl;
 // 			std::cerr << "upper node depth is: " << static_cast< int >( upper_node_->data->root_pathlength ) << std::endl;
 // 			std::cerr << "lower node depth is: " << static_cast< int >( lower_node_->data->root_pathlength ) << std::endl;
@@ -83,27 +83,27 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		void setInterpolationValue( float f ) { interpolation_value_ = f; }
 		void setSignalStrength( float f ) { signal_strength_ = f; }
 		
-		void setNodeRange( const TaxonNode* lower_node, medium_unsigned_int lower_node_support, const TaxonNode* upper_node, medium_unsigned_int upper_node_support ) {
+		void setNodeRange( const TaxonNode* lower_node, large_unsigned_int lower_node_support, const TaxonNode* upper_node, large_unsigned_int upper_node_support ) {
 			assert( lower_node == upper_node || taxinter_.isParentOf( upper_node, lower_node ) );
 			lower_node_ = lower_node;
 			upper_node_ = upper_node;
-			taxon_support_ = std::vector< medium_unsigned_int >( lower_node->data->root_pathlength - upper_node->data->root_pathlength + 1, upper_node_support );
+			taxon_support_ = std::vector< large_unsigned_int >( lower_node->data->root_pathlength - upper_node->data->root_pathlength + 1, upper_node_support );
 			taxon_support_.back() = lower_node_support;
 		}
 		
 		void setNodeRange( const TaxonNode* lower_node, const TaxonNode* upper_node ) {
-			medium_unsigned_int support = getQueryFeatureWidth();
+			large_unsigned_int support = getQueryFeatureWidth();
 			setNodeRange( lower_node, support, upper_node, support );
 		}
 
-		void setNodeRange( const TaxonNode* lower_node, const TaxonNode* upper_node, medium_unsigned_int support ) {
+		void setNodeRange( const TaxonNode* lower_node, const TaxonNode* upper_node, large_unsigned_int support ) {
 			setNodeRange( lower_node, support, upper_node, support );
 		}
 		
-		void setNodePoint( const TaxonNode* node, medium_unsigned_int support ) { setNodeRange( node, support, node, support ); } //alias for point estimate
+		void setNodePoint( const TaxonNode* node, large_unsigned_int support ) { setNodeRange( node, support, node, support ); } //alias for point estimate
 		
 		void setNodePoint( const TaxonNode* node ) { //alias for point estimate
-			medium_unsigned_int support = getQueryFeatureWidth();
+			large_unsigned_int support = getQueryFeatureWidth();
 			setNodeRange( node, support, node, support );
 		}
 		
@@ -113,8 +113,8 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			lower_node_ = node;
 		}
 		
-		void setSupportAt( const TaxonNode* node, medium_unsigned_int support ) { setSupportAt( node->data->root_pathlength, support ); }
-		void setSupportAt( small_unsigned_int depth, medium_unsigned_int support ) { taxon_support_.at( depth - upper_node_->data->root_pathlength ) = support; } //TODO: at->[]
+		void setSupportAt( const TaxonNode* node, large_unsigned_int support ) { setSupportAt( node->data->root_pathlength, support ); }
+		void setSupportAt( small_unsigned_int depth, large_unsigned_int support ) { taxon_support_.at( depth - upper_node_->data->root_pathlength ) = support; } //TODO: at->[]
 		
 		//de-serialization
 		virtual bool parse( const std::string& line ) { //read GFF3-style
@@ -200,7 +200,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		float interpolation_value_;
 		float signal_strength_;
 		TaxonomyInterface taxinter_;
-		std::vector< medium_unsigned_int > taxon_support_; //internal encoding of support, TODO: change to small_unsigned_int?
+		std::vector< large_unsigned_int > taxon_support_; //internal encoding of support, TODO: change to small_unsigned_int?
 		
 		void printColumns1to8( std::ostream& strm ) const {
 			strm << getQueryIdentifier() << tab << "taxator-tk" << tab << "sequence_feature" << tab << query_feature_begin_ << tab << query_feature_end_ << tab;
@@ -215,7 +215,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			assert( lower_node_ && upper_node_ && ! taxon_support_.empty() );
 			
 			strm << "tax=";
-			medium_unsigned_int last_support = 0;
+			large_unsigned_int last_support = 0;
 			Taxonomy::PathUpIterator pit( lower_node_ );
 			unsigned int i = taxon_support_.size() - 1;
 			while ( pit != upper_node_ ) {
@@ -245,7 +245,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 					std::vector< std::string > taxpath;
 					std::vector< std::string > taxid_support;
 					TaxonID taxid;
-					medium_unsigned_int support;
+					large_unsigned_int support;
 					
 					tokenizeSingleCharDelim( value, taxpath, "-", 0, false );
 					
@@ -253,10 +253,10 @@ class PredictionRecordBase { //TODO: rename to something like feature
 					tokenizeSingleCharDelim( *it, taxid_support, ":", 2, false );
 					taxid = boost::lexical_cast< TaxonID >( taxid_support[0] );
 					if ( taxid_support[1].empty() ) support = getQueryFeatureWidth();
-					else support = boost::lexical_cast< medium_unsigned_int >( taxid_support[1] );
+					else support = boost::lexical_cast< large_unsigned_int >( taxid_support[1] );
 					const TaxonNode* last_node = taxinter_.getNode( taxid );
 					lower_node_ = last_node;
-					std::list< medium_unsigned_int > tmp_taxon_support;
+					std::list< large_unsigned_int > tmp_taxon_support;
 					
 					while ( ! (++it)->empty() ) { //last field is empty by definition, if well formed
 						taxid_support.clear();
@@ -274,7 +274,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 							tmp_taxon_support.push_front( support );
 						}
 						
-						if ( ! taxid_support[1].empty() ) support = boost::lexical_cast< medium_unsigned_int >( taxid_support[1] );
+						if ( ! taxid_support[1].empty() ) support = boost::lexical_cast< large_unsigned_int >( taxid_support[1] );
 						last_node = node;
 					}
 					tmp_taxon_support.push_front( support );

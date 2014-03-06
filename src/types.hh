@@ -34,6 +34,7 @@ typedef int_least32_t large_int; // –2,147,483,648 to 2,147,483,647
 typedef uint_least8_t small_unsigned_int; // 0 to 255
 typedef uint_least16_t medium_unsigned_int; // 0 to 65,535
 typedef uint_least32_t large_unsigned_int; // 0 to 4,294,967,295
+typedef uint_least64_t very_large_unsigned_int; // 0 to 18,446,744,073,709,551,615
 
 // basic mappings
 typedef large_unsigned_int TaxonID; //maximum number at time of writing was 1,050,856
