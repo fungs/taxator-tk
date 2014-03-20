@@ -35,7 +35,7 @@ template< typename ContainerT >
 class AlignmentsFilter {
 	public:
 		typedef ContainerT AlignmentRecordSetType;
-		
+
 		virtual ~AlignmentsFilter() {};
 		virtual void filter( ContainerT& recordset ) = 0;
 		virtual const std::string getInfo() { return description; };
@@ -53,7 +53,7 @@ template< typename ContainerT >
 class MaxBitscoreAlignmentFilter : public AlignmentsFilter< ContainerT > {
 	public:
 		typedef typename ContainerT::value_type AlignmentRecordPtrType;
-		
+
 		void filter( ContainerT& recordset ) {
 			best_records.clear();
 			if( ! recordset.empty() ) {
@@ -176,11 +176,11 @@ template< typename ContainerT, typename Comparator = std::greater< float > >
 class SortByBitscoreFilter : public AlignmentsFilter< ContainerT > { //includes masked records
 	public:
 		typedef typename ContainerT::value_type AlignmentRecordPtrType;
-		
+
 		void filter( ContainerT& recordset ) {
 			std::multimap< float, AlignmentRecordPtrType, Comparator > sorttable;
 
-			typename ContainerT::iterator record_it = recordset.begin();
+			//typename ContainerT::iterator record_it = recordset.begin();
 			while( ! recordset.empty() ) {
 				AlignmentRecordPtrType record = recordset.back();
 				sorttable.insert( std::make_pair( record->getScore(), record ) );
@@ -670,7 +670,7 @@ class NumBestBitscoreFilter : public AlignmentsFilter< ContainerT > {
 					sorted_bitscores.insert( std::make_pair( (*record_it)->getScore(), (*record_it) ) );
 				}
 			}
-			
+
 			if ( sorted_bitscores.empty() ) return;
 
 			// mark records to be masked
@@ -804,7 +804,7 @@ class RemoveUnclassifiedQueriesFilter : public AlignmentsFilter< ContainerT > {
 			assert(  re_results.size() > 1 );
 			return std::string( re_results[1].first, re_results[1].second );
 		}
-		
+
 		const boost::regex identifier_regex_;
 		static const std::string description;
 		StrIDConverter& seqid2taxid;
@@ -820,7 +820,7 @@ template< typename ContainerT >
 class TaxonMaskingFilter : public AlignmentsFilter< ContainerT > {
 	public:
 		TaxonMaskingFilter( StrIDConverter& staxon, StrIDConverter& rtaxon ) : staxon_( staxon ), rtaxon_( rtaxon ) {};
-		
+
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
 				typename ContainerT::iterator record_it = recordset.begin();
@@ -845,7 +845,7 @@ class TaxonMaskingFilter : public AlignmentsFilter< ContainerT > {
 				}
 			}
 		}
-		
+
 	private:
 		StrIDConverter& staxon_;
 		StrIDConverter& rtaxon_;
@@ -861,7 +861,7 @@ template< typename ContainerT >
 class RemoveIdentSeqIDFilter : public AlignmentsFilter< ContainerT > {
 	public:
 		RemoveIdentSeqIDFilter( const std::string& extract_re ) : identifier_regex_( extract_re ) {}; //TODO: catch boost::regex_error
-		
+
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
 				typename ContainerT::iterator record_it = recordset.begin();
@@ -881,7 +881,7 @@ class RemoveIdentSeqIDFilter : public AlignmentsFilter< ContainerT > {
 			assert(  re_results.size() > 1 );
 			return std::string( re_results[1].first, re_results[1].second );
 		}
-		
+
 		const boost::regex identifier_regex_;
 		static const std::string description;
 };
@@ -903,7 +903,7 @@ class RemoveIdentTaxIDFilter : public AlignmentsFilter< ContainerT > {
 					TaxonID taxid = seqid2taxid[ seqid ];
 					while( record_it != recordset.end() ) {
 						TaxonID reftaxid = seqid2taxid[ (*record_it)->getReferenceIdentifier() ]; //TODO: use (*record_it)->getReferenceNode and traverse...
-						
+
 						if( taxid == reftaxid ) {
 							(*record_it)->filterOut();
 						}
@@ -926,7 +926,7 @@ class RemoveIdentTaxIDFilter : public AlignmentsFilter< ContainerT > {
 			assert(  re_results.size() > 1 );
 			return std::string( re_results[1].first, re_results[1].second );
 		}
-		
+
 		const boost::regex identifier_regex_;
 		static const std::string description;
 		StrIDConverter& seqid2taxid;
@@ -940,7 +940,7 @@ const std::string RemoveIdentTaxIDFilter< ContainerT >::description = "RemoveIde
 // class TagEssentialFilter : public AlignmentsFilter< ContainerT > { //TODO: remove this filter
 // 	public:
 // 		TagEssentialFilter( StrIDConverter& accessconv, Taxonomy* tax ) : seqid2taxid( accessconv ), taxinter( tax ) {};
-// 
+//
 // 		void filter( ContainerT& recordset ) {
 // 			if( ! recordset.empty() ) {
 // 				typename ContainerT::iterator record_it = recordset.begin();
@@ -950,22 +950,22 @@ const std::string RemoveIdentTaxIDFilter< ContainerT >::description = "RemoveIde
 // 					TaxonID taxid = seqid2taxid[ seqid ];
 // 					const TaxonNode* label_node = taxinter.getNode( taxid );
 // 					int maxdepth = 0;
-// 
+//
 // 					while( record_it != recordset.end() ) {
 // 						const TaxonNode* node = taxinter.getNode( (*record_it)->getNode()->data->reference_taxid );
 // 						const TaxonNode* pair_lca = taxinter.getLCA( node, label_node );
-// 
+//
 // 						int depth = pair_lca->data->root_pathlength;
-// 
+//
 // 						lcadepths.push_back( depth );
-// 
+//
 // 						if( ! (*record_it)->isFiltered() ) { //obeys former filtering for cut calculation
 // 							maxdepth = std::max( depth, maxdepth );
 // 						}
-// 
+//
 // 						++record_it;
 // 					}
-// 
+//
 // 					std::list< int >::iterator depth_it = lcadepths.begin();
 // 					record_it = recordset.begin();
 // 					while( record_it != recordset.end() ) {
