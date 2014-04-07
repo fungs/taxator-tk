@@ -129,7 +129,8 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			boost::format query_seqname_fmt( "%d:%d@%s len=%d" );
 
 			typename ContainerT::iterator rec_it = firstUnmaskedIter( recordset );
-                // merken
+            typename ContainerT::iterator rec_it2 = rec_it;
+
 			if ( rec_it == recordset.end() ) {
 				TaxonPredictionModel< ContainerT >::setUnclassified( prec );
 				return;
@@ -141,13 +142,25 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			large_unsigned_int qrstop = (*rec_it)->getQueryStop();
 			large_unsigned_int qlength = (*rec_it)->getQueryLength();
 			float qprevscore = (*rec_it)->getScore();
+            float qmaxscore = .0;
 
 			// determine position range of query to consider
 			uint n = 0;
+
+			while(rec_it2!= recordset.end()){
+
+                if(!(*rec_it2)->isFiltered()){
+                    qmaxscore = std::max( qmaxscore, (*rec_it)->getScore() );
+                }
+                rec_it2++;
+			}
+
 			assert( qrstart <= qrstop );			++n;
 			while ( ++rec_it != recordset.end() ) {
 
 				assert( (*rec_it)->getQueryStart() <= (*rec_it)->getQueryStop() );
+
+                if((*rec_it)->getScore()<qmaxscore*0.25){(*rec_it)->filterOut();}
 
 				if ( ! (*rec_it)->isFiltered() ) {
 					qrstart = std::min( (*rec_it)->getQueryStart(), qrstart );
@@ -337,13 +350,22 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
                          else ival = (qscore - lscore)/static_cast<float>( uscore - lscore );
                     }
 
-                    //TODO vereinfachen -> oben ?
-                    for ( std::list< boost::tuple< uint, int > >::iterator it = anchor_indices_p2_tmp.begin(); it != anchor_indices_p2_tmp.end(); ) {
-                            anchor_indices_p2.insert( it->get<0>() );
-							++it;
+                    uint min_root_distance = std::numeric_limits< int >::max();
+
+                    for ( std::list< boost::tuple< uint, int > >::iterator it =  anchor_indices_p2_tmp.begin(); it !=  anchor_indices_p2_tmp.end(); ) {
+                        uint LCAroot = this->taxinter_.getLCA(records_ordered[it->get<0>()]->getReferenceNode(),lnode)->data->root_pathlength;
+                        if( LCAroot < min_root_distance){ min_root_distance = LCAroot;}
+                        ++it;
                     }
 
-					measure_phase2_alignment_.stop();
+                    for ( std::list< boost::tuple< uint, int > >::iterator it =  anchor_indices_p2_tmp.begin(); it !=  anchor_indices_p2_tmp.end(); ) {
+                        if(this->taxinter_.getLCA(records_ordered[it->get<0>()]->getReferenceNode(),lnode)->data->root_pathlength == min_root_distance){
+                        anchor_indices_p2.insert( it->get<0>() );
+                        }
+                        ++it;
+                    }
+
+                    measure_phase2_alignment_.stop();
 
 					logsink << "#ival: " << ival << "low: " << lscore << "| up: " << uscore << "\n";
 					const float taxsig = .0;//placer.getTaxSignal( qscore );
