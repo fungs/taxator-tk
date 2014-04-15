@@ -177,12 +177,9 @@ on the final binning results, suggesting that the algorithm is quite robust.
 Some extra tools:
 -----------------
 
-taxknife:	Works on a given taxonomy.
-   
-	Modes:
-
-	"traverse"	Traverses taxonomic ids up to a given rank.
-	"names"		Prints the name or rank name of a given taxon.
+taxknife:	Works on a given taxonomy tree. Available modes are:
+  "traversal":   Traverses taxonomic ids up to a given rank.
+  "annotation":  Prints the name or rank name of a given taxon.
 
 --------------------------------------------------------------------------------
 
@@ -204,21 +201,17 @@ reset every time you are opening a new shell or command line terminal.
 
 Note:
 Make sure you have a mapping file that maps each sequence in your sequence
-collection to a valid NCBI taxonomic identifier. I will provide such mappings
-for several RefSeq releases of microbial sequences. They can be found in the
-RefSeq release catalogue but should be checked to match the actual taxonomy.
-It is crutial that the mapping exactly! maps the reference sequences names, as
-reported by the assembler, to taxonomic IDs, as specified in the taxonomy. It is
-quite easy to check which reference name cannot be mapped correctly by running
-the program taxknife in "names"-mode with the list of reference names and looking for
-the reported errors("taxknife names -f 1 < names.txt >/dev/null").
-
-To make sure all ranks are mapped correctly you can use taxknife in "traverse"-mode with all needed
-ranks in argument -r:
-"taxknife traverse-f 2 -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax"
-
-If you want to check your mapping you could do:
-"taxknife names -f 2 -s rank < mapping_to_check.tax > output.txt"
+collection to a valid NCBI taxonomic identifier. We provide such mappings
+for several reference data bundles. They can also be found in the RefSeq release
+catalogue but should be checked to match the actual taxonomy. It is crucial that
+the mapping exactly! maps the reference sequences names, as reported by the
+aligner, to taxonomic IDs, as specified in the taxonomy. It is easy to check
+for unmappable reference taxonomic IDs by running the program taxknife in
+"annotation" mode with a list of IDs and looking for the reported errors:
+  taxknife -f 2 annotation < mapping.tax >/dev/null
+Normal operation in taxator is on a pruned taxonomy with major ranks, so
+transform the mapping by running:
+  taxknife -f 2 traversal -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax
 
 --------------------------------------------------------------------------------
 
@@ -261,19 +254,19 @@ binner < my.predictions.gff3 -i genus:0.6 > my.tax
 
 (g)
 # Show the corresponding predictions with taxon names
-taxknife names -f 2 -s name < my.tax
+taxknife -f 2 names -s name < my.tax
 
 # or if you want to show the names on the phylum level.
-taxknife traverse -r phylum -f 2 < my.tax | taxknife names -f 2 -s name
+taxknife -f 2 traverse -r phylum < my.tax | taxknife -f 2 names -s name
 
 # to get a nice rank profile
-taxknife names -f 2 -s rank < my.tax | sort | uniq -c
+taxknife -f 2 names -s rank < my.tax | sort | uniq -c
 
 # clean up you mapping so it only points to major ranks (recommended for taxator)
-taxknife traverse -f 2 -r "species genus family order class phylum superkingdom" < mapping.tax > mapping_cleaned.tax
+taxknife -f 2 traverse -r species genus family order class phylum superkingdom < mapping.tax > mapping_cleaned.tax
 
 (h)
-# restrict run time (50 works nice in general and avoids excessive aligning)
+# restrict run time (50 works nicely in general and avoids excessive aligning)
 zcat my.alignments.gz | alignments-filter -b 50 | taxator ...
 
 (i)
@@ -293,6 +286,7 @@ lca:___________Use the Lowest Common Ancestor (LCA) of all reference taxa of the
                alignments.
 
 megan-lca:_____Use the LCA of taxa of only the x % best matching references.
+
 ic-megan-lca:__Like megan-lca but considers "unclassified" nodes in taxonomy.
 
 --------------------------------------------------------------------------------
@@ -331,9 +325,7 @@ integrated in such. The following considerations were taken:
 - If the local aligner finds many alignments for an input sequence, this will
   slow down the RPA without notable benefits. At the moment you can easily
   exclude many alignments via alignments-filter but in future we want to
-  implement a filter directly in taxator that works on a per segment basis and
-  uses a good heuristic to exclude unrelevant segments and speed up the
-  algorithm further.
+  implement a heuristic filter directly in taxator to speed up the algorithm.
 
 --------------------------------------------------------------------------------
 
@@ -344,4 +336,5 @@ We acknowledge the work done by the contributors of the SEQAN and BOOST projects
 as well as the author(s) of the tree.hh classes, LAST, BLAST and all the other
 anonymous contributors.
 
-For any questions, feedback or complaints, contact johdro@mpi-inf.mpg.de
+For any questions, feedback or complaints, contact
+johannes.droege@uni-duesseldorf.de

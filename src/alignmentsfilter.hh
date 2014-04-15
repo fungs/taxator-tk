@@ -747,8 +747,8 @@ class BestScorePerReferenceTaxIDFilter : public AlignmentsFilter< ContainerT > {
  		BestScorePerReferenceTaxIDFilter(){};
 
 		void filter( ContainerT& recordset ) {
-			std::map< unsigned int, AlignmentRecord* > keep;
-			std::map< unsigned int, AlignmentRecord* >::iterator keep_it;
+			std::map< TaxonID, AlignmentRecord* > keep;
+			std::map< TaxonID, AlignmentRecord* >::iterator keep_it;
 			//mask all records having the same gi but a worse bitscore
 			for( typename ContainerT::iterator record_it = recordset.begin(); record_it != recordset.end(); ++record_it ) {
 				if( ! (*record_it)->isFiltered() ) { //TODO: change taxid to node pointer content

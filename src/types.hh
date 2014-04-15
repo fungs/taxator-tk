@@ -37,6 +37,7 @@ typedef uint_least32_t large_unsigned_int; // 0 to 4,294,967,295
 typedef uint_least64_t very_large_unsigned_int; // 0 to 18,446,744,073,709,551,615
 
 // basic mappings
-typedef large_unsigned_int TaxonID; //maximum number at time of writing was 1,050,856
+// typedef large_unsigned_int TaxonID; //maximum number at time of writing was 1,050,856
+typedef std::string TaxonID;  // TODO: see if memory usage is much higher with strings
 
 #endif //types_hh_

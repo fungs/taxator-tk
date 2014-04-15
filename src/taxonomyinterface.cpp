@@ -33,6 +33,12 @@ const std::string& TaxonomyInterface::getRank ( const TaxonID taxid ) const {
 
 
 
+const std::string& TaxonomyInterface::getRankInternal( const std::string& rank ) const {
+	return tax->getRankInternal( rank );
+}
+
+
+
 const std::string& TaxonomyInterface::getName ( const TaxonNode* node ) const {
 	return node->data->annotation->name;
 }

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <string>
 #include <vector>
+#include <boost/iterator/iterator_concepts.hpp>
 
 const char endline = '\n';
 const char tab = '\t';
@@ -37,5 +38,12 @@ const char default_mask_symbol = '*';
 const std::string empty_string;
 
 const std::string ENVVAR_TAXONOMY_NCBI = "TAXATORTK_TAXONOMY_NCBI";
+
+namespace newick {
+	const std::string nodestart = "(";
+	const std::string nodestop = ")";
+	const std::string nodesep = ",";
+	const std::string treestop = ";\n";
+}
 
 #endif //constants_hh_

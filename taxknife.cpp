@@ -33,12 +33,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/ncbidata.hh"
 #include "src/utils.hh"
 #include "src/constants.hh"
+#include "src/taxonfilter.hh"
 
 using namespace std;
 
 int main( int argc, char** argv ) {
-	string show_what, invalid_replace_value_traversal, invalid_replace_value_annotation;
-	vector< string > rank_names, ranks, operations;
+	string show_what, invalid_replace_value_traverse, invalid_replace_value_annotate, tree_outfile, operation;
+	vector< string > rank_names;
 	unsigned int field_pos;
 	bool allnodes = false;
 
@@ -50,28 +51,40 @@ int main( int argc, char** argv ) {
 	po::options_description desc("Allowed options");
 	desc.add_options()
 	( "help,h", "show help message")
-	( "mode", po::value< vector <string> >( &operations),"choose mode:\n"
-                                          "\"traversal\": follow nodes upwards in taxonomy\n\n"
-                                          "\"annotation\": looks up metainformation attached to nodes (e.g. names)\n\n")
+	( "mode,m", po::value< std::string >( &operation)->default_value( "annotate" ), "choose mode:\n"
+                                          "\"traverse\": follow nodes upwards in taxonomy\n\n"
+                                          "\"annotate\": looks up metainformation attached to nodes (e.g. names)\n\n"
+																					"\"tree\": writes a (sub)tree\n\n")
 	( "field,f", po::value< unsigned int >( &field_pos )->default_value( 1 ), "input column\n" );
 
+	
 	// TODO: put option parsing in separate objects which can be chained
-	po::options_description rankf("traversal mode");
-	rankf.add_options()
+	po::options_description traverse_opts("traverse mode");
+	traverse_opts.add_options()
 	( "keep-not-rank,k", "unmappable taxids remain (otherwise mapped to root)" )
 	( "keep-not-taxid,t", "unknown taxonomic IDs are kept (otherwise skipped)" )
-	( "set-invalid-traversal,b", po::value< string >( &invalid_replace_value_traversal ),"replace unknown taxids by this given value" )
-	( "traverse-ranks,r", po::value< vector <string> >( &rank_names)-> multitoken(),"traverse taxonomy up to one of these ranks (space separated list)");
+	( "set-invalid-traverse,b", po::value< string >( &invalid_replace_value_traverse ),"replace unknown taxids by this given value" )
+	( "traverse-ranks,r", po::value< vector <string> >( &rank_names)->multitoken(),"traverse taxonomy up to one of these ranks (space separated list)");
 
+	
 	// TODO: put option parsing in separate objects which can be chained
-	po::options_description namef("annotation mode");
-	namef.add_options()
+	po::options_description annotate_opts("annotate mode");
+	annotate_opts.add_options()
 	( "allnodes,a", "if set, all nodes will be used, not only at selected ranks" )
-	( "set-invalid-annotation,c", po::value< string >( &invalid_replace_value_annotation ),"replace all taxids that are invalid by this given value" )
+	( "set-invalid-annotate,c", po::value< string >( &invalid_replace_value_annotate ),"replace all taxids that are invalid by this given value" )
 	( "show,s", po::value< string >( &show_what )->default_value( "name" ),"either 'name', 'rank', 'path' or 'taxid-path'" )
-	( "name-ranks,n", po::value< vector <string> >( &ranks)-> multitoken(),"select ranks to be considered; if not set, default ranks will be used");
+	( "name-ranks,n", po::value< vector <string> >( &rank_names)->multitoken(),"select ranks to be considered; if not set, default ranks will be used");
 
-    desc.add(rankf).add(namef);
+	
+	// TODO: put option parsing in separate objects which can be chained
+	po::options_description tree_opts("tree mode");
+	tree_opts.add_options()
+	( "tree-ranks,q", po::value< vector <string> >( &rank_names)->multitoken(),"consider these taxonomic ranks (ordered space separated list from low to high, e.g. species family phylum)")
+	( "outfile,o", po::value< string >( &tree_outfile )->default_value("tree.newick"), "name of newick file to be written")
+	( "fill-intermediate,i", "fill in dummy intermediate nodes if ranks are missing")
+	( "names,v", "show scientific names in tree (no character restrictions)");
+	
+    desc.add(traverse_opts).add(annotate_opts).add(tree_opts);  //TODO: handle options separately
 
     po::variables_map vm;
     po::store(po::command_line_parser( argc, argv ).options( desc ).positional(mode).run(), vm);
@@ -79,15 +92,23 @@ int main( int argc, char** argv ) {
 
 		// global sanity checks
     if( vm.count("help")) { cout << desc << endl; return EXIT_SUCCESS; }
-    if(operations.empty()) { cout << "\n Please choose a mode.\n" << endl; cout << desc <<endl; return EXIT_FAILURE; }
+    if(operation.empty()) { cout << "\n Please choose a mode.\n" << endl; cout << desc <<endl; return EXIT_FAILURE; }
     if( field_pos < 1 ) { cerr << "Field number index is 1-based" << endl; return EXIT_FAILURE; }
 
     // build taxonomy
     boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
     if( ! tax ) return EXIT_FAILURE;
     TaxonomyInterface interface( tax.get() );
+		
+		//TODO: change code to use set of ranks, not single rank to traverse
+		set< const string* > ranks;
+		for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
+			const string& rank = tax->getRankInternal( *it );
+			if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
+			else ranks.insert( &rank );
+		}
 
-    if(find(operations.begin(), operations.end(),"traversal") != operations.end()){
+    if( operation == "traverse" ){
         // command line arguments
 
 //         if( ! vm.count( "traversal" ) ) { //TODO: always false?
@@ -97,29 +118,15 @@ int main( int argc, char** argv ) {
 
         bool keep_not_rank = vm.count( "keep-not-rank" );
         bool keep_not_taxid = vm.count( "keep-not-taxid" );
-        bool replace_invalid = vm.count( "set-invalid-traversal" );
+        bool replace_invalid = vm.count( "set-invalid-traverse" );
 
-        // create taxonomy
-        /*
-        boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
-        if( ! tax ) return EXIT_FAILURE;
-        TaxonomyInterface interface( tax.get() );
-        */
-
-        //TODO: change code to use set of ranks, not single rank to traverse
-        set< const string* > ranks;
-        for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
-            const string& rank = tax->getRankInternal( *it );
-            if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
-            else ranks.insert( &rank );
-        }
 
         // parse line by line
         string line;
         stringstream buffer;
         list< string > fields;
         list< string >::iterator field_it;
-        unsigned int taxid;
+        TaxonID taxid;
         const TaxonNode* rootnode = interface.getRoot();
         const TaxonNode* node;
 
@@ -135,9 +142,7 @@ int main( int argc, char** argv ) {
             ++i;
           } else {
             try {
-              //cerr << "Converting " << *field_it << " to unsigned int" << endl;
-              taxid = boost::lexical_cast< unsigned int >( *field_it );
-              //cerr << "Converted without exception!" << endl;
+              taxid = boost::lexical_cast< TaxonID >( *field_it );
               node = interface.getNode( taxid );
               if( node ) {
                 while( ! node->data->annotation || ( ! ranks.count( &(node->data->annotation->rank) ) && node != rootnode ) ) {
@@ -146,7 +151,7 @@ int main( int argc, char** argv ) {
                 if( keep_not_rank && node == rootnode ) {
                   cout << buffer.str();
                   if( replace_invalid ) {
-                    cout << invalid_replace_value_traversal;
+                    cout << invalid_replace_value_traverse;
                   } else {
                                     cout << taxid;
                   }
@@ -159,12 +164,12 @@ int main( int argc, char** argv ) {
                   cout << default_field_separator << *field_it << endl;
                 }
               } else {
-                cerr << "traversal: Could not find node with taxid " << *field_it << " in the taxonomy";
+                cerr << "traverse: Could not find node with taxid " << *field_it << " in the taxonomy";
                 if( keep_not_taxid ) {
                   cerr << endl;
                   cout << buffer.str();
                   if( replace_invalid ) { //TODO: only works in combination with keep-invalid
-                    cout << invalid_replace_value_traversal;
+                    cout << invalid_replace_value_traverse;
                   } else {
                     cout << taxid;
                   }
@@ -177,7 +182,7 @@ int main( int argc, char** argv ) {
                 }
               }
             } catch( boost::bad_lexical_cast e ) {
-              cerr << "traversal: Could not parse taxid " << *field_it << " in line \"" << line << "\", skipping record..." << endl;
+              cerr << "traverse: Could not parse taxid " << *field_it << " in line \"" << line << "\", skipping record..." << endl;
             }
             break;
           }
@@ -187,22 +192,18 @@ int main( int argc, char** argv ) {
             buffer.clear();
         }
 
-        return EXIT_SUCCESS;
-	}
-    else if(find(operations.begin(), operations.end(),"annotation") != operations.end()){
-
-        if( ! vm.count( "name-ranks" ) ) ranks = default_ranks;
+	} else if( operation == "annotate" ){
 
         if( ! vm.count( "allnodes" ) ) allnodes = false;
         else allnodes = true;
 
-        bool replace_invalid = vm.count( "set-invalid-annotation" );
+        bool replace_invalid = vm.count( "set-invalid-annotate" );
 
         // parse line by line
         string line;
         list< string > fields;
         list< string >::iterator field_it;
-        unsigned int taxid;
+        TaxonID taxid;
         const TaxonNode* node;
         stringstream buffer;
 
@@ -218,7 +219,7 @@ int main( int argc, char** argv ) {
               ++i;
                   } else {
                     try {
-                      taxid = boost::lexical_cast< unsigned int >( *field_it );
+                      taxid = boost::lexical_cast< TaxonID >( *field_it );
                       node = interface.getNode( taxid );
                 if( node ) {
                   if( node->data->annotation ) {
@@ -228,12 +229,12 @@ int main( int argc, char** argv ) {
                     }
                     cout << endl;
                   } else {
-                    cout << "node_without_annotation";
+                    cout << "node_without_annotate";
                   }
                 } else {
                   cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
                   if ( replace_invalid ) {
-                    cout << buffer.str() << invalid_replace_value_annotation;
+                    cout << buffer.str() << invalid_replace_value_annotate;
                     if( ! (++field_it)->empty() ) {
                       cout << default_field_separator << *field_it;
                     }
@@ -243,7 +244,7 @@ int main( int argc, char** argv ) {
                     } catch( boost::bad_lexical_cast e ) {
                 cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                 if ( replace_invalid ) {
-                  cout << buffer.str() << invalid_replace_value_annotation;
+                  cout << buffer.str() << invalid_replace_value_annotate;
                   if( ! (++field_it)->empty() ) {
                     cout << default_field_separator << *field_it;
                   }
@@ -270,7 +271,7 @@ int main( int argc, char** argv ) {
                 ++i;
               } else {
                 try {
-                  taxid = boost::lexical_cast< unsigned int >( *field_it );
+                  taxid = boost::lexical_cast< TaxonID >( *field_it );
                   node = interface.getNode( taxid );
                   if( node ) {
                     if( node->data->annotation ) {
@@ -285,7 +286,7 @@ int main( int argc, char** argv ) {
                   } else {
                     cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
                    if ( replace_invalid ) {
-                      cout << buffer.str() << invalid_replace_value_annotation;
+                      cout << buffer.str() << invalid_replace_value_annotate;
                       if( ! (++field_it)->empty() ) {
                         cout << default_field_separator << *field_it;
                       }
@@ -295,7 +296,7 @@ int main( int argc, char** argv ) {
                 } catch( boost::bad_lexical_cast e ) {
                   cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                   if ( replace_invalid ) {
-                    cout << buffer.str() << invalid_replace_value_annotation;
+                    cout << buffer.str() << invalid_replace_value_annotate;
                     if( ! (++field_it)->empty() ) {
                       cout << default_field_separator << *field_it;
                     }
@@ -322,7 +323,7 @@ int main( int argc, char** argv ) {
                                 ++i;
                             } else {
                                 try {
-                                    taxid = boost::lexical_cast< unsigned int >( *field_it );
+                                    taxid = boost::lexical_cast< TaxonID >( *field_it );
                                     node = interface.getNode( taxid );
                                     if( node ) {
                                         cout << buffer.str();
@@ -346,7 +347,7 @@ int main( int argc, char** argv ) {
                                     } else {
                                         cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
                                     if ( replace_invalid ) {
-                                            cout << buffer.str() << invalid_replace_value_annotation;
+                                            cout << buffer.str() << invalid_replace_value_annotate;
                                             if( ! (++field_it)->empty() ) {
                                                 cout << default_field_separator << *field_it;
                                             }
@@ -356,7 +357,7 @@ int main( int argc, char** argv ) {
                                 } catch( boost::bad_lexical_cast e ) {
                                     cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                                     if ( replace_invalid ) {
-                                        cout << buffer.str() << invalid_replace_value_annotation;
+                                        cout << buffer.str() << invalid_replace_value_annotate;
                                         if( ! (++field_it)->empty() ) {
                                             cout << default_field_separator << *field_it;
                                         }
@@ -383,7 +384,7 @@ int main( int argc, char** argv ) {
                                     ++i;
                                 } else {
                                     try {
-                                        taxid = boost::lexical_cast< unsigned int >( *field_it );
+                                        taxid = boost::lexical_cast< TaxonID >( *field_it );
                                         node = interface.getNode( taxid );
                                         if( node ) {
                                             cout << buffer.str();
@@ -403,7 +404,7 @@ int main( int argc, char** argv ) {
                                         } else {
                                             cerr << "no taxon with taxid " << taxid << " found in taxonomy" << endl;
                                         if ( replace_invalid ) {
-                                                cout << buffer.str() << invalid_replace_value_annotation;
+                                                cout << buffer.str() << invalid_replace_value_annotate;
                                                 if( ! (++field_it)->empty() ) {
                                                     cout << default_field_separator << *field_it;
                                                 }
@@ -413,7 +414,7 @@ int main( int argc, char** argv ) {
                                     } catch( boost::bad_lexical_cast e ) {
                                         cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                                         if ( replace_invalid ) {
-                                            cout << buffer.str() << invalid_replace_value_annotation;
+                                            cout << buffer.str() << invalid_replace_value_annotate;
                                             if( ! (++field_it)->empty() ) {
                                                 cout << default_field_separator << *field_it;
                                             }
@@ -435,7 +436,40 @@ int main( int argc, char** argv ) {
                 }
             }
         }
+    } else if( operation == "tree" ) {
+			bool tree_show_names = vm.count( "names" );
+			bool tree_fill_intermediate = vm.count( "fill-intermediate" );
+			
+			NewickTaxonFilter filter_field(interface, tree_outfile, rank_names, tree_show_names, tree_fill_intermediate);
+			
+			// parse line by line
+			string line;
+			list< string > fields;
+			list< string >::iterator field_it;
+			stringstream buffer;
 
-        return EXIT_SUCCESS;
-    }
-}
+			while( getline( cin, line ) ) { //TODO: simplify, use fields as buffer
+				if ( ignoreLine( line ) ) continue;
+				tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
+				field_it = fields.begin();
+				unsigned int i = 1;
+				while( field_it != fields.end() ) {
+					if( i < field_pos ) {
+						buffer << *field_it++ << default_field_separator;
+						++i;
+					} else {
+						filter_field(*field_it);
+						buffer << *field_it;
+						if( ! (++field_it)->empty() ) buffer << default_field_separator << *field_it;
+						else buffer << endl;
+						break;
+					}
+				}
+				cout << buffer.str();
+				fields.clear();
+				buffer.str("");
+				buffer.clear();
+			}
+		}
+		return EXIT_SUCCESS;
+	}

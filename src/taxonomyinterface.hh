@@ -39,6 +39,9 @@ class TaxonomyInterface {
 
 		const std::string& getRank( const TaxonNode* node ) const;
 		const std::string& getRank( const TaxonID taxid ) const;
+		
+		const std::string& getRankInternal( const std::string& rank ) const;
+		
 		const std::string& getName( const TaxonNode* node ) const;
 		const std::string& getName( const TaxonID taxid ) const;
 

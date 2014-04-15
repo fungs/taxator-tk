@@ -215,7 +215,7 @@ class TaxonTree : public tree< Taxon* > {
 	private:
 		std::set< std::string > ranks_;
 		const std::string& rank_not_found_;
-		std::map< unsigned int, Node* > taxid2node_; //use boost::ptr_map<> -> no destructor needed, hash map is faster
+		std::map< TaxonID, Node* > taxid2node_; //use boost::ptr_map<> -> no destructor needed, hash map is faster
 		small_unsigned_int max_depth_;
 };
 

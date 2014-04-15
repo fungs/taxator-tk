@@ -73,7 +73,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 
 	small_unsigned_int depth_counter = 0;
 	large_unsigned_int lrvalue_counter = 0;
-	TaxonID node_taxid = 1; //NCBI root taxid
+	TaxonID node_taxid = boost::lexical_cast<TaxonID>(1); //NCBI root taxid
 	small_unsigned_int max_depth = 0;
 
 	// remove root self-link from children

@@ -13,7 +13,7 @@ TaxonTree::~TaxonTree() {
 
 
 
-void TaxonTree::addToIndex( unsigned int taxid , TaxonTree::Node* node ) {
+void TaxonTree::addToIndex( TaxonID taxid , TaxonTree::Node* node ) {
 	taxid2node_[ taxid ] = node;
 }
 
