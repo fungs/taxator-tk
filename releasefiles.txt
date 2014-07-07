@@ -15,14 +15,14 @@ acc2taxid.cpp
 alignments-filter.cpp
 binner.cpp
 extract-fastacomment-ncbifield.cpp
-name-filter.cpp
-rank-filter.cpp
 taxator.cpp
 unittest_ncbitaxonomy.cpp
+taxknife.cpp
 
 # taxator-tk classes and functions
 src/predictionrecord.hh
 src/fastnodemap.hh
+src/taxonfilter.hh
 src/taxonpredictionmodel.hh
 src/taxonpredictionmodelsequence.hh
 src/tree.hh

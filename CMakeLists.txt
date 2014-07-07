@@ -7,8 +7,9 @@ set( boost_version_required_enc 103401 )
 set( project_name taxator-tk )
 
 # cmake requirements detection
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake-modules)
-# find_package( Sqlite3 )
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake-modules ${CMAKE_MODULE_PATH})
+# find_package(Sqlite3)
+find_package(Threads REQUIRED)  # necessary workaround for cmake boost detection bug (not linking POSIX threads library)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -42,7 +43,7 @@ target_link_libraries( alignments-filter ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boos
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
 add_executable( taxator taxator.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/predictionrecord.cpp )
 #target_link_libraries( taxator boost_program_options boost_system boost_filesystem boost_thread )
-target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} )
+target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} )
 
 # apply filtering to predictions file
 add_executable( binner binner.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
