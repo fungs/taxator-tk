@@ -1,6 +1,6 @@
 This file only lists major changes and bug fixes for each version
 
-v. 1.2 taxator-tk (=SVN r61)
+v. 1.2 taxator-tk (=SVN r63)
 ============================
 * program taxknife substitutes name-filter and rank-filter
 * adjust data types to support longer segments
