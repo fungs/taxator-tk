@@ -1,5 +1,13 @@
 This file only lists major changes and bug fixes for each version
 
+v. 1.2 taxator-tk (=SVN r61)
+============================
+* program taxknife substitutes name-filter and rank-filter
+* adjust data types to support longer segments
+* better approximation of identity scores + support values in binner
+* optimizations in RPA procedure
+* heuristic to avoid excessive run-time with bad alignments
+
 v. 1.1 taxator-tk (=SVN r51)
 ============================
 * code cleanup
