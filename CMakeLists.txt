@@ -28,21 +28,12 @@ endif()
 include_directories( "includes-external" )
 set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
 
-# traverse nodes up to a given rank
-#add_executable( rank-filter rank-filter.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
-#target_link_libraries( rank-filter ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
-# looks up the name or rank name of a node
-#add_executable( name-filter name-filter.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
-#target_link_libraries( name-filter ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
 # apply filtering to alignments file
 add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp src/accessconv.cpp )
 target_link_libraries( alignments-filter ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # takes input alignments and predicts a taxon for each query id using various methods and parameters
 add_executable( taxator taxator.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/accessconv.cpp src/predictionrecord.cpp )
-#target_link_libraries( taxator boost_program_options boost_system boost_filesystem boost_thread )
 target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} )
 
 # apply filtering to predictions file
@@ -52,6 +43,7 @@ target_link_libraries( binner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LI
 # taxknife 
 add_executable( taxknife taxknife.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
 target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
+
 
 # The following targets are usually not needed or for development and testing: uncomment if needed
 
