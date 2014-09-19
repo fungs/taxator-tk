@@ -71,11 +71,12 @@ int main( int argc, char** argv ) {
 	
 	if( oformat_args[0] == "CAMI" ) { 
 		// add CAMI key=value headers
+		cout << "#CAMI Format for Binning" << endl; 
 		for( uint i = 1; i < oformat_args.size(); ++i ) {
 			cout << '@' << oformat_args[i] << endl;
 		}
 		
-		cout << "@@SEQUENCEID\tTAXID" << endl;
+		cout << endl << "@@SEQUENCEID\tTAXID" << endl << endl;
 		
 		// parse line by line
 		uint max_pos = max( ident_pos, taxon_pos );
