@@ -79,6 +79,8 @@ int main( int argc, char** argv ) {
 		
 		// parse line by line
 		uint max_pos = max( ident_pos, taxon_pos );
+		--ident_pos;
+		--taxon_pos;
 		const string cami_field_separator = "\t";
 		vector< string > fields;
 		string line;
