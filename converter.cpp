@@ -71,7 +71,7 @@ int main( int argc, char** argv ) {
 	
 	if( oformat_args[0] == "CAMI" ) { 
 		// add CAMI key=value headers
-		for( uint i = 1; i <= oformat_args.size(); ++i ) {
+		for( uint i = 1; i < oformat_args.size(); ++i ) {
 			cout << '@' << oformat_args[i] << endl;
 		}
 		
