@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
 #include <boost/scoped_ptr.hpp>
-#include "src/alignmentrecord.hh"
+#include "src/alignmentrecordRE.hh"
 #include "src/alignmentsfilter.hh"
 
 
@@ -39,7 +39,7 @@ template< typename AlignmentsFilterListType >
 void parseAndFilter( AlignmentsFilterListType& filters, bool mask = true ) {
 // 	template <template <typename> class Container, typename AlignmentRecordType>
 // 	void parseAndFilter( boost::ptr_list< AlignmentsFilter< Container::< AlignmentRecordType* > > >& filters, bool mask = true ) {
-	
+
 	// some type tricks
 	typedef typename boost::remove_pointer< typename AlignmentsFilterListType::value_type >::type AlignmentsFilterType; //expect stdcontainer
 	typedef typename AlignmentsFilterType::AlignmentRecordSetType AlignmentRecordSetType;
@@ -48,20 +48,20 @@ void parseAndFilter( AlignmentsFilterListType& filters, bool mask = true ) {
 	typename AlignmentsFilterListType::iterator filter_it;
 	AlignmentRecordFactory< AlignmentRecordType > recfac;
 	AlignmentFileParser< AlignmentRecordType > parser( cin, recfac );
-	RecordSetGenerator< AlignmentRecordType > recgen( parser );
-	
+	RecordSetGeneratorSort< AlignmentRecordType, AlignmentRecordSetType, false > recgen( parser ); // Eik geaendert
+
 	AlignmentRecordSetType recordset;
 	typename AlignmentRecordSetType::iterator rec_it;
 	AlignmentRecordType* record;
-	
+
 	//apply list of filters to each record set
 	while( recgen.notEmpty() ) {
+	    //std::cerr << "iterate ov recgen\n";
 		recgen.getNext( recordset );
-
 		// apply all filters
 		filter_it = filters.begin();
 		while( filter_it != filters.end() ) {
-// 			cerr << "applying filter: " << filter_it->getInfo() << endl;
+ 			//cerr << "applying filter: " << filter_it->getInfo() << endl;
 			filter_it++->filter( recordset );
 		}
 
@@ -84,7 +84,7 @@ int main( int argc, char** argv ) {
 	float minscore, toppercent, minpid;
 	double maxevalue;
 	unsigned int numbestscore, minsupport;
-	
+
 	std::string tax_map1_filename, tax_map2_filename;
 
 	namespace po = boost::program_options;
@@ -130,10 +130,10 @@ int main( int argc, char** argv ) {
 			cout << "'--remove-ref-from-query-taxon' requires two mapping files: '--taxon-mapping-sample' and '--taxon-mapping-reference'" << endl;
 			return EXIT_SUCCESS;
 		}
-		
+
 		seqid2taxid_sample.reset( loadStrIDConverterFromFile( tax_map1_filename ) );
 		seqid2taxid_reference.reset( loadStrIDConverterFromFile( tax_map2_filename, 1000 ) );
-		
+
 		filters.push_back( new TaxonMaskingFilter< RecordSetType >( *seqid2taxid_sample, *seqid2taxid_reference ) );
 	}
 	if( keep_best_per_gi ) {

@@ -57,7 +57,7 @@ int main( int argc, char** argv ) {
 																					"\"tree\": writes a (sub)tree\n\n")
 	( "field,f", po::value< unsigned int >( &field_pos )->default_value( 1 ), "input column\n" );
 
-	
+
 	// TODO: put option parsing in separate objects which can be chained
 	po::options_description traverse_opts("traverse mode");
 	traverse_opts.add_options()
@@ -66,7 +66,7 @@ int main( int argc, char** argv ) {
 	( "set-invalid-traverse,b", po::value< string >( &invalid_replace_value_traverse ),"replace unknown taxids by this given value" )
 	( "traverse-ranks,r", po::value< vector <string> >( &rank_names)->multitoken(),"traverse taxonomy up to one of these ranks (space separated list)");
 
-	
+
 	// TODO: put option parsing in separate objects which can be chained
 	po::options_description annotate_opts("annotate mode");
 	annotate_opts.add_options()
@@ -75,7 +75,7 @@ int main( int argc, char** argv ) {
 	( "show,s", po::value< string >( &show_what )->default_value( "name" ),"either 'name', 'rank', 'path' or 'taxid-path'" )
 	( "name-ranks,n", po::value< vector <string> >( &rank_names)->multitoken(),"select ranks to be considered; if not set, default ranks will be used");
 
-	
+
 	// TODO: put option parsing in separate objects which can be chained
 	po::options_description tree_opts("tree mode");
 	tree_opts.add_options()
@@ -83,7 +83,7 @@ int main( int argc, char** argv ) {
 	( "outfile,o", po::value< string >( &tree_outfile )->default_value("tree.newick"), "name of newick file to be written")
 	( "fill-intermediate,i", "fill in dummy intermediate nodes if ranks are missing")
 	( "names,v", "show scientific names in tree (no character restrictions)");
-	
+
     desc.add(traverse_opts).add(annotate_opts).add(tree_opts);  //TODO: handle options separately
 
     po::variables_map vm;
@@ -99,7 +99,7 @@ int main( int argc, char** argv ) {
     boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
     if( ! tax ) return EXIT_FAILURE;
     TaxonomyInterface interface( tax.get() );
-		
+
 		//TODO: change code to use set of ranks, not single rank to traverse
 		set< const string* > ranks;
 		for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
@@ -439,9 +439,9 @@ int main( int argc, char** argv ) {
     } else if( operation == "tree" ) {
 			bool tree_show_names = vm.count( "names" );
 			bool tree_fill_intermediate = vm.count( "fill-intermediate" );
-			
+
 			NewickTaxonFilter filter_field(interface, tree_outfile, rank_names, tree_show_names, tree_fill_intermediate);
-			
+
 			// parse line by line
 			string line;
 			list< string > fields;

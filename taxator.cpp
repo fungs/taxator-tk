@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <queue>
 #include "src/taxontree.hh"
 #include "src/ncbidata.hh"
-#include "src/alignmentrecord.hh"
+#include "src/alignmentrecordRE.hh"
 #include "src/taxonpredictionmodelsequence.hh"
 #include "src/taxonpredictionmodel.hh"
 #include "src/constants.hh"
@@ -47,67 +47,67 @@ using namespace std;
 
 typedef list< AlignmentRecordTaxonomy* > RecordSetType;
 
-void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink ) {
+void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments,bool alignments_sorted, std::ostream& logsink ) {
 	AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 	AlignmentFileParser< AlignmentRecordTaxonomy > parser( cin, fac );
-	RecordSetGenerator< AlignmentRecordTaxonomy > recgen( parser );
-	
-	std::queue< RecordSetType > workload;
-	RecordSetType tmprset;
+    RecordSetGenerator<AlignmentRecordTaxonomy,RecordSetType>* recgen = NULL; // boost smpt
+
+    if(alignments_sorted){recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType>( parser );}
+    else if (split_alignments){recgen = new RecordSetGeneratorSort<AlignmentRecordTaxonomy, RecordSetType, true>( parser );}
+    else{recgen = new RecordSetGeneratorSort<AlignmentRecordTaxonomy, RecordSetType, false>( parser );}
+
+	RecordSetType rset;
 	PredictionRecord prec( tax );
 
 	//print GFF3Header
 	std::cout << GFF3Header();
-	
-	while( recgen.notEmpty() ) {
-		
-		// parse
-		recgen.getNext( tmprset );
-		if ( split_alignments ) separateAlignmentsByRange( tmprset, workload );  // one query can have several aligning regions
-		else workload.push( tmprset );
-		tmprset.clear();  // ownership was transferred, clear for use in next cycle
-		
-		// run
-		while ( ! workload.empty() ) {
-			RecordSetType& rset = workload.front();
-			predictor->predict( rset, prec, logsink );
-			deleteRecords( rset );
-			cout << prec;
-			workload.pop();
+	while( recgen->notEmpty() ) {
+		recgen->getNext( rset );
+        predictor->predict( rset, prec, logsink );
+        deleteRecords( rset );
+        std::cout << prec;
 		}
-	}
+
+	delete recgen;
 }
-
-
 
 class BoostProducer {
 	public:
-		BoostProducer( BoundedBuffer< RecordSetType >& buffer, AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac, bool split_alignments ) :
+		BoostProducer( BoundedBuffer< RecordSetType >& buffer, AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac, bool split_alignments, bool alignments_sorted ) :
 			buffer_( buffer ),
 			fac_( fac ),
-			split_alignments_( split_alignments )
+			split_alignments_( split_alignments ),
+			alignments_sorted_( alignments_sorted )
 			{}
 
 		void operator()() { produce(); }
-		
+
 	private:
+
 		BoundedBuffer< RecordSetType >& buffer_;
 		AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac_;
 		bool split_alignments_;
-		
+		bool alignments_sorted_;
+
 		void produce() {
 			AlignmentFileParser< AlignmentRecordTaxonomy > parser( cin, fac_ );
-			RecordSetGenerator< AlignmentRecordTaxonomy > recgen( parser );
+            RecordSetGenerator<AlignmentRecordTaxonomy,RecordSetType>* recgen = NULL;
+
+            if(alignments_sorted_){recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType>( parser );}
+            else if (split_alignments_){recgen = new RecordSetGeneratorSort<AlignmentRecordTaxonomy, RecordSetType, true>( parser );}
+            else{recgen = new RecordSetGeneratorSort<AlignmentRecordTaxonomy, RecordSetType, false>( parser );}//RecordSetGenerator< AlignmentRecordTaxonomy >* recgen = NULL;
+			//recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy>( parser, split_alignments_);
 			RecordSetType tmprset;
-			
-			while( recgen.notEmpty() ) {
-				recgen.getNext( tmprset );
-				if ( split_alignments_ ) separateAlignmentsByRange( tmprset, buffer_ );
-				else buffer_.push( tmprset );
+
+			while( recgen->notEmpty() ) {
+				recgen->getNext( tmprset );
+                buffer_.push( tmprset );
 				tmprset.clear();  // ownership was transferred, clear for use in next cycle
 			}
+
+			delete recgen;
 		}
-		
+
 };
 
 
@@ -122,7 +122,7 @@ class BoostConsumer {
 			log_( log ),
 			thread_count_( 0 )
 			{}
-			
+
 		void operator()() { consume(); }
 
 	private:
@@ -133,15 +133,15 @@ class BoostConsumer {
 		ConcurrentOutStream& log_;
 		boost::mutex count_mutex_; //needed for concurrent thread count
 		uint thread_count_;
-		
+
 		void consume() {
 			PredictionRecord prec( tax_ );
-			
+
 			// determine count of this thread to index concurrent stream
 			boost::mutex::scoped_lock count_lock( count_mutex_ );
 			const uint this_thread = thread_count_++;
 			count_lock.unlock();
-			
+
 			while ( true ) {
 				RecordSetType rset;
 				try {
@@ -149,15 +149,15 @@ class BoostConsumer {
 				} catch ( boost::thread_interrupted ) {
 					break;
 				}
-				
+
 				// run prediction
 				predictor_.predict( rset, prec, log_( this_thread ) );
 				log_.flush( this_thread );
-				
+
 				// output to stdout
 				output_( this_thread ) << prec;
 				output_.flush( this_thread );
-				
+
 				deleteRecords( rset );
 			}
 		}
@@ -165,43 +165,43 @@ class BoostConsumer {
 
 
 
-void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink, uint number_threads  ) {
+void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted , std::ostream& logsink, uint number_threads  ) {
 	AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
-	
+
 	//print GFF3Header
 	std::cout << GFF3Header();
-	
+
 	//adjust thread number
 	uint procs = boost::thread::hardware_concurrency();
 	if ( ! number_threads ) number_threads = procs;  // set number of threads to available (producer thread is really lightweight)
 	else if ( procs ) number_threads = std::min( number_threads, procs );
-	
+
 	BoundedBuffer< RecordSetType > buffer( 10*number_threads );  // hold ten data chunks per consumer TODO: make option
 	ConcurrentOutStream output( std::cout, number_threads, 1000 );  // TODO: analyse number and increase buffer size
 	ConcurrentOutStream log( logsink, number_threads, 20000 );
-	
-	BoostProducer producer( buffer, fac, split_alignments );
+
+	BoostProducer producer( buffer, fac, split_alignments, alignments_sorted );
 	BoostConsumer consumer( buffer, predictor, tax, log, output );
-	
+
 	// start the consumers that wait for data in buffer
 	boost::thread_group t_consumers;
 	for( uint i = 0; i < number_threads; ++i ) t_consumers.create_thread( boost::ref( consumer ) );
-	
+
 	producer();  // main thread is the producer that fills the buffer (not counted separately)
-	
+
 	buffer.waitUntilEmpty();
 	t_consumers.interrupt_all();  // tell waiting consumers to quit, there will be no more data coming
 	t_consumers.join_all();
-	
+
 	assert( buffer.empty() );  // TODO: remove
 }
 
 
 
 // TODO: use function template?
-void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, std::ostream& logsink, uint number_threads ) {
-	if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, logsink, number_threads );
-	doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments, logsink );
+void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted, std::ostream& logsink, uint number_threads ) {
+	if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink, number_threads );
+	doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink );
 }
 
 
@@ -210,9 +210,9 @@ int main( int argc, char** argv ) {
 
 	vector< string > ranks;
 	string accessconverter_filename, algorithm, query_filename, query_index_filename, db_filename, db_index_filename, whitelist_filename, log_filename;
-	bool delete_unmarked, split_alignments;
+	bool delete_unmarked, split_alignments, alignments_sorted;
 	uint nbest, minsupport, number_threads;
-	float toppercent, minscore;
+	float toppercent, minscore, filterout;
 	double maxevalue;
 
 	namespace po = boost::program_options;
@@ -233,7 +233,9 @@ int main( int argc, char** argv ) {
 	hidden_options.add_options()
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
 	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct segments and treat them separately (for algorithms where applicable)" )
+	( "alignments-sorted,o", po::value< bool>( &alignments_sorted )->default_value( false ), "avoid sorting if alignments are sorted")
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
+	( "filter-out-alignments,x", po::value<float>(&filterout)->default_value(0.0), "filter out alignments with score smaller then maxscore*value")
 	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.05 ), "RPA re-evaluation band or top percent parameter for LCA methods" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
 	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering) for MEGAN algorithm" )
@@ -241,10 +243,10 @@ int main( int argc, char** argv ) {
 	( "nbest,n", po::value< uint >( &nbest )->default_value( 1 ), "n-best LCA classification parameter" )
 	( "ignore-unclassified,u", "alignments for partly unclassified taxa will be ignored" )
 	( "db-whitelist,w", po::value< string >( &whitelist_filename ), "specifiy list of sequence identifiers in reference to be used to reduce memory footprint (RPA algorithm)" );
-	
+
 	po::options_description all_options;
 	all_options.add( visible_options ).add( hidden_options );
-	
+
 	po::variables_map vm;
 	po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
 	po::notify ( vm );
@@ -253,7 +255,7 @@ int main( int argc, char** argv ) {
 		cout << visible_options << endl;
 		return EXIT_SUCCESS;
 	}
-	
+
 	if ( vm.count ( "advanced-options" ) ) {
 		cout << hidden_options << endl;
 		return EXIT_SUCCESS;
@@ -268,26 +270,25 @@ int main( int argc, char** argv ) {
 		cout << visible_options << endl;
 		return EXIT_FAILURE;
 	}
-	
+
 	bool ignore_unclassified = vm.count( "ignore-unclassified" );
-	
+
 	boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );  // create taxonomy
 	if( ! tax ) return EXIT_FAILURE;
 	if( delete_unmarked ) tax->deleteUnmarkedNodes();  // do everything only with the major NCBI ranks given by "ranks"
 	boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
 	std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
-	
+
 	// choose appropriate prediction model from command line parameters
 	//TODO: "adresse of temporary warning" is annoying but life-time is guaranteed until function returns
 	//TODO: remove warning and error suppression compiler flags
-	if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
-	else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
-	else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
-	else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
-	else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );
+	if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
+	else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
+	else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
+	else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
+	else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
 	else if( algorithm == "rpa" ) {
 		typedef seqan::String< seqan::Dna5 > StringType;
-		
 		// load query sequences
 		boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
 		if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType >( query_filename ) );
@@ -300,8 +301,8 @@ int main( int argc, char** argv ) {
 		if( db_index_filename.empty() ) db_storage.reset( new RandomInmemorySeqStoreRO< StringType >( db_filename ) );
 		else db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
 		measure_db_loading.stop();
-		
-		doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, toppercent ), *seqid2taxid, tax.get(), split_alignments, logsink, number_threads );  // TODO: reuse toppercent param?
+
+		doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
 	} else {
 		cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
 		return EXIT_FAILURE;
