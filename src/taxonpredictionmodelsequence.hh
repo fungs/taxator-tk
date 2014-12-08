@@ -109,10 +109,11 @@ class BandFactor{
 template< typename ContainerT, typename QStorType, typename DBStorType >
 class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 	public:
-		DoubleAnchorRPAPredictionModel( const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float reeval_bandwidth = .1 ) :
+		DoubleAnchorRPAPredictionModel( const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float filterout ,float reeval_bandwidth = .1 ) :
 					TaxonPredictionModel< ContainerT >( tax ),
 					query_sequences_( q_storage ),
 					db_sequences_( db_storage ),
+					filterout_(filterout),
 					reeval_bandwidth_factor_( 1. - reeval_bandwidth ), //TODO: check range
 					measure_placement_algorithm_( "placement algorithm" ),
 					measure_phase2_alignment_( "best reference anchor alignments (step 2)" ),
@@ -123,19 +124,17 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 
 		void predict( ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink ) {
 			this->initPredictionRecord( recordset, prec ); //set name and length
-
 			// cannot be part of class because it is not thread-safe
 			boost::format db_seqname_fmt( "%d:%d@%s tax=%s" );
 			boost::format query_seqname_fmt( "%d:%d@%s len=%d" );
 
 			typename ContainerT::iterator rec_it = firstUnmaskedIter( recordset );
-            typename ContainerT::iterator rec_it2 = rec_it;
+            //typename ContainerT::iterator rec_it2 = rec_it;
 
 			if ( rec_it == recordset.end() ) {
 				TaxonPredictionModel< ContainerT >::setUnclassified( prec );
 				return;
 			}
-
 			// set some shortcuts
 			const std::string& qid = (*rec_it)->getQueryIdentifier();
 			large_unsigned_int qrstart = (*rec_it)->getQueryStart();
@@ -143,32 +142,31 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			large_unsigned_int qlength = (*rec_it)->getQueryLength();
 			float qprevscore = (*rec_it)->getScore();
             float qmaxscore = .0;
+            //float factor = filterout_; // good 0.25
+
 
 			// determine position range of query to consider
 			uint n = 0;
+			do {
+                  if(!(*rec_it)->isFiltered()) qmaxscore = std::max( qmaxscore, (*rec_it)->getScore());
+            } while(++rec_it != recordset.end());
 
-			while(rec_it2!= recordset.end()){
+            rec_it = firstUnmaskedIter( recordset );
 
-                if(!(*rec_it2)->isFiltered()){
-                    qmaxscore = std::max( qmaxscore, (*rec_it)->getScore() );
-                }
-                rec_it2++;
-			}
+			assert( qrstart <= qrstop );
 
-			assert( qrstart <= qrstop );			++n;
-			while ( ++rec_it != recordset.end() ) {
+			do {
+                assert( (*rec_it)->getQueryStart() <= (*rec_it)->getQueryStop() );
 
-				assert( (*rec_it)->getQueryStart() <= (*rec_it)->getQueryStop() );
-
-                if((*rec_it)->getScore()<qmaxscore*0.25){(*rec_it)->filterOut();}
+                if((*rec_it)->getScore()<qmaxscore*filterout_){(*rec_it)->filterOut();}
 
 				if ( ! (*rec_it)->isFiltered() ) {
 					qrstart = std::min( (*rec_it)->getQueryStart(), qrstart );
 					qrstop = std::max( (*rec_it)->getQueryStop(), qrstop );
-					qprevscore = std::max( qprevscore, (*rec_it)->getScore() );
+	 				qprevscore = std::max( qprevscore, (*rec_it)->getScore() );
 					++n;
 				}
-			}
+			} while ( ++rec_it != recordset.end() );
 
 			//measure
 			uint gcounter = 0;
@@ -229,6 +227,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 
 			std::set< uint > anchor_indices_p1;
 			large_unsigned_int anchors_support = 0;
+			const TaxonNode* rtax = records_ordered[0]->getReferenceNode();
 
 			{ // phase 1 (DB re-alignment within band)
 				measure_reeval_alignment_.start();
@@ -258,7 +257,10 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 
 				for ( std::set< uint >::iterator it = anchor_indices_p1.begin(); it != anchor_indices_p1.end(); ) { //reduce number of anchors
 					if ( rrseqs_qscores[*it] != rrseqs_qscores[index_best] || rrseqs_matches[*it] != rrseqs_matches[index_best] ) anchor_indices_p1.erase( it++ );
-					else ++it;
+					else{
+					    rtax = this->taxinter_.getLCA(rtax,records_ordered[*it]->getReferenceNode());
+                        ++it;
+					}
 				}
 				measure_reeval_alignment_.stop();
 				logsink << "# alignments step 1\t" << counter << std::endl;
@@ -317,7 +319,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 						if(score<=qscore){
 						    lnode = this->taxinter_.getLCA(lnode,records_ordered[i]->getReferenceNode());
                             if(score > lscore) lscore = score;
-                            logsink << "current lowernode : " << " ("<< score <<") "<<lnode->data->annotation->name << "\n";
+                            logsink << "current lowernode : " << " ("<< score <<") "<<lnode->data->annotation->name << " " << records_ordered[i]->getReferenceNode()->data->annotation->name << "\n";
 						    if(lnode == this->taxinter_.getRoot()){
                                 unode = this->taxinter_.getRoot();
                                 break;
@@ -333,7 +335,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
                                 anchor_indices_p2_tmp.clear();
                                 }
                             anchor_indices_p2_tmp.push_back(boost::make_tuple(i,score));
-                            logsink << "current uppernode : " << " ("<< score <<") "<< unode->data->annotation->name << "\n";
+                            logsink << "current uppernode : " << " ("<< score <<") "<< unode->data->annotation->name << " " << records_ordered[i]->getReferenceNode()->data->annotation->name << "\n";
                         }
 
                         if ( score == 0 ) anchor_indices_p1.erase( i ); //remove all identical sequences TODO: consider tax. signal calculation
@@ -453,6 +455,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 			prec.setQueryFeatureEnd( qrstop );
 			prec.setInterpolationValue( anchors_ival );
 			prec.setNodeRange( lnode, unode, anchors_support );
+			prec.setRtax( rtax );
 			gcounter = phase1_counter + phase2_counter + phase3_counter;
 			float normalised_rt = (float)gcounter/(float)n;
 			logsink << "# ratio;" << "id: " << qrseqname << "\t" << n << "\t" << phase1_counter << "\t"<< phase2_counter << "\t" << phase3_counter << "\t" << gcounter << "\t" << std::setprecision(2) << std::fixed <<normalised_rt << std::endl;
@@ -466,6 +469,7 @@ class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT >
 		compareTupleFirstLT< boost::tuple< int, uint >, 0 > tuple_1_cmp_le_;
 
 		private:
+            const float filterout_;
 			const float reeval_bandwidth_factor_;
 			StopWatchCPUTime measure_placement_algorithm_;
 			StopWatchCPUTime measure_phase2_alignment_;
