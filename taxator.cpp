@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <queue>
 #include "src/taxontree.hh"
 #include "src/ncbidata.hh"
-#include "src/alignmentrecordRE.hh"
+#include "src/alignmentrecord.hh"
 #include "src/taxonpredictionmodelsequence.hh"
 #include "src/taxonpredictionmodel.hh"
 #include "src/constants.hh"

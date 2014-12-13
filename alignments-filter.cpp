@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
 #include <boost/scoped_ptr.hpp>
-#include "src/alignmentrecordRE.hh"
+#include "src/alignmentrecord.hh"
 #include "src/alignmentsfilter.hh"
 
 
