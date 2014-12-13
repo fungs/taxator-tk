@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <string>
 #include "types.hh"
-#include "alignmentrecordRE.hh"
+#include "alignmentrecord.hh"
 #include "taxonomyinterface.hh"
 #include "constants.hh"
 

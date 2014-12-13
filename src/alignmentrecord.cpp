@@ -1,4 +1,4 @@
-#include "alignmentrecordRE.hh"
+#include "alignmentrecord.hh"
 
 //overload ostream operator for class AlignmentRecord ->print()
 std::ostream& operator<<( std::ostream& strm, const AlignmentRecord& rec ) {
