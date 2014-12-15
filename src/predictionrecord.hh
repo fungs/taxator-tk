@@ -36,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class PredictionRecordBase { //TODO: rename to something like feature
 	public:
-		PredictionRecordBase( const Taxonomy* tax ) : query_length_( 0 ), lower_node_( NULL ), upper_node_( NULL ), interpolation_value_( -1. ), signal_strength_( 0. ), taxinter_( tax ) {};
+		PredictionRecordBase( const Taxonomy* tax ) : query_length_( 0 ), lower_node_( NULL ), upper_node_( NULL ), rtax_( NULL ) , interpolation_value_( -1. ), signal_strength_( 0. ), taxinter_( tax ) {};
 
 		virtual ~PredictionRecordBase() {}
 
@@ -74,6 +74,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		float getSignalStrength() const { return signal_strength_; }
 		const TaxonNode* getUpperNode() const { return upper_node_; }
 		const TaxonNode* getLowerNode() const { return lower_node_; }
+		const TaxonNode* getRtax() const { return rtax_; }
 
 		//pure setters
 		virtual void setQueryIdentifier( const std::string& id ) = 0;
@@ -82,6 +83,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		void setQueryFeatureEnd( large_unsigned_int i ) { query_feature_end_ = i; }
 		void setInterpolationValue( float f ) { interpolation_value_ = f; }
 		void setSignalStrength( float f ) { signal_strength_ = f; }
+		void setRtax( const TaxonNode* rtax) { rtax_ = rtax; }
 
 		void setNodeRange( const TaxonNode* lower_node, large_unsigned_int lower_node_support, const TaxonNode* upper_node, large_unsigned_int upper_node_support ) {
 			assert( lower_node == upper_node || taxinter_.isParentOf( upper_node, lower_node ) );
@@ -184,10 +186,13 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			printFeatureSeqLen( strm );
 			strm << ';';
 			printFeatureTax( strm );
+			strm << ';';
+			printRtax( strm );
 			if ( interpolation_value_ >= 0 ) {
 				strm << ';';
 				printFeatureIVal( strm );
 			}
+
 			strm << endline;
 		}
 
@@ -197,6 +202,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		large_unsigned_int query_feature_end_;
 		const TaxonNode* lower_node_;
 		const TaxonNode* upper_node_; //can be removed with knowledge of lower_node_ and taxon_support_.size()
+		const TaxonNode* rtax_;
 		float interpolation_value_;
 		float signal_strength_;
 		TaxonomyInterface taxinter_;
@@ -211,6 +217,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 
 		void printFeatureSeqLen( std::ostream& strm ) const { strm << "seqlen=" << query_length_; }
 		void printFeatureIVal( std::ostream& strm ) const { strm << "ival=" << interpolation_value_; }
+		void printRtax(std::ostream& strm ) const {strm << "rtax=" << rtax_->data->taxid;}
 		void printFeatureTax( std::ostream& strm ) const {
 			assert( lower_node_ && upper_node_ && ! taxon_support_.empty() );
 
@@ -229,6 +236,8 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			strm << pit->data->taxid;
 			if ( taxon_support_[i] != last_support ) strm << ':' << taxon_support_[i];
 		}
+
+
 
 		virtual bool parseKeyValue( const std::string& key, const std::string& value ) {
 			try {
@@ -287,6 +296,11 @@ class PredictionRecordBase { //TODO: rename to something like feature
 					assert( lower_node_->data->root_pathlength - upper_node_->data->root_pathlength + 1 == static_cast<small_unsigned_int>( taxon_support_.size() ) );
 					return true;
 				}
+            if(key == "rtax"){
+                const TaxonNode* rtax_node = taxinter_.getNode( value );
+                setRtax(rtax_node);
+                    return true;
+            }
 			} catch( boost::bad_lexical_cast e ) {
 				std::cerr << "could not parse value of attribute " << key << std::endl;
 				return false;
