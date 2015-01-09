@@ -61,7 +61,7 @@ void parseAndFilter( AlignmentsFilterListType& filters, bool mask = true ) {
 		// apply all filters
 		filter_it = filters.begin();
 		while( filter_it != filters.end() ) {
- 			//cerr << "applying filter: " << filter_it->getInfo() << endl;
+			//cerr << "applying filter: " << filter_it->getInfo() << endl;
 			filter_it++->filter( recordset );
 		}
 

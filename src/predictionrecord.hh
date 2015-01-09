@@ -170,6 +170,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 					if ( ! parseKeyValue( key_value[0], key_value[1] ) ) return false; //set values
 					key_value.clear();
 				}
+				if(interpolation_value_ == -1) interpolation_value_ = 1.;  // default value for output compression
 			}
 
 			// easy things that cannot go wrong (I know: what can go wrong, will go wrong)
@@ -188,7 +189,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 			printFeatureTax( strm );
 			strm << ';';
 			printRtax( strm );
-			if ( interpolation_value_ >= 0 ) {
+			if ( interpolation_value_ >= 0. && interpolation_value_ < 1. ) {
 				strm << ';';
 				printFeatureIVal( strm );
 			}
