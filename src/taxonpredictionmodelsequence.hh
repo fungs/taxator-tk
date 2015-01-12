@@ -221,7 +221,7 @@ public:
         logsink << "ID\t" << qrseqname << std::endl;
         logsink << "  NUMREF\t" << n << std::endl << std::endl;
 
-        std::set< uint > qgroup;
+        std::set<uint> qgroup;
         large_unsigned_int anchors_support = 0;
         const TaxonNode* rtax = NULL;  // taxon of closest evolutionary neighbor(s)
 
@@ -252,15 +252,19 @@ public:
             }
 
             // only keep and use the best-scoring reference sequences
-            std::list<const TaxonNode*> rtaxa_list;
+//             std::list<const TaxonNode*> rtaxa_list;
+            rtax = records_ordered[index_best]->getReferenceNode();
             for (std::set< uint >::iterator it = qgroup.begin(); it != qgroup.end();) {
                 if (rrseqs_qscores[*it] != rrseqs_qscores[index_best] || rrseqs_matches[*it] != rrseqs_matches[index_best]) qgroup.erase(it++);
                 else {
-                    rtaxa_list.push_back(records_ordered[*it]->getReferenceNode());
+                    const TaxonNode* cnode = records_ordered[*it]->getReferenceNode();
+                    rtax = this->taxinter_.getLCA(rtax, cnode);
+                    logsink << "      current ref node: " << "("<< rrseqs_qscores[*it] <<") "<< rtax->data->annotation->name << " (+ " << cnode->data->annotation->name << " )" << std::endl;
                     ++it;
                 }
             }
-            rtax = this->taxinter_.getLCA(rtaxa_list);
+//             const TaxonNode* rtax = this->taxinter_.getLCA(rtaxa_list);  // taxon of closest evolutionary neighbor(s)
+            
             measure_pass_0_alignment_.stop();
             logsink << "    NUMALN\t" << pass_0_counter << std::endl << std::endl;
         }
@@ -287,7 +291,7 @@ public:
                 qgroup.erase(qgroup.begin());
                 const int qscore = rrseqs_qscores[index_anchor];
                 const TaxonNode* rnode = records_ordered[index_anchor]->getReferenceNode();
-                lnode = rnode;
+                lnode = rtax;
                 unode = NULL;
                 int lscore(-1.);
                 int uscore(-1.);
@@ -325,33 +329,33 @@ public:
                     }
 
                     // place sequence
-                    if(score <= qscore) {
-                        lnode = this->taxinter_.getLCA(lnode, cnode);
-                        if(score > lscore) lscore = score;
-                        logsink << "      current lower node: " << "("<< score <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-                        if(lnode == this->taxinter_.getRoot()) {
-                            unode = this->taxinter_.getRoot();
-                            break;
-                        }
-                    }
-
+                    if (score == 0) qgroup.erase(i);  // remove this from list of qnodes because it is sequence-identical
                     else {
-                        if(score == min_upper_score) {
-                            unode = this->taxinter_.getLCA(cnode, this->taxinter_.getLCA(lnode, unode));
-                            logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                        if(score <= qscore) {
+                            lnode = this->taxinter_.getLCA(lnode, cnode);
+                            if(score > lscore) lscore = score;
+                            logsink << "      current lower node: " << "("<< score <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                            if(lnode == this->taxinter_.getRoot()) {
+                                unode = this->taxinter_.getRoot();
+                                break;
+                            }
                         }
-                        else if (score < min_upper_score) {
-                            uscore = score;
-                            min_upper_score = score;
-                            unode = this->taxinter_.getLCA(cnode, lnode);
-                            outgroup_tmp.clear();
-                            logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (* " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-                        }
-                        outgroup_tmp.push_back(boost::make_tuple(i,score));
-                    }
 
-                    if (score == 0) qgroup.erase(i); //remove this from list of qnodes because it is sequence-identical
-                        // TODO: consider tax. signal calculation
+                        else {
+                            if(score == min_upper_score) {
+                                unode = this->taxinter_.getLCA(cnode, this->taxinter_.getLCA(lnode, unode));
+                                logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                            }
+                            else if (score < min_upper_score) {
+                                uscore = score;
+                                min_upper_score = score;
+                                unode = this->taxinter_.getLCA(cnode, lnode);
+                                outgroup_tmp.clear();
+                                logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (* " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                            }
+                            outgroup_tmp.push_back(boost::make_tuple(i,score));
+                        }
+                    }
                 }
 
                 float ival = .0;                                 //  TODO: initialize
@@ -360,8 +364,8 @@ public:
                     uscore = -1;
                     ival = 1.;
                 } else if(unode != lnode) {
-                    unode = this->taxinter_.getLCA(lnode, unode);
-                    if (lscore < qscore) ival = (qscore - lscore)/static_cast<float>(uscore - lscore);
+                    unode = this->taxinter_.getLCA(unode, lnode);
+                    if( unode != lnode && lscore < qscore) ival = (qscore - lscore)/static_cast<float>(uscore - lscore);
                 }
 
                 measure_pass_1_alignment_.stop();
