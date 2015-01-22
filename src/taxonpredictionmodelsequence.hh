@@ -107,9 +107,9 @@ private:
 
 // TODO: make timers thread-safe
 template< typename ContainerT, typename QStorType, typename DBStorType >
-class DoubleAnchorRPAPredictionModel : public TaxonPredictionModel< ContainerT > {
+class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 public:
-    DoubleAnchorRPAPredictionModel(const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float exclude_factor ,float reeval_bandwidth = .1) :
+    RPAPredictionModel(const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float exclude_factor ,float reeval_bandwidth = .1) :
         TaxonPredictionModel< ContainerT >(tax),
         query_sequences_(q_storage),
         db_sequences_(db_storage),
@@ -123,71 +123,103 @@ public:
 
     void predict(ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink) {
         this->initPredictionRecord(recordset, prec);  // just set query name and length
+        const std::string& qid = prec.getQueryIdentifier();
 
         // cannot be part of class because it is not thread-safe
-        boost::format db_seqname_fmt("%d:%d@%s tax=%s");
-        boost::format query_seqname_fmt("%d:%d@%s len=%d");
+        boost::format seqname_fmt("%d:%d@%s");
 
-        typename ContainerT::iterator rec_it = firstUnmaskedIter(recordset);
+        // determine best local alignment score and number of unmasked records
+        uint n = 0;  // number of alignments/reference segments
+        uint n_pre = 0;
+        float qmaxscore = .0;
+        for(typename ContainerT::iterator rec_it = recordset.begin(); rec_it != recordset.end(); ++rec_it) {
+            if(!(*rec_it)->isFiltered()) {
+                qmaxscore = std::max(qmaxscore, (*rec_it)->getScore());
+                ++n;
+            }
+        }
 
-        if (rec_it == recordset.end()) {  // no alignments -> set unclassified
+        // TODO: push records to temporary list
+        // TODO: reduce number of records based on simple PID heuristic
+        {
+            n_pre = n;
+            const float threshold = qmaxscore*exclude_alignments_factor_;
+            for(typename ContainerT::iterator rec_it = recordset.begin(); rec_it != recordset.end(); ++rec_it) {
+                if(!(*rec_it)->isFiltered() && (*rec_it)->getScore() < threshold) {
+                    (*rec_it)->filterOut();
+                    --n;
+                }
+            }
+        }
+        
+        // with no unmasked alignment, set to unclassified and return
+        if(n==0) {  //TODO: record should not be reported at all in GFF3
+            logsink << "ID\t" << boost::str(seqname_fmt % -1 % -1 % qid) << std::endl;
+            logsink << "  NUMREF\t" << n_pre << tab << n << std::endl << std::endl;
+            
             TaxonPredictionModel< ContainerT >::setUnclassified(prec);
             return;
         }
+                
+        // with one alignment, don't align and return
+        if(n==1) {
+            typename ContainerT::iterator rec_it = firstUnmaskedIter(recordset);
+            large_unsigned_int qrstart = (*rec_it)->getQueryStart();
+            large_unsigned_int qrstop = (*rec_it)->getQueryStop();
+            
+            logsink << "ID\t" << boost::str(seqname_fmt % qrstart % qrstop % qid) << std::endl;
+            logsink << "  NUMREF\t" << n_pre << tab << n << std::endl << std::endl;
+            
+            prec.setQueryFeatureBegin(qrstart);
+            prec.setQueryFeatureEnd(qrstop);
+            prec.setInterpolationValue(1.);
+            prec.setNodeRange((*rec_it)->getReferenceNode(), this->taxinter_.getRoot(), (*rec_it)->getIdentities());
+            prec.setBestReferenceTaxon((*rec_it)->getReferenceNode());
+            return;
+        }
         
-        // set shortcuts
-        const std::string& qid = (*rec_it)->getQueryIdentifier();
-        large_unsigned_int qrstart = (*rec_it)->getQueryStart();
-        large_unsigned_int qrstop = (*rec_it)->getQueryStop();
-        const large_unsigned_int qlength = (*rec_it)->getQueryLength();
-        float qmaxscore = .0;
-
-
-        // determine position range of query to consider
-        uint n = 0;  // number of alignments/reference segments
-        
-        // determine maximum alignment score
-        do if(!(*rec_it)->isFiltered()) qmaxscore = std::max(qmaxscore, (*rec_it)->getScore());
-        while(++rec_it != recordset.end());
-
-        rec_it = firstUnmaskedIter(recordset);
-        assert(qrstart <= qrstop);
-
-        do {  // screen alignments and determine query range
-            assert((*rec_it)->getQueryStart() <= (*rec_it)->getQueryStop());  // TODO: output error and exit
-            if (! (*rec_it)->isFiltered()) {
-                if((*rec_it)->getScore() < qmaxscore*exclude_alignments_factor_) (*rec_it)->filterOut();
-                else {
+        // n>1 -> screen alignments and determine query range
+        large_unsigned_int qrstart;
+        large_unsigned_int qrstop;
+        {
+            typename ContainerT::iterator rec_it = firstUnmaskedIter(recordset);
+            qrstart = (*rec_it)->getQueryStart();
+            qrstop = (*rec_it)->getQueryStop();
+            while (++rec_it != recordset.end()) {
+                if (! (*rec_it)->isFiltered()) {
                     qrstart = std::min((*rec_it)->getQueryStart(), qrstart);
                     qrstop = std::max((*rec_it)->getQueryStop(), qrstop);
-                    ++n;
                 }
             }
-        } while (++rec_it != recordset.end());
-
-        // measure number of alignment calculations in each of the three passes
+        }
+        const large_unsigned_int qrlength = qrstop - qrstart + 1;
+        
+        // logging
+        const std::string qrseqname = boost::str(seqname_fmt % qrstart % qrstop % qid);
+        logsink << "ID\t" << qrseqname << std::endl;
+        logsink << "  NUMREF\t" << n_pre << tab << n << std::endl << std::endl;
+        
+        // count number of alignment calculations in each of the three passes
         uint gcounter = 0;
         uint pass_0_counter = 0;
         uint pass_1_counter = 0;
         uint pass_2_counter = 0;
-
+        
         // data storage  TODO: use of C-style arrays
         const seqan::Dna5String qrseq = query_sequences_.getSequence(qid, qrstart, qrstop);
-        const std::string qrseqname = boost::str(query_seqname_fmt % qrstart % qrstop % qid % qlength);
         std::vector< AlignmentRecordTaxonomy* > records_ordered;
-        std::vector< seqan::Dna5String > rrseqs_ordered; //TODO: boost ptr_container/seqan::StringSet/set to detect equal sequences
-        std::vector< std::string > rrseqs_ordered_names;
-        std::vector< int > rrseqs_qscores;
-        std::vector< large_unsigned_int > rrseqs_matches;
         records_ordered.reserve(n);
+        std::vector< seqan::Dna5String > rrseqs_ordered; //TODO: boost ptr_container/seqan::StringSet/set to detect equal sequences
         rrseqs_ordered.reserve(n);
-        rrseqs_matches.reserve(n);
+//         std::vector< std::string > rrseqs_ordered_names;
+        std::vector< int > rrseqs_qscores;
         rrseqs_qscores.reserve(n);
-
-
+        std::vector< large_unsigned_int > rrseqs_matches;
+        rrseqs_matches.reserve(n);
+        
         {   // retrieve segment sequences
             measure_sequence_retrieval_.start();
-            rec_it = recordset.begin();
+            typename ContainerT::iterator rec_it = recordset.begin();
             while (rec_it != recordset.end()) {
                 if (! (*rec_it)->isFiltered()) {
                     records_ordered.push_back(*rec_it);
@@ -203,22 +235,18 @@ public:
                         large_unsigned_int start = left_ext < rstart ? rstart - left_ext : 1;
                         large_unsigned_int stop = rstop + right_ext;
                         rrseqs_ordered.push_back(db_sequences_.getSequence(rid, start, stop)); //TODO: avoid copying
-                        rrseqs_ordered_names.push_back(boost::str(db_seqname_fmt % start % stop % rid % rec.getReferenceNode()->data->taxid));
+//                         rrseqs_ordered_names.push_back(boost::str(seqname_fmt % start % stop % rid));
                     } else {
                         large_unsigned_int start = right_ext < rstop ? rstop - right_ext : 1;
                         large_unsigned_int stop = rstart + left_ext;
                         rrseqs_ordered.push_back(db_sequences_.getSequenceReverseComplement(rid, start, stop)); //TODO: avoid copying
-                        rrseqs_ordered_names.push_back(boost::str(db_seqname_fmt % stop % start % rid % rec.getReferenceNode()->data->taxid));
+//                         rrseqs_ordered_names.push_back(boost::str(seqname_fmt % stop % start % rid));
                     }
                 }
                 ++rec_it;
             }
             measure_sequence_retrieval_.stop();
         }
-
-        // logging
-        logsink << "ID\t" << qrseqname << std::endl;
-        logsink << "  NUMREF\t" << n << std::endl << std::endl;
 
         std::set<uint> qgroup;
         large_unsigned_int anchors_support = 0;
@@ -232,23 +260,33 @@ public:
             uint index_best = 0;
 
             for (uint i = 0; i < n; ++i) { //calculate scores for best-scoring references
-                if (records_ordered[i]->getScore() >= dbalignment_score_threshold) { //TODO: avoid equal sequences using local alignment score/pid
-                    qgroup.insert(i); //TODO: move to if-statement
-                    const int score = -seqan::globalAlignmentScore(rrseqs_ordered[i], qrseq, seqan::MyersBitVector());
+                int score;
+                large_unsigned_int matches;
+                
+                if(records_ordered[i]->getAlignmentLength() == qrlength && records_ordered[i]->getIdentities() == qrlength) {
+                    qgroup.insert(i);
+                    score = 0;
+                    matches = records_ordered[i]->getIdentities();
+                    logsink << "    *ALN " << i << " <=> query\tscore = " << score << "; matches = " << matches << std::endl;
+                } else if (records_ordered[i]->getScore() >= dbalignment_score_threshold) {
+                    qgroup.insert(i);
+                    score = -seqan::globalAlignmentScore(rrseqs_ordered[i], qrseq, seqan::MyersBitVector());
                     ++pass_0_counter;
-                    const large_unsigned_int matches = std::max(static_cast<large_unsigned_int>(std::max(seqan::length(rrseqs_ordered[i]), seqan::length(qrseq)) - score), records_ordered[i]->getIdentities());
-                    logsink << "    ALN " << i << " <=> query\tscore = " << score << "; matches = " << matches << std::endl;
-                    rrseqs_qscores.push_back(score);
-                    rrseqs_matches.push_back(matches);
-                    anchors_support = std::max(anchors_support, matches);
-
-                    if (score < rrseqs_qscores[index_best] || (score == rrseqs_qscores[index_best] && matches > rrseqs_matches[index_best])) {
-                        index_best = i;
-                    }
+                    matches = std::max(static_cast<large_unsigned_int>(std::max(seqan::length(rrseqs_ordered[i]), seqan::length(qrseq)) - score), records_ordered[i]->getIdentities());
+                    logsink << "    +ALN " << i << " <=> query\tscore = " << score << "; matches = " << matches << std::endl;
                 } else {  // not similar -> fill in some dummy values
-                    rrseqs_qscores.push_back(std::numeric_limits< int >::max());
-                    rrseqs_matches.push_back(0);
+                    score = std::numeric_limits< int >::max();
+                    matches = 0;
                 }
+                rrseqs_qscores.push_back(score);
+                rrseqs_matches.push_back(matches);
+                
+                if (score < rrseqs_qscores[index_best] || (score == rrseqs_qscores[index_best] && matches > rrseqs_matches[index_best])) {
+                    index_best = i;
+                }
+                
+                anchors_support = std::max(anchors_support, matches);  //TODO: move to previous if-statement?
+                
                 lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records_ordered[i]->getReferenceNode());
             }
 
@@ -264,7 +302,11 @@ public:
                     ++it;
                 }
             }
-//             const TaxonNode* rtax = this->taxinter_.getLCA(rtaxa_list);  // taxon of closest evolutionary neighbor(s)
+            
+            assert(! qgroup.empty());/* {  //debug code
+                std::cerr << "score = " << rrseqs_qscores[index_best] << "; matches = " << rrseqs_matches[index_best] << std::endl;
+                exit(1);
+            };*/
             
             measure_pass_0_alignment_.stop();
             logsink << "    NUMALN\t" << pass_0_counter << std::endl << std::endl;
@@ -321,7 +363,7 @@ public:
                             ++pass_1_counter;
                             ++alignments_counter;
                             matches = std::max(seqan::length(rrseqs_ordered[ i ]), seqan::length(rrseqs_ordered[ index_anchor ])) - score;
-                            logsink << "    ALN " << i << " <=> " << index_anchor << "\tscore = " << score << "; matches = " << matches << std::endl;
+                            logsink << "    +ALN " << i << " <=> " << index_anchor << "\tscore = " << score << "; matches = " << matches << std::endl;
                             
                             // update query alignment scores using triangle relation
                             if (rrseqs_qscores[index_anchor] == 0 && rrseqs_matches[i]) {  // TODO: why rrseqs_matches[i]? 
@@ -370,7 +412,7 @@ public:
                 int qscore_ex = qscore * bandfactor;
                 int min_upper_score = std::numeric_limits< int >::max();
                 
-                logsink << std::endl << "    EXT\tqscore = " << qscore << "; threshold = " << qscore_ex << std::endl;
+                logsink << std::endl << "    EXT\tqscore = " << qscore << "; threshold = " << qscore_ex << "; bandfactor = " << bandfactor << std::endl;
                 for(std::list< boost::tuple<uint,int> >::iterator it = outgroup_tmp.begin(); it != outgroup_tmp.end();) {
 //                     uint i;
                     int score = it->get<1>();
@@ -419,19 +461,19 @@ public:
                     const TaxonNode* cnode = records_ordered[i]->getReferenceNode();
                     
                     if(score > min_upper_score) continue;
-                    else {
-                        unode = this->taxinter_.getLCA(cnode, unode);
-                        logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-                    }
+                    
+                    // add to upper node if(score <= min_upper_score)
+                    unode = this->taxinter_.getLCA(cnode, unode);
+                    logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
 
-                    // curate minimal outgroup
-                    const small_unsigned_int lca_root_dist = this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength;
+                    // curate minimal outgroup TODO: only keep score == min_upper_score in outgroup?
+                    const small_unsigned_int lca_root_dist = this->taxinter_.getLCA(cnode, rtax)->data->root_pathlength;
                     if(lca_root_dist > lca_root_dist_min) continue;
                     else if(lca_root_dist < lca_root_dist_min) {
                         lca_root_dist_min = lca_root_dist;
                         outgroup.clear();
                     }
-                    outgroup.insert(i);                    
+                    outgroup.insert(i);
                 }
 
                 // adjust interpolation value and upper node
@@ -442,9 +484,7 @@ public:
                     ival = 1.;
                 } else if(unode != lnode && lscore < qscore) ival = (qscore - lscore)/static_cast<float>(uscore - lscore);
                 
-                
-
-                logsink << std::endl << "    SCORE\tlscore = " << lscore << "; uscore = " << uscore << "; qscore = " << qscore << "; qscore_ex = " << qscore_ex << "; ival = " << ival  << std::endl;
+                logsink << std::endl << "    SCORE\tlscore = " << lscore << "; uscore = " << uscore << "; qscore = " << qscore << "; qscore_ex = " << qscore_ex << "; ival = " << ival  << std::endl << std::endl;
                 const float taxsig = .0;  // TODO: placer.getTaxSignal(qscore);
 
                 ival_global = std::max(ival, ival_global);  // combine interpolation values conservatively
@@ -454,7 +494,7 @@ public:
 //                 anchors_lnode.push_back(lnode);
 //                 anchors_unode.push_back(unode);
                 
-            } while (! qgroup.empty() && lnode_global != this->taxinter_.getRoot());  // TODO: use lca_allnodes, not root
+            } while (! qgroup.empty() && lnode_global != this->taxinter_.getRoot());
 
             logsink << "    NUMALN\t" << alignments_counter << tab << alignments_counter_naive - alignments_counter << std::endl;
             logsink << "    NUMOUTGRP\t" << outgroup.size() << std::endl;
@@ -475,7 +515,7 @@ public:
         // avoid unneccessary computation if root node is reached TODO: where?
 //         unode = this->taxinter_.getLCA(anchors_unode);
 //         anchors_unode.clear();  // TODO: remove; code simplification
-        logsink << "    RANGE\t" << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
+        logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
         
         {   // pass 2 (stable upper node estimation alignment)
             measure_pass_2_alignment_.start();
@@ -502,7 +542,7 @@ public:
                 if (!rrseqs_matches[index_anchor]) { //need to align query <=> anchor
                     int score = -seqan::globalAlignmentScore(rrseqs_ordered[index_anchor], qrseq, seqan::MyersBitVector());
                     int matches = std::max(seqan::length(rrseqs_ordered[index_anchor]), seqan::length(qrseq)) - score;
-                    logsink << "    ALN query <=> " << index_anchor << "\tscore = " << score << "; matches = " << matches << std::endl;
+                    logsink << "    +ALN query <=> " << index_anchor << "\tscore = " << score << "; matches = " << matches << std::endl;
                     rrseqs_qscores[index_anchor] = score;
                     ++pass_2_counter;
                     ++alignments_counter;
@@ -527,7 +567,7 @@ public:
                         if( this->taxinter_.isParentOf(unode_global, cnode) || cnode == unode_global ) score = std::numeric_limits<int>::max();
                         else {
                             score = -seqan::globalAlignmentScore(rrseqs_ordered[ i ], rrseqs_ordered[ index_anchor ], seqan::MyersBitVector());
-                            logsink << "    ALN " << i << " <=> " << index_anchor << "\tscore = " << score <<  std::endl;
+                            logsink << "    +ALN " << i << " <=> " << index_anchor << "\tscore = " << score <<  std::endl;
                             ++pass_2_counter;
                             rrseqs_qscores[i] = score;
                             ++alignments_counter;
@@ -574,14 +614,14 @@ public:
         
         if(unode_global == lnode_global) ival_global = 1.;
         
-        logsink << "    RANGE\t" << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
+        logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
 
         prec.setSignalStrength(anchors_taxsig);
         prec.setQueryFeatureBegin(qrstart);
         prec.setQueryFeatureEnd(qrstop);
         prec.setInterpolationValue(ival_global);
         prec.setNodeRange(lnode_global, unode_global, anchors_support);
-        prec.setRtax(rtax);
+        prec.setBestReferenceTaxon(rtax);
         gcounter = pass_0_counter + pass_1_counter + pass_2_counter;
         float normalised_rt = (float)gcounter/(float)n;
         logsink << "STATS \"" << qrseqname << "\"\t" << n << "\t" << pass_0_counter << "\t"<< pass_1_counter << "\t" << pass_2_counter << "\t" << gcounter << "\t" << std::setprecision(2) << std::fixed <<normalised_rt << std::endl << std::endl;

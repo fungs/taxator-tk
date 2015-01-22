@@ -117,7 +117,7 @@ class AlignmentRecord {
 				try {
 					identities_ = boost::lexical_cast< large_unsigned_int >( fields[9] );
 				} catch( boost::bad_lexical_cast e ) {
-					std::cerr << "could not identities" << std::endl;
+					std::cerr << "could not parse identities" << std::endl;
 					return false;
 				}
 

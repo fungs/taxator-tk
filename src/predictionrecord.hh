@@ -83,7 +83,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		void setQueryFeatureEnd( large_unsigned_int i ) { query_feature_end_ = i; }
 		void setInterpolationValue( float f ) { interpolation_value_ = f; }
 		void setSignalStrength( float f ) { signal_strength_ = f; }
-		void setRtax( const TaxonNode* rtax) { rtax_ = rtax; }
+		void setBestReferenceTaxon( const TaxonNode* rtax) { rtax_ = rtax; }
 
 		void setNodeRange( const TaxonNode* lower_node, large_unsigned_int lower_node_support, const TaxonNode* upper_node, large_unsigned_int upper_node_support ) {
 			assert( lower_node == upper_node || taxinter_.isParentOf( upper_node, lower_node ) );
@@ -299,7 +299,7 @@ class PredictionRecordBase { //TODO: rename to something like feature
 				}
             if(key == "rtax"){
                 const TaxonNode* rtax_node = taxinter_.getNode( value );
-                setRtax(rtax_node);
+                setBestReferenceTaxon(rtax_node);
                     return true;
             }
 			} catch( boost::bad_lexical_cast e ) {
