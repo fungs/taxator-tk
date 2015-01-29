@@ -235,7 +235,7 @@ int main( int argc, char** argv ) {
 	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct segments and treat them separately (for algorithms where applicable)" )
 	( "alignments-sorted,o", po::value< bool>( &alignments_sorted )->default_value( false ), "avoid sorting if alignments are sorted")
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
-	( "filter-out-alignments,x", po::value<float>(&filterout)->default_value(0.0), "filter out alignments with score smaller then maxscore*value")
+	( "filter-out-alignments,x", po::value<float>(&filterout)->default_value(1.0), "filter out alignments, increase means faster run-time whereas 0 has no effect")
 	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.05 ), "RPA re-evaluation band or top percent parameter for LCA methods" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
 	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering) for MEGAN algorithm" )
@@ -280,13 +280,13 @@ int main( int argc, char** argv ) {
 	std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
 
 	// choose appropriate prediction model from command line parameters
-	//TODO: "adresse of temporary warning" is annoying but life-time is guaranteed until function returns
+	//TODO: "adress of temporary warning" is annoying but life-time is guaranteed until function returns
 	//TODO: remove warning and error suppression compiler flags
-	if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
-	else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
-	else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
-	else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
-	else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments,alignments_sorted, logsink, number_threads );
+	if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+	else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+	else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+	else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+	else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
 	else if( algorithm == "rpa" ) {
 		typedef seqan::String< seqan::Dna5 > StringType;
 		// load query sequences
@@ -302,7 +302,7 @@ int main( int argc, char** argv ) {
 		else db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
 		measure_db_loading.stop();
 
-		doPredictions( &DoubleAnchorRPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+		doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
 	} else {
 		cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
 		return EXIT_FAILURE;

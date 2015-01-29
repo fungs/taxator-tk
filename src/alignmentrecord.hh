@@ -449,7 +449,7 @@ class RecordSetGeneratorSorted : public RecordSetGenerator< RecordType, RecordSe
 
 			while( last_record_ ) {
 
-				RecordType* record = last_record_;
+				AlignmentRecordTypePtr record = last_record_;
                 const std::string& query_id = *last_query_id_;
 
                 large_unsigned_int start = record->getQueryStart();

@@ -27,25 +27,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class StopWatchCPUTime {
 	public:
-		StopWatchCPUTime( const std::string& info ) : info_( info ), sum_( 0 ), counter_( 0 ), conversion_to_milliseconds_( CLOCKS_PER_SEC/1000 ) {}
+		StopWatchCPUTime( const std::string& info ) : info_( info ), stopped_(true), sum_( 0 ), counter_( 0 ), conversion_to_milliseconds_( CLOCKS_PER_SEC/1000 ) {}
 		
-		~StopWatchCPUTime() {
-			std::cerr << info_ << " took: " << static_cast< int >( sum_ ) << '/' << sum_/static_cast< double >( counter_ ) << " (total/avg. in milliseconds)" << std::endl;
-		}
+// 		~StopWatchCPUTime() {
+// 			std::cerr << info_ << " took: " << static_cast< int >( sum_ ) << '/' << sum_/static_cast< double >( counter_ ) << " (total/avg. in milliseconds)" << std::endl;
+// 		}
 		
 		void start() {
-			timestamp_ = clock();
+            if(stopped_) {
+                timestamp_ = clock();
+                stopped_ = false;
+            }
 		}
 		
 		void stop() {
-			
-			sum_ += (std::clock() - timestamp_)/conversion_to_milliseconds_;
-			++counter_;
+			if(!stopped_) {
+                sum_ += (std::clock() - timestamp_)/conversion_to_milliseconds_;
+                ++counter_;
+                stopped_ = true;
+            }
 		}
+		
+		large_unsigned_int read() {
+            if(stopped_) return sum_;
+            return (std::clock() - timestamp_)/conversion_to_milliseconds_;
+        }
 		
 	private:
 		const std::string info_;
-		clock_t timestamp_;
+        bool stopped_;
+        clock_t timestamp_;
 		large_unsigned_int sum_;
 		large_unsigned_int counter_;
 		const unsigned int conversion_to_milliseconds_;
