@@ -58,16 +58,19 @@ class PredictionRecordBase { //TODO: rename to something like feature
 		large_unsigned_int getQueryFeatureEnd() const { return query_feature_end_; }
 		large_unsigned_int getQueryFeatureWidth() const { return query_feature_end_ - query_feature_begin_ + 1; }
 
-		large_unsigned_int getSupportAt( const TaxonNode* node ) const { return getSupportAt( node->data->root_pathlength ); } //TODO: range check
+		large_unsigned_int getSupportAt( const TaxonNode* node , const bool extend=false) const { return getSupportAt( node->data->root_pathlength, extend ); } //TODO: range check
 
-		large_unsigned_int getSupportAt( small_unsigned_int depth ) const {
-// 			std::cerr << "taxon support size is: " << taxon_support_.size() << std::endl;
+		large_unsigned_int getSupportAt( small_unsigned_int depth , const bool extend=false) const {
+// 			std::cerr << "taxon support size is: " << _.size() << std::endl;
 // 			std::cerr << "upper node depth is: " << static_cast< int >( upper_node_->data->root_pathlength ) << std::endl;
 // 			std::cerr << "lower node depth is: " << static_cast< int >( lower_node_->data->root_pathlength ) << std::endl;
 // 			std::cerr << "lower node is: " << lower_node_->data->taxid << std::endl;
 			int index = depth - upper_node_->data->root_pathlength;
-			if ( index >= 0 && index < static_cast< const int >( taxon_support_.size() ) ) return taxon_support_.at( index );
-			return 0;
+			if (index >= 0) {
+                if(index < static_cast< const int >( taxon_support_.size())) return taxon_support_.at( index );
+                else return taxon_support_.back();  //TODO: is this correct? extend not used!!!
+			}
+            return 0;
 		} //TODO: at->[]
 
 		float getInterpolationValue() const { return interpolation_value_; }
