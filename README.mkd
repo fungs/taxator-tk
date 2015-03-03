@@ -159,7 +159,7 @@ Overall, the parameters of the binning program seem to have very little effect
 on the final binning results, suggesting that the algorithm is quite robust.
 
 
-## Extra tools:
+## Extra tools
 
 - **taxknife**:
   Works on a given taxonomy tree. Available modes are:
@@ -287,7 +287,6 @@ A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
   Sorting can also be parallelized.
 
 # Technical aspects
-
 
 The software implementation and design try to be as slick, fast and flexible as
 possible to provide a real tool kit for building an analysis pipeline or to be
