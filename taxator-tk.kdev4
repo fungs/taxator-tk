@@ -1,4 +1,4 @@
 [Project]
 Manager=KDevCMakeManager
 Name=taxator-tk-trunk
-VersionControl=svn
+VersionControl=git
