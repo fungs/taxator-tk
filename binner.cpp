@@ -331,9 +331,9 @@ int main ( int argc, char** argv ) {
 				if ( rank_pid < min_pid ) break;
 				predict_node = &*pit;
 			} while ( pit != target_node );
-			std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << endline;
+			std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << tab << prec->getQueryLength() << endline;
 		} else {
-			std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << endline;
+			std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << tab << prec->getQueryLength() << endline;
 		}
 	}
 	std::cerr << " done" << std::endl;

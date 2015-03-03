@@ -62,9 +62,16 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
 	//print GFF3Header
 	std::cout << GFF3Header();
 	while( recgen->notEmpty() ) {
+//         std::cerr << "reading new recordset... ";
 		recgen->getNext( rset );
+//         std::cerr << "done" << std::endl;
+        
         predictor->predict( rset, prec, logsink );
+        
+//         std::cerr << "clearing recordset... ";
         deleteRecords( rset );
+//         std::cerr << "done" << std::endl;
+        
         std::cout << prec;
 		}
 
@@ -89,7 +96,7 @@ class BoostProducer {
 		bool split_alignments_;
 		bool alignments_sorted_;
 
-		void produce() {
+		void produce() {  //TODO: use boost smart pointers for factory
 			AlignmentFileParser< AlignmentRecordTaxonomy > parser( cin, fac_ );
             RecordSetGenerator<AlignmentRecordTaxonomy,RecordSetType>* recgen = NULL;
 
@@ -235,7 +242,7 @@ int main( int argc, char** argv ) {
 	( "split-alignments,s", po::value< bool >( &split_alignments )->default_value( true ), "decompose alignments into disjunct segments and treat them separately (for algorithms where applicable)" )
 	( "alignments-sorted,o", po::value< bool>( &alignments_sorted )->default_value( false ), "avoid sorting if alignments are sorted")
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks" )
-	( "filter-out-alignments,x", po::value<float>(&filterout)->default_value(1.0), "filter out alignments, increase means faster run-time whereas 0 has no effect")
+	( "heuristic-cutoff,x", po::value<float>(&filterout)->default_value(0.5), "filter out alignments, increase means faster run-time whereas 0 means no filtering at all")
 	( "toppercent,t", po::value< float >( &toppercent )->default_value( 0.05 ), "RPA re-evaluation band or top percent parameter for LCA methods" )
 	( "max-evalue,e", po::value< double >( &maxevalue )->default_value( 1000.0 ), "set maximum evalue for filtering" )
 	( "min-support,c", po::value< uint >( &minsupport )->default_value( 1 ), "set minimum number of hits an alignment needs to have (after filtering) for MEGAN algorithm" )

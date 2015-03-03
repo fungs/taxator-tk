@@ -95,31 +95,26 @@ int main( int argc, char** argv ) {
     if(operation.empty()) { cout << "\n Please choose a mode.\n" << endl; cout << desc <<endl; return EXIT_FAILURE; }
     if( field_pos < 1 ) { cerr << "Field number index is 1-based" << endl; return EXIT_FAILURE; }
 
-    // build taxonomy
-    boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
-    if( ! tax ) return EXIT_FAILURE;
-    TaxonomyInterface interface( tax.get() );
-
-		//TODO: change code to use set of ranks, not single rank to traverse
-		set< const string* > ranks;
-		for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
-			const string& rank = tax->getRankInternal( *it );
-			if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
-			else ranks.insert( &rank );
-		}
-
     if( operation == "traverse" ){
         // command line arguments
-
-//         if( ! vm.count( "traversal" ) ) { //TODO: always false?
-//             cout << "Required argument \"--traversal\" is not given.\n" << desc << endl;
-//             return EXIT_FAILURE;
-//         }
 
         bool keep_not_rank = vm.count( "keep-not-rank" );
         bool keep_not_taxid = vm.count( "keep-not-taxid" );
         bool replace_invalid = vm.count( "set-invalid-traverse" );
+        
+        // build taxonomy
+        boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
+        if(!tax) return EXIT_FAILURE;
+        TaxonomyInterface interface(tax.get());
 
+        
+        // internal string addresses for comparison
+        set< const string* > ranks;
+        for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
+            const string& rank = tax->getRankInternal( *it );
+            if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
+            else ranks.insert( &rank );
+        }
 
         // parse line by line
         string line;
@@ -198,6 +193,11 @@ int main( int argc, char** argv ) {
         else allnodes = true;
 
         bool replace_invalid = vm.count( "set-invalid-annotate" );
+        
+        // build taxonomy
+        boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
+        if(!tax) return EXIT_FAILURE;
+        TaxonomyInterface interface(tax.get());
 
         // parse line by line
         string line;
@@ -437,39 +437,46 @@ int main( int argc, char** argv ) {
             }
         }
     } else if( operation == "tree" ) {
-			bool tree_show_names = vm.count( "names" );
-			bool tree_fill_intermediate = vm.count( "fill-intermediate" );
+        bool tree_show_names = vm.count( "names" );
+        bool tree_fill_intermediate = vm.count( "fill-intermediate" );
+        
+        // build taxonomy
+        boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
+        if(!tax) return EXIT_FAILURE;
+        TaxonomyInterface interface(tax.get());
 
-			NewickTaxonFilter filter_field(interface, tree_outfile, rank_names, tree_show_names, tree_fill_intermediate);
+        NewickTaxonFilter filter_field(interface, tree_outfile, rank_names, tree_show_names, tree_fill_intermediate);
 
-			// parse line by line
-			string line;
-			list< string > fields;
-			list< string >::iterator field_it;
-			stringstream buffer;
+        // parse line by line
+        string line;
+        list< string > fields;
+        list< string >::iterator field_it;
+        stringstream buffer;
 
-			while( getline( cin, line ) ) { //TODO: simplify, use fields as buffer
-				if ( ignoreLine( line ) ) continue;
-				tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
-				field_it = fields.begin();
-				unsigned int i = 1;
-				while( field_it != fields.end() ) {
-					if( i < field_pos ) {
-						buffer << *field_it++ << default_field_separator;
-						++i;
-					} else {
-						filter_field(*field_it);
-						buffer << *field_it;
-						if( ! (++field_it)->empty() ) buffer << default_field_separator << *field_it;
-						else buffer << endl;
-						break;
-					}
-				}
-				cout << buffer.str();
-				fields.clear();
-				buffer.str("");
-				buffer.clear();
-			}
-		}
-		return EXIT_SUCCESS;
-	}
+        while( getline( cin, line ) ) { //TODO: simplify, use fields as buffer
+            if ( ignoreLine( line ) ) continue;
+            tokenizeSingleCharDelim( line, fields, default_field_separator, field_pos );
+            field_it = fields.begin();
+            unsigned int i = 1;
+            while( field_it != fields.end() ) {
+                if( i < field_pos ) {
+                    buffer << *field_it++ << default_field_separator;
+                    ++i;
+                } else {
+                    filter_field(*field_it);
+                    buffer << *field_it;
+                    if( ! (++field_it)->empty() ) buffer << default_field_separator << *field_it;
+                    else buffer << endl;
+                    break;
+                }
+            }
+            cout << buffer.str();
+            fields.clear();
+            buffer.str("");
+            buffer.clear();
+        }
+    } else {
+        cerr << "unknown operation mode '" << operation << "' for --mode / -m" << endl;
+    }
+    return EXIT_SUCCESS;
+}

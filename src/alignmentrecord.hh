@@ -572,10 +572,8 @@ void records2Nodes( const ContainerT1& recordset, ContainerT2& refnodes ) {
 
 template< typename ContainerT >
 void deleteRecords( ContainerT& recordset ) {
-	while( recordset.size() ) {
-		delete recordset.back();
-		recordset.pop_back();
-	}
+    for(typename ContainerT::const_iterator rec_it = recordset.begin(); rec_it != recordset.end(); ++rec_it) delete *rec_it;
+    recordset.clear();
 }
 
 
