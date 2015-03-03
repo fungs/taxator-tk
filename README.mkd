@@ -16,7 +16,7 @@ On a Unix (Linux) system type
 and all programs will be built in a sub-directory called "Build-ARCH" where
 ARCH is your computer architecture, e. g. Build-x86_64 for a 64 bit system.
 
-# Installation from source
+# Installation
 
 There is no installation procedure. Either copy the executables from the build
 directory to your prefered directory in your PATH variable like /usr/local/bin
