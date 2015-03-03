@@ -168,30 +168,29 @@ on the final binning results, suggesting that the algorithm is quite robust.
 
 # NCBI taxonomy
 
-All programs that need a taxonomy to work will read the NCBI taxonomy dump files
-from a directory that is defined via the environment variable
-TAXATORTK_TAXONOMY_NCBI. You can use the provided script
-"download-ncbi-taxonomy-gimapping.sh" to download the taxonomy files from the
-official NCBI FTP server. Example:
+All programs that need a taxonomy to work will read the NCBI taxonomy dump
+files from a directory that is defined via the environment variable
+TAXATORTK_TAXONOMY_NCBI. You can download the package
+ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz
+and place the files names.dmp and nodes.dmp in a folder and specify its path
+in the environment variable. An environment variable is only persistent for
+the current session. It must be reset every time you are opening a new shell
+or command line terminal.
 
-    mkdir ncbi-taxonomy && cd ncbi-taxonomy
-    path_unpacked_taxator-tk/tools/download-ncbi-taxonomy-gimapping.sh
-    export TAXATORTK_TAXONOMY_NCBI=$PWD
-
-An environment variable is only persistent for the current session. It must be
-reset every time you are opening a new shell or command line terminal.
-
-Note:
+**Note:**
 Make sure you have a mapping file that maps each sequence in your sequence
 collection to a valid NCBI taxonomic identifier. We provide such mappings
-for several reference data bundles. They can also be found in the RefSeq release
-catalogue but should be checked to match the actual taxonomy. It is crucial that
+for several refpacks. They can also be found in the RefSeq release catalogue
+but should be checked to match the actual taxonomy. It is crucial that
 the mapping exactly! maps the reference sequences names, as reported by the
 aligner, to taxonomic IDs, as specified in the taxonomy. It is easy to check
 for unmappable reference taxonomic IDs by running the program taxknife in
 "annotation" mode with a list of IDs and looking for the reported errors:
 
     taxknife -f 2 annotation < mapping.tax >/dev/null
+
+Invalid IDs can be found in the merged.dmp file or online on
+http://www.ncbi.nlm.nih.gov/Taxonomy/taxonomyhome.html
 
 Normal operation in taxator is on a pruned taxonomy with major ranks, so
 transform the mapping by running:
