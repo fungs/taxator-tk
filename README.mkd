@@ -1,5 +1,4 @@
-COMPILATION:
-============
+# Compilation
 
 If you downloaded the source package, make sure you installed all needed
 software development packages. You need to have a recent version of the Boost
@@ -11,15 +10,15 @@ and the UNIX tools "make" and "uname" which should be contained in a standard
 installation.
 
 On a Unix (Linux) system type
-./build.sh
+
+    ./build.sh
 
 and all programs will be built in a sub-directory called "Build-ARCH" where
 ARCH is your computer architecture, e. g. Build-x86_64 for a 64 bit system.
 
 --------------------------------------------------------------------------------
 
-INSTALLATION FROM SOURCE:
-=========================
+# Installation from source
 
 There is no installation procedure. Either copy the executables from the build
 directory to your prefered directory in your PATH variable like /usr/local/bin
@@ -27,8 +26,7 @@ or execute them by prefixing them with the build directory.
 
 --------------------------------------------------------------------------------
 
-USAGE:
-======
+# Usage
 
 Basic concept:
 The basic pipeline concept allows splitting the overall prediction into
@@ -39,21 +37,20 @@ compressing it using a standard compressor like gzip, or to feed it directly
 into the next program without the necessity to save the data on a disk.
 A binning process can be implemented as follows:
 
---------------------------------------------------------------------------------
-| (1)ALIGN [=> (2)CONVERT] [=> (3)FILTER] => (4)PREDICT SEGMENTS => (5)BINNING |
---------------------------------------------------------------------------------
+
+**(1) ALIGN [=> (2) CONVERT] [=> (3) FILTER] => (4) PREDICT SEGMENTS => (5) BINNING**
 
 Here is a description of the individual steps:
 
-(1) ALIGN: Align sample sequences against database.
-           The aligner can be replaced as long a conversion tool is provided
-           that will convert the aligners output into the intermediate alignment
-           format used in the pipeline. Aligners supported out-of-the-box are
-           NCBI blastn (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
-           NCBI blastx (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
-           LAST lastal (http://last.cbrc.jp)
+## 1. **ALIGN**: Align sample sequences against database
+The aligner can be replaced as long a conversion tool is provided
+that will convert the aligners output into the intermediate alignment
+format used in the pipeline. Aligners supported out-of-the-box are
+- NCBI blastn (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
+- NCBI blastx (ftp://ftp.ncbi.nih.gov/blast/executables/blast+/)
+- LAST lastal (http://last.cbrc.jp)
 
- Note:
+**Note:**
 We used LAST for aligning nucleotide reads and contigs. The aligner is extremely
 fast but requires a large amount of main memory for running. You can align a
 real-sized sample within hours against all of microbial RefSeq. The current NCBI
@@ -66,25 +63,23 @@ and order, making any conversion or sorting steps superfluous (see next section)
 For database construction with LAST, use only the accession to index the
 sequences. LAST README shows how to transform your FASTA identifiers.
 
---------------------------------------------------------------------------------
+## 2. **CONVERT**: Transform alignment into universal TAB-separated format
+The intermediate format is quite simple: a tab-separated text file.
+We provide scripts for use with "NCBI BLAST" (blastn or blastx
+using XML output) and "LAST" (using maf output) in the alignment
+phase.
 
-(2) CONVERT: Transform alignment into universal TAB-separated format.
-             The intermediate format is quite simple: a tab-separated text file.
-             We provide scripts for use with "NCBI BLAST" (blastn or blastx
-             using XML output) and "LAST" (using maf output) in the alignment
-             phase.
-
-Native BLAST:
+- **Native BLAST**:
 With the new NCBI blast+ packages you can produce the taxator-tk intermediate
 alignment format without conversion using the following parameter:
 -outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length'
 
-blastxml2alignments.py:
+- **blastxml2alignments**:
 Blast XML output converter (use "-outfmt 5" with BLAST+). Check out the options
 using the "-h" option of blastn, blastx or blastall. This output probably is 
 slower than directly generating the TAB-separated intermediate short format.
 
-lastmaf2alignments.py:
+- **lastmaf2alignments**:
 LAST MAF format converter (use "-f 1"). As a limitation of the MAF format used
 by LAST (http://genome.ucsc.edu/FAQ/FAQformat.html), sequence identifiers of
 database and query sequences must not contain white spaces or the first white
@@ -94,7 +89,7 @@ identifier, so you must sort the output of the conversion script. The UNIX sort
 command like sort from the GNU coreutils is convenient for doing this (set
 LC_COLLATE="C" if you are using a non-english locale und Linux).
 
- Note:
+**Note:**
 The conversion scripts are written in python (>=2.7, not python 3). For parsing
 BlastXML output, you also need a recent version of BioPython installed. BLAST
 can output the alignments consecutively so they can be piped directly
@@ -103,20 +98,17 @@ Note also that, depending on how the BLAST DB was constructed, sometimes it will
 use the GI as name of the sequence and sometimes the full identifier. To get the
 correct sequence names for your alignments (the same as in your mappings file),
 reformat your DB with the correct options, or in case of XML output, try the
-command line options of the conversion script blastxml2alignments.py.
+command line options of the conversion script blastxml2alignments.
 
---------------------------------------------------------------------------------
+## 3. **FILTER**: Apply restriction filters
+E.g. exclude bad alignments. This step is optional and ususally not needed but
+can help you to implement your quality policies or reduce the run time.
 
-(3) FILTER: Apply e. g. quality restriction filters to exclude bad
-            alignments. This step is optional and ususally not needed but
-            can help you to implement your quality policies or reduce the
-            run time.
-
-alignments-filter:
+- **alignments-filter**:
 Support some filtering schemes based on absolute and relative score values or
 e-values. Check out the options.
 
- Note:
+**Note:**
 alignments-filter at the moment is a simple way to limit the run time of
 segment prediction by fixing the number of alignments given to it. This is
 because the run time of taxator with the RPA algorithm is in O(n) and n is the
@@ -125,13 +117,11 @@ flexible filter integrated into taxator to exclude alignments not relevant for
 taxonomic assignment. Until then, it is convenient to limit the number of
 alignments given to taxator to a number between 20 and 50.
 
---------------------------------------------------------------------------------
 
-(4) PREDICT SEGMENTS: Make a taxonomic classification for regions of homology
-                      on the sample sequences. There can be multiple such
-                      regions on a contiguous stretch of sequence.
+## 4. **PREDICT SEGMENTS**: Make a taxonomic classification for regions of homology
+There can be multiple such regions on a contiguous stretch of a query sequence.
 
-taxator:
+- **taxator**:
 Does the actual taxonomic prediction by mapping the alignment reference
 sequences on the NCBI taxonomy tree. taxator-tk implements its own realignment
 placement algorithm (RPA) of taxonomic classification of sequence segments that
@@ -151,14 +141,12 @@ work nicely, make sure that your disk storage is fast and has low enough latency
 If you want to look into taxator's log file, be warned that these are quite
 large and can grow to several GBs of size.
 
---------------------------------------------------------------------------------
+## 5. **BINNING**: Use a strategy to combine one or more segment predictions
+Assign the whole sequence. Binning represents a common means to use the segment
+assignments. Others could be the detection of assembly errors or to look for
+unknown horizontal gene transfers.
 
-(5) BINNING: Use a strategy to combine one or more segment predictions on a
-             sequence to assign the whole sequence. Binning represent a common
-             means to use the segment assignments. Others could be the detection
-             of assembly errors or to look for unknown horizontal gene transfers.
-
-binner:
+- **binner**:
 This program takes all the segment predictions of a sample and assigns whole
 sequences. It implements a whole sample noise filtering step where very rare
 taxa are pruned from the predictions (similar to MEGAN's min-support filter).
@@ -172,19 +160,17 @@ limits will lower the rate of false predictions at specific taxonomic ranks.
 Overall, the parameters of the binning program seem to have very little effect
 on the final binning results, suggesting that the algorithm is quite robust.
 
+
+## Extra tools:
+
+- **taxknife**:
+  Works on a given taxonomy tree. Available modes are:
+  - "traversal":   Traverses taxonomic ids up to a given rank.
+  - "annotation":  Prints the name or rank name of a given taxon.
+
 --------------------------------------------------------------------------------
 
-Some extra tools:
------------------
-
-taxknife:	Works on a given taxonomy tree. Available modes are:
-  "traversal":   Traverses taxonomic ids up to a given rank.
-  "annotation":  Prints the name or rank name of a given taxon.
-
---------------------------------------------------------------------------------
-
-NCBI taxonomy:
---------------
+# NCBI taxonomy
 
 All programs that need a taxonomy to work will read the NCBI taxonomy dump files
 from a directory that is defined via the environment variable
@@ -215,84 +201,83 @@ transform the mapping by running:
 
 --------------------------------------------------------------------------------
 
-Recipes:
-========
+# Recipes
 
-(a)
-# Align sequences to DATABASE using LAST and do a best-hit classification
-lastal -f 1 PATH/TO/DATABASE mysample.fna | lastmaf2alignments.py | sort | taxator -a n-best-lca -n 1 -g acc_taxid.tax
+Align sequences to DATABASE using LAST and do a best-hit classification
 
-(b)
-# Do a BLAST-MEGAN-style classification with blastn alignments and with a
-# top-percent filter value of 30 % and a minimum E-value of 0.01.
-blastn -task blastn -db DATABASE --outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length' -query mysample.fna | taxator -a megan-lca -t 0.3 -e 0.01 -g acc_taxid.tax
+    lastal -f 1 PATH/TO/DATABASE mysample.fna | lastmaf2alignments | sort | taxator -a n-best-lca -n 1 -g acc_taxid.tax
 
-(c)
-# If you want to save the alignments with LAST compressed and in sorted order
-lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort | gzip > my.alignments.gz
+Do a BLAST-MEGAN-style classification with blastn alignments and with a top-percent
+filter value of 30 % and a minimum E-value of 0.01.
 
-# and continue with a RPA prediction and saving the predictions into a file using 10 parallel threads
-zcat my.alignments.gz | taxator -a rpa -q query.fna -f ref.fna -g acc_taxid.tax -p 10 > my.predictions.unsorted.gff3
+    blastn -task blastn -db DATABASE --outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length' -query mysample.fna | taxator -a megan-lca -t 0.3 -e 0.01 -g acc_taxid.tax
 
-# Or doing all at once without compression-decompression in BASH
-lastal -f 1 DATABASE mysample.fna | lastmaf2alignments.py | sort | tee >(gzip > my.alignments.gz) | taxator -a rpa -q query.fna -f ref.fna -g acc_taxid.tax -p 10 > my.predictions.unsorted.gff3
+If you want to save the alignments with LAST compressed and in sorted order
 
-(d)
-# Using e-values with LAST is more tricky because it requires another program.
-# evalue filtering is discouraged with taxator-tk because RPA is robust to chance alignments.
-lastal -f 1 DATABASE mysample.fna | lastex -z 1 DATABASE.prj mysample.prj - | lastmaf2alignments.py | sort | ...
+    lastal -f 1 DATABASE mysample.fna | lastmaf2alignments | sort | gzip > my.alignments.gz
 
-(e)
-# Create a binning from the segment assignments (sorting fixes output disorder in taxator multi-threading output)
-# require same genus and below to be at least 60 % identical to closest homolog.
-sort my.predictions.unsorted.gff3 | binner -i genus:0.6 > my.tax
+and continue with a RPA prediction and saving the predictions into a file using 10 parallel threads
 
-(f)
-# Putting together above commands one could write the following simple binning workflow (in BASH)
-lastal -f 1 DATABASE my.fna | lastmaf2alignments.py | sort | tee <(gzip > my.alignments.gz) | taxator -a rpa -g acc_taxid.tax -q query.fna -v query.fna.fai -f ref.fna -i ref.fna.fai -p 10 | sort > my.predictions.gff3
-binner < my.predictions.gff3 -i genus:0.6 > my.tax
+    zcat my.alignments.gz | taxator -a rpa -q query.fna -f ref.fna -g acc_taxid.tax -p 10 > my.predictions.unsorted.gff3
 
-(g)
-# Show the corresponding predictions with taxon names
-taxknife -f 2 names -s name < my.tax
+Or doing all at once without compression-decompression in BASH
 
-# or if you want to show the names on the phylum level.
-taxknife -f 2 traverse -r phylum < my.tax | taxknife -f 2 names -s name
+    lastal -f 1 DATABASE mysample.fna | lastmaf2alignments | sort | tee >(gzip > my.alignments.gz) | taxator -a rpa -q query.fna -f ref.fna -g acc_taxid.tax -p 10 > my.predictions.unsorted.gff3
 
-# to get a nice rank profile
-taxknife -f 2 names -s rank < my.tax | sort | uniq -c
+Using e-values with LAST is more tricky because it requires another program.
+evalue filtering is discouraged with taxator-tk because RPA is robust to spurious alignments.
 
-# clean up you mapping so it only points to major ranks (recommended for taxator)
-taxknife -f 2 traverse -r species genus family order class phylum superkingdom < mapping.tax > mapping_cleaned.tax
+    lastal -f 1 DATABASE mysample.fna | lastex -z 1 DATABASE.prj mysample.prj - | lastmaf2alignments | sort | ...
 
-(h)
-# restrict run time (50 works nicely in general and avoids excessive aligning)
-zcat my.alignments.gz | alignments-filter -b 50 | taxator ...
+Create a binning from the segment assignments (sorting fixes output disorder in taxator multi-threading output)
+require same genus and below to be at least 60 % identical to closest homolog.
 
-(i)
-# A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
-blastn -task blastn -db DATABASE --outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length' -query mysample.fna -num_threads 2 | taxator -g acc_taxid.tax -q query.fna -v query.fna.fai -f ref.fna -i ref.fna.fai -p 3 | sort > my.predictions.gff3
-binner < my.predictions.gff3 > my.tax
+    sort my.predictions.unsorted.gff3 | binner -i genus:0.6 > my.tax
+
+Putting together above commands one could write the following simple binning workflow (in BASH)
+
+    lastal -f 1 DATABASE my.fna | lastmaf2alignments | sort | tee <(gzip > my.alignments.gz) | taxator -a rpa -g acc_taxid.tax -q query.fna -v query.fna.fai -f ref.fna -i ref.fna.fai -p 10 | sort > my.predictions.gff3
+    binner < my.predictions.gff3 -i genus:0.6 > my.tax
+
+Show the corresponding predictions with taxon names
+
+    taxknife -f 2 names -s name < my.tax
+
+Or if you want to show the names on the phylum level
+
+    taxknife -f 2 traverse -r phylum < my.tax | taxknife -f 2 names -s name
+
+To get a nice rank profile
+
+    taxknife -f 2 names -s rank < my.tax | sort | uniq -c
+
+Clean up your mapping so it only points to major ranks (recommended for taxator)
+
+    taxknife -f 2 traverse -r species genus family order class phylum superkingdom < mapping.tax > mapping_cleaned.tax
+
+Restrict run time (50 works nicely in general and avoids excessive aligning)
+
+    zcat my.alignments.gz | alignments-filter -b 50 | taxator ...
+
+A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
+
+    blastn -task blastn -db DATABASE --outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length' -query mysample.fna -num_threads 2 | taxator -g acc_taxid.tax -q query.fna -v query.fna.fai -f ref.fna -i ref.fna.fai -p 3 | sort > my.predictions.gff3
+    binner < my.predictions.gff3 > my.tax
+
+# Taxonomic placement algorithms
+
+- **rpa**: Use the LCA of taxa of a dynamic set of reference segments as determined by
+  the ordering of pairwise scores of alignments.
+
+- **lca**: Use the Lowest Common Ancestor (LCA) of all reference taxa of the alignments.
+
+- **megan-lca**: Use the LCA of taxa of only the x % best matching references.
+
+- **ic-megan-lca**: Like megan-lca but considers "unclassified" nodes in taxonomy.
 
 --------------------------------------------------------------------------------
 
-TAXONOMIC PLACEMENT ALGORITHMS
-==============================
-
-rpa:___________Use the LCA of taxa of a dynamic set of reference segments as
-               determined by the ordering of pairwise scores of alignments.
-
-lca:___________Use the Lowest Common Ancestor (LCA) of all reference taxa of the
-               alignments.
-
-megan-lca:_____Use the LCA of taxa of only the x % best matching references.
-
-ic-megan-lca:__Like megan-lca but considers "unclassified" nodes in taxonomy.
-
---------------------------------------------------------------------------------
-
-TIPS:
-=====
+# Tips
 
 - Use taxator with FASTA indices, e.g. on a solid state drive
 
@@ -308,8 +293,8 @@ TIPS:
 
 --------------------------------------------------------------------------------
 
-TECHNICAL ASPECTS
-=================
+# Technical aspects
+
 
 The software implementation and design try to be as slick, fast and flexible as
 possible to provide a real tool kit for building an analysis pipeline or to be
@@ -329,12 +314,10 @@ integrated in such. The following considerations were taken:
 
 --------------------------------------------------------------------------------
 
-ACKNOWLEDGEMENTS/CONTACT
-========================
+# Acknowledgements and contact
 
 We acknowledge the work done by the contributors of the SEQAN and BOOST projects
-as well as the author(s) of the tree.hh classes, LAST, BLAST and all the other
-anonymous contributors.
+as well as the author(s) of the tree.hh classes and all other anonymous contributors.
 
 For any questions, feedback or complaints, contact
 johannes.droege@uni-duesseldorf.de
