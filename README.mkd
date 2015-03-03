@@ -1,6 +1,6 @@
 # Compilation
 
-If you downloaded the source package, make sure you installed all needed
+If you downloaded the source, make sure you installed all needed
 software development packages. You need to have a recent version of the Boost
 C++ libararies (www.boost.org) installed (>= version 1.34), including the
 development header files.
