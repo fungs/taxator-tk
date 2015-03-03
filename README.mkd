@@ -16,15 +16,11 @@ On a Unix (Linux) system type
 and all programs will be built in a sub-directory called "Build-ARCH" where
 ARCH is your computer architecture, e. g. Build-x86_64 for a 64 bit system.
 
---------------------------------------------------------------------------------
-
 # Installation from source
 
 There is no installation procedure. Either copy the executables from the build
 directory to your prefered directory in your PATH variable like /usr/local/bin
 or execute them by prefixing them with the build directory.
-
---------------------------------------------------------------------------------
 
 # Usage
 
@@ -170,8 +166,6 @@ on the final binning results, suggesting that the algorithm is quite robust.
   - "traversal":   Traverses taxonomic ids up to a given rank.
   - "annotation":  Prints the name or rank name of a given taxon.
 
---------------------------------------------------------------------------------
-
 # NCBI taxonomy
 
 All programs that need a taxonomy to work will read the NCBI taxonomy dump files
@@ -203,8 +197,6 @@ Normal operation in taxator is on a pruned taxonomy with major ranks, so
 transform the mapping by running:
 
     taxknife -f 2 traversal -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax
-
---------------------------------------------------------------------------------
 
 # Recipes
 
@@ -280,8 +272,6 @@ A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
 
 - **ic-megan-lca**: Like megan-lca but considers "unclassified" nodes in taxonomy.
 
---------------------------------------------------------------------------------
-
 # Tips
 
 - Use taxator with FASTA indices, e.g. on a solid state drive
@@ -295,8 +285,6 @@ A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
   when using sort with large data. You can use the -T parameter of sort (see
   sort manpage). Use sort from recent GNU coreutils (speed improvements).
   Sorting can also be parallelized.
-
---------------------------------------------------------------------------------
 
 # Technical aspects
 
@@ -316,8 +304,6 @@ integrated in such. The following considerations were taken:
   slow down the RPA without notable benefits. At the moment you can easily
   exclude many alignments via alignments-filter but in future we want to
   implement a heuristic filter directly in taxator to speed up the algorithm.
-
---------------------------------------------------------------------------------
 
 # Acknowledgements and contact
 
