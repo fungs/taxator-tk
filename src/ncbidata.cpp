@@ -24,7 +24,8 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 		}
 	}
 
-	std::multimap< TaxonID, TaxonID > children;
+  typedef std::multimap< TaxonID, TaxonID > ChildMap;
+	ChildMap children;
 	std::map< TaxonID, TaxonAnnotation* > annotation;
 
 	{
@@ -68,8 +69,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	}
 
 	// build tree from root (taxid 1) to leaves and set nested set and rootpath values for all nodes and max_depth_ for taxonomy
-	std::multimap< TaxonID, TaxonID >::reverse_iterator child_rev_it;
-	std::pair< std::multimap< TaxonID, TaxonID >::reverse_iterator, std::multimap< TaxonID, TaxonID >::reverse_iterator > children_range;
+	typedef std::pair< ChildMap::iterator, ChildMap::iterator > ChildRange;
 
 	small_unsigned_int depth_counter = 0;
 	large_unsigned_int lrvalue_counter = 0;
@@ -77,7 +77,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	small_unsigned_int max_depth = 0;
 
 	// remove root self-link from children
-	std::multimap< TaxonID, TaxonID >::iterator tmp_it = children.find( node_taxid );
+	ChildMap::iterator tmp_it = children.find( node_taxid );
 	if( tmp_it != children.end() ) {
 		children.erase( tmp_it ); //because keys are sorted this is the pair (1,1)
 	} else {
@@ -89,7 +89,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 	tmptaxon->root_pathlength = depth_counter++;
 	tmptaxon->leftvalue = lrvalue_counter;
 
-	// check wether to mark the node as special
+	// check whether to mark the node as special
 	if( specialranks.count( &(tmptaxon->annotation->rank) ) ) {
 		tmptaxon->mark_special = true;
 	}
@@ -106,13 +106,12 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 		(*node_it)->leftvalue = ++lrvalue_counter;
 
 		// get children
-		children_range = children.equal_range( node_taxid );
-
+		ChildRange children_range = children.equal_range( node_taxid );
 		if( children_range.first != children_range.second ) { //means that node has at least one child
-			for( child_rev_it = children_range.second; child_rev_it != children_range.first; ++child_rev_it ) { //from last to first
+			for(ChildMap::iterator child_it = children_range.first; child_it != children_range.second; ++child_it ) {
 
 				// make new node and append to parent node
-				node_taxid = child_rev_it->second;
+				node_taxid = child_it->second;
 				tmptaxon = new Taxon( annotation[ node_taxid ] );
 				tmptaxon->taxid = node_taxid;
 				tmptaxon->root_pathlength = depth_counter;
@@ -126,7 +125,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
 					}
 				}
 
-				// check wether to mark the node as special
+				// check whether to mark the node as special
 				if( specialranks.find( &(tmptaxon->annotation->rank) ) != specialranks.end() ) {
 					tmptaxon->mark_special = true; //other children shall be marked, too
 				}
@@ -198,7 +197,7 @@ Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_t
 const std::string extractFastaCommentField( const std::string& comment, const std::string& key ) {
 	const std::size_t key_length = key.size();
 	std::list< std::string > fields;
-	tokenizeSingleCharDelim( comment, fields, "|" ); //NCBI scheme
+	tokenizeSingleCharDelim( comment, fields, "|" );  // NCBI scheme
 
 	std::list< std::string >::iterator field_it = fields.begin();
 	while ( field_it != fields.end() ) {

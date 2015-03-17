@@ -128,21 +128,9 @@ public:
         StopWatchCPUTime stopwatch_init("initializing this record");  // log overall time for this predict phase
         stopwatch_init.start();
 
-
-        // determine best local alignment score and number of unmasked records
-        
-        
-//         for(typename ContainerT::iterator rec_it = recordset.begin(); rec_it != recordset.end(); ++rec_it) {
-//             if(!(*rec_it)->isFiltered()) {
-//                 qmaxscore = std::max(qmaxscore, (*rec_it)->getScore());
-//                 ++n_pre;
-//             }
-//         }
-
-        // go through records and determine maximum local alignment score
+        // push records into active_records  TODO: remove intermediate active_records?
         active_list_type_ active_records;
         {
-//             const float threshold = qmaxscore*exclude_alignments_factor_;
             for(typename ContainerT::iterator rec_it = recordset.begin(); rec_it != recordset.end(); ++rec_it) {
                 if(!(*rec_it)->isFiltered()) active_records.push_back(*rec_it);
             }
@@ -203,9 +191,9 @@ public:
         logsink << "  NUMREF" << tab << n << std::endl;
         
         // sort the list by score
-        sort_.filter(active_records);  //TODO: optimize sorting algo
+        sort_.filter(active_records);  //TODO: optimize sorting algorithm
         
-        // data storage  TODO: use Boost ptr containers
+        // data storage  TODO: maybe use Boost ptr containers
         const seqan::Dna5String qrseq = query_sequences_.getSequence(qid, qrstart, qrstop);
         
         std::vector< typename ContainerT::value_type > records(n);  //TODO: move below next section and do not create records if q==r_best
@@ -221,6 +209,7 @@ public:
         const float qmaxscore = records[0]->getScore();
         
         // n>1 and query is identical to reference, we will use local alignment scores only
+        // TODO: add option to recalculate (github issue #24)
         if(records[0]->getAlignmentLength() == qrlength && records[0]->getIdentities() == qrlength) {
             float score_best = records[0]->getScore();
             const TaxonNode* lnode = records[0]->getReferenceNode();
@@ -258,18 +247,9 @@ public:
             return;
         }
         
-//         records.reserve(n);
-        
-//         std::vector< seqan::Dna5String > segments; //TODO: boost ptr_container/seqan::StringSet/set to detect equal sequences
-//         segments.reserve(n);
-        
         std::vector<seqan::Dna5String> segments(n);    //TODO: don't call element constructors
-//         std::vector< std::string > segments_names;
         std::vector< int > queryscores(n, std::numeric_limits< int >::max());
-//         queryscores.reserve(n);
         std::vector< large_unsigned_int > querymatches(n, 0);   //TODO: value is not really relevant
-//         querymatches.reserve(n);
-//         std::cerr << "initialization completed." << std::endl;
         stopwatch_init.stop();
         
         // count number of alignment calculations in each of the three passes
@@ -281,36 +261,7 @@ public:
         uint pass_2_counter = 0;
         uint pass_2_counter_naive = 0;
         
-        
-        
         StopWatchCPUTime stopwatch_seqret("retrieving sequences for this record");  // log overall time for this predict phase
-/*        {   // retrieve segment sequences
-            std::cerr << "Retrieving " << n << " sequences for record " << qrseqname << std::endl;
-            stopwatch_seqret.start();
-
-            for(typename active_list_type_::iterator rec_it = active_records.begin(); rec_it != active_records.end(); ++rec_it) {
-                records.push_back(*rec_it);
-                AlignmentRecordTaxonomy& rec = **rec_it;
-                large_unsigned_int left_ext = rec.getQueryStart() - qrstart;  //TODO: check for error
-                large_unsigned_int right_ext = qrstop - rec.getQueryStop();
-                segments.push_back(getSequence(rec.getReferenceIdentifier(),  rec.getReferenceStart(), rec.getReferenceStop(), left_ext, right_ext));
-
-                // cut out reference region
-//                 if(rstart <= rstop) {
-//                     large_unsigned_int start = left_ext < rstart ? rstart - left_ext : 1;
-//                     large_unsigned_int stop = rstop + right_ext;
-//                     segments.push_back(db_sequences_.getSequence(rid, start, stop)); //TODO: avoid copying
-// //                         segments_names.push_back(boost::str(seqname_fmt % start % stop % rid));
-//                 } else {
-//                     large_unsigned_int start = right_ext < rstop ? rstop - right_ext : 1;
-//                     large_unsigned_int stop = rstart + left_ext;
-//                     segments.push_back(db_sequences_.getSequenceReverseComplement(rid, start, stop)); //TODO: avoid copying
-// //                         segments_names.push_back(boost::str(seqname_fmt % stop % start % rid));
-//                 }
-            }
-            stopwatch_seqret.stop();
-        }*/
-        
         StopWatchCPUTime stopwatch_process("processing this record");  // log overall time for this predict phase
         stopwatch_process.start();
 
@@ -321,7 +272,6 @@ public:
         
         {   // pass 0 (re-alignment to most similar reference segments)
             logsink << std::endl << "  PASS\t0" << std::endl;
-//             std::cerr << "Working on record " << qrseqname << std::endl;
             float dbalignment_score_threshold = reeval_bandwidth_factor_*qmaxscore;
             uint index_best = 0;
 
@@ -364,7 +314,6 @@ public:
                 }
                 
                 anchors_support = std::max(anchors_support, matches);  //TODO: move to previous if-statement?
-                
                 lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records[i]->getReferenceNode());
             }
 
@@ -379,27 +328,21 @@ public:
                     ++it;
                 }
             }
-            
-            assert(! qgroup.empty());  //debug code
+            assert(! qgroup.empty());  // TODO: only in debug mode
             
             logsink << "    NUMALN\t" << pass_0_counter << tab << pass_0_counter_naive - pass_0_counter << std::endl << std::endl;
         }
 
-        float anchors_taxsig = 1.;                          // a measure of tree-like scores  
+        float anchors_taxsig = 1.;  // a measure of tree-like scores  
         float ival_global = 0.;
         const TaxonNode* lnode_global = rtax;
         const TaxonNode* unode_global = rtax;
-        std::set<uint> outgroup;                 // outgroup sequences
+        std::set<uint> outgroup;
         float bandfactor_max = 1.;
 
         {   // pass 1 (best reference alignment)
             logsink << "  PASS\t1" << std::endl;
-//             const std::size_t num_qnodes = qgroup.size();
-//             anchors_lnode.reserve(num_qnodes);  //TODO: performance check
-//             anchors_unode.reserve(num_qnodes + 1);  // minimum
 
-//             uint alignments_counter = 0;
-//             uint alignments_counter_naive = 0;
             small_unsigned_int lca_root_dist_min = std::numeric_limits<small_unsigned_int>::max();
             do {  // for each most similar reference segment
                 BandFactor bandfactor1(this->taxinter_, n);
@@ -429,20 +372,16 @@ public:
                     const TaxonNode* cnode = records[i]->getReferenceNode();
                     const double qpid = static_cast<double>(querymatches[i])/qrlength;
                     const float qlscore = records[i]->getScore();
-//                     bool skip_alignment = qpid < qpid_thresh_guarantee;
-//                     float qpid_est = qpid + 1.0 - qpid_upper;
-//                     bool skip_alignment = qpid_est < qpid_upper;
                     double qpid_thresh = std::max(qpid_thresh_guarantee, qpid_thresh_heuristic);
                     
-                    if(qpid >= qpid_thresh) {  //TODO: implement algorithm parameter and command line option
-//                         std::cerr << "Working on record " << qrseqname << std::endl;
+                    if(qpid >= qpid_thresh) {  //TODO: implement command line option
                         int score;
                         large_unsigned_int matches;
                         
                         if (i == index_anchor) score = 0;
                         else {
                             // use triangle relation to avoid alignment
-                            if (queryscores[i] == 0) { // && queryscores[index_anchor] == 0 ) { //&& querymatches[i]) {
+                            if (queryscores[i] == 0) { // && queryscores[index_anchor] == 0 ) { //&& querymatches[i]) { // TODO: correct?
                                 score = queryscores[index_anchor];
                                 matches = querymatches[index_anchor];
                             }
@@ -454,19 +393,8 @@ public:
                                 
                                 score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                                 ++pass_1_counter;
-//                                 ++alignments_counter;
                                 matches = std::max(seqan::length(segments[i]), seqan::length(segments[index_anchor])) - score;
                                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qscore_loc = " << qlscore << "; qpid = " << qpid << "; score = " << score << "; matches = " << matches << std::endl;
-                                
-                                // update query alignment scores using triangle relation
-//                                 if(score==0) {
-//                                     queryscores[i] = score;
-//                                     querymatches[i] = matches;
-//                                 }
-//                                 if (queryscores[index_anchor] == 0 && querymatches[i]) {  // TODO: why querymatches[i]? 
-//                                     queryscores[i] = score;
-//                                     querymatches[i] = matches;
-//                                 }
                             }
                         }
                         
@@ -479,11 +407,6 @@ public:
                                 lnode = this->taxinter_.getLCA(lnode, cnode);
                                 if(score > lscore) lscore = score;
                                 logsink << "      current lower node: " << "("<< score <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-    //                             if(lnode == this->taxinter_.getRoot()) {
-    //                                 unode = this->taxinter_.getRoot();
-    //                                 break;
-    //                             }
-//                                 if(skip_alignment) logsink << "    ERROR" << tab << "score <= qscore but excluded!" << std::endl;
                             }
                             else {
                                 if(score < uscore) {  // true if we find a segment with a lower score than query
@@ -494,31 +417,11 @@ public:
                                         qpid_thresh_heuristic = qpid*exclude_alignments_factor_;
                                     }
                                     if(!qlscore_thresh_heuristic) qlscore_thresh_heuristic = records[i]->getScore()*exclude_alignments_factor_;
-                                    
-//                                     qpid_upper = std::max(qpid_upper, querymatches[i]/float(qrlength));  //TODO: check for errors
                                 }
                                 outgroup_tmp.push_back(boost::make_tuple(i,score));
                             }
-
-//                             logsink << std::setprecision(2) << "      EXCL_ALN" << tab << "qpid=" << qpid << "; qpid_thresh=" << qpid_thresh << "; excl=" << skip_alignment << std::endl;
-//                             logsink << "      EXCL_ALN" << tab << "qpid=" << qpid << "; qpid_est=" << qpid_est << "; qpid_upper=" << qpid_upper << "; excl=" << skip_alignment << std::endl;
-                            
-    //                             // TODO: change logic in outgroup; keep highest taxon with worst score
-    //                             if(score == min_upper_score) {
-    //                                 unode = this->taxinter_.getLCA(cnode, this->taxinter_.getLCA(lnode, unode));
-    //                                 logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-    //                             }
-    //                             else if (score < min_upper_score) {
-    //                                 uscore = score;
-    //                                 min_upper_score = score;
-    //                                 unode = this->taxinter_.getLCA(cnode, lnode);
-    //                                 outgroup_tmp.clear();
-    //                                 logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (* " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-    //                             }
-    //                         }
                         }
                     }
-//                     } else logsink << std::setprecision(2) << "    -ALN " << i << " <=> " << index_anchor << tab << "qscore_loc = " << qlscore << "; qpid = " << qpid << "; qpid_thresh = " << qpid_thresh << "; qlscore_thresh = " << qlscore_thresh_heuristic << std::endl;
                 }
                 
                 float bandfactor = bandfactor1.getFactor();  //TODO: limit and check
@@ -528,18 +431,8 @@ public:
                 
                 logsink << std::endl << "    EXT\tqueryscore = " << qscore << "; threshold = " << qscore_ex << "; bandfactor = " << bandfactor << std::endl;
                 for(std::list< boost::tuple<uint,int> >::iterator it = outgroup_tmp.begin(); it != outgroup_tmp.end();) {
-//                     uint i;
                     int score = it->get<1>();
-//                     boost::tie(i, score) = *it;
-//                     const TaxonNode* cnode = records[i]->getReferenceNode();
-//                     if(score <= qscore_ex) {
-//                         unode = this->taxinter_.getLCA(unode, cnode);
-//                         min_upper_score = std::min(min_upper_score, score);
-//                         if(score > lscore) lscore = score;
-//                         logsink << "      current upper node: " << "("<< score <<") "<<unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-//                         ++it;
-//                     }
-//                     else {
+
                     if(score > qscore_ex) {
                         if (score > min_upper_score) it = outgroup_tmp.erase(it);
                         else {
@@ -551,19 +444,6 @@ public:
                         else min_upper_score = std::max(min_upper_score, score);
                         ++it;
                     }
-//                     else {
-//                         if(score == min_upper_score) {
-//                             unode = this->taxinter_.getLCA(cnode, unode);
-//                             logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-//                         }
-//                         else {  // if (score > min_upper_score)
-//                             min_upper_score = uscore = score;
-//                             unode = this->taxinter_.getLCA(cnode, lnode);
-//                             logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (* " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-//                         }
-//                         ++it;
-//                     }
-//                     }
                 }
                 
                 // push elements from temporary to outgroup set
@@ -605,46 +485,20 @@ public:
                 anchors_taxsig = std::min(taxsig, anchors_taxsig);  // combine taxonomic signal values conservatively
                 unode_global = this->taxinter_.getLCA(unode_global, unode);
                 lnode_global = this->taxinter_.getLCA(lnode_global, lnode);
-//                 anchors_lnode.push_back(lnode);
-//                 anchors_unode.push_back(unode);
                 
             } while (! qgroup.empty() && lnode_global != this->taxinter_.getRoot());
 
             logsink << "    NUMALN\t" << pass_1_counter << tab << pass_1_counter_naive - pass_1_counter << std::endl;
             logsink << "    NUMOUTGRP\t" << outgroup.size() << std::endl;
-        
-//             { // retain only taxa in outgroup which are closest to root
-//                 std::size_t tmp_size = outgroup.size();
-//                 for (std::map<uint, small_unsigned_int>::iterator it = outgroup.begin(); it !=  outgroup.end();) {
-//                     if(it->second > lca_root_dist_min) outgroup.erase(it++);  // TODO: check if this works
-//                     else ++it;
-//                 }
-//                 logsink << "    NUMOUTGRP\t" << outgroup.size() << tab << tmp_size - outgroup.size() << std::endl;
-//             }
-            
-//         anchors_unode.push_back(unode);
         }
 
-        // avoid unneccessary computation if root node is reached TODO: where?
-//         unode = this->taxinter_.getLCA(anchors_unode);
-//         anchors_unode.clear();  // TODO: remove; code simplification
         logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
         
         {   // pass 2 (stable upper node estimation alignment)
             logsink << "  PASS\t2" << std::endl;
-//             std::cerr << "Working on record " << qrseqname << std::endl;
-//             uint alignments_counter = 0;
-//             uint alignments_counter_naive = 0;
             while (! outgroup.empty()) {
-//                 std::list<uint> reevaluate;
-//                 BandFactor bandfactor2(this->taxinter_, n);
                 const uint index_anchor = *outgroup.begin();
                 outgroup.erase(outgroup.begin());
-                
-//                 std::cerr << "after erase: " << outgroup.size() << std::endl;
-//                 unode = records[index_anchor]->getReferenceNode();
-//                 lnode = NULL;
-//                 bandfactor2.addSequence(0, rnode);
                 
                 if( unode_global == lca_allnodes ) {
                     if( queryscores[index_anchor] == std::numeric_limits<int>::max() ) pass_2_counter_naive += n;
@@ -712,31 +566,11 @@ public:
                         }
                     }
                 }
-
-//                 {
-//                     int qscore_ex = qscore * bandfactor2.getFactor();
-//                     logsink << std::endl << "    EXT\tqueryscore = " << qscore << "; threshold = " << qscore_ex << std::endl;
-//                     std::list<uint>::iterator it = reevaluate.begin();
-//                     while(it != reevaluate.end() && unode != lca_allnodes ) {
-//                         const int score = queryscores[*it];
-//                         const TaxonNode* cnode = records[*it]->getReferenceNode();
-//                         if(score <= qscore_ex) {
-//                             unode = this->taxinter_.getLCA(cnode, unode);
-//                             logsink << "      current upper node: " << "("<< score <<") "<< unode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
-//                         }
-//                         ++it;
-//                     }
-//                 }
-
                 logsink << std::endl;
             }
             logsink << "    NUMALN\t" << pass_2_counter << tab << pass_2_counter_naive - pass_2_counter << std::endl;
         }
 
-//         lnode = this->taxinter_.getLCA(anchors_lnode);
-//         if(! anchors_unode.empty()) unode = this->taxinter_.getRoot();  // root if no outgroup element
-//         else unode = this->taxinter_.getLCA(anchors_unode);
-        
         if(unode_global == lnode_global) ival_global = 1.;
         
         logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;

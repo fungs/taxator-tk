@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include "ncbidata.hh"
 #include <assert.h>
+#include "exception.hh"
 
 
 // This currently works with standard and packed strings
@@ -232,7 +233,8 @@ class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
 			if( it != refid2position_.end() ) seq_num = it->second;
 			else {
 				std::cerr << "Sequence " << id << " not found in sequence file." << std::endl; //TODO. propagate error
-				return seq;
+// 				return seq;
+          BOOST_THROW_EXCEPTION(SequenceNotFound{});
 			}
 			
 			stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
