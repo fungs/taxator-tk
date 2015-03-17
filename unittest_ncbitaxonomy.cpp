@@ -27,12 +27,12 @@ bool unittest_assert( bool condition, const std::string& testname ) {
 int main( int argc, char** argv ) {
 
 	// command line arguments
-	if( argc < 2 ) {
-		std::cerr << "Not enough parameters given. Usage:" << std::endl << argv[0] << " seqid2taxid.sqlite" << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	const std::string accessconverter_filename = argv[1];
+// 	if( argc < 2 ) {
+// 		std::cerr << "Not enough parameters given. Usage:" << std::endl << argv[0] << " seqid2taxid.tsv" << std::endl;
+// 		return EXIT_FAILURE;
+// 	}
+// 
+// 	const std::string accessconverter_filename = argv[1];
 	bool alltests = true;
 	TaxonTree::iterator node_it;
 
@@ -58,11 +58,9 @@ int main( int argc, char** argv ) {
 		for(int i=0; i < 1000; ) {
 			node_it = tax->begin();
 			node_it += rand() % number_nodes;
-	// 		std::cout << "node picked: " << (*node_it)->annotation->name << std::endl;
 			unsigned int leftvalue = (*node_it)->leftvalue;
 			unsigned int rightvalue = (*node_it)->rightvalue;
 			for( TaxonTree::sibling_iterator child = node_it.node->first_child; child != node_it.node->last_child; ++child ) {
-	// 			std::cout << "child" << std::endl;
 				alltests = alltests && unittest_assert( leftvalue <= (*child)->leftvalue && rightvalue >= (*child)->rightvalue, "NESTED_SET (" + ( (*child)->annotation ? (*child)->annotation->name : "dummy node" ) + ")" );
 				++i; //increase for every child
 			}
@@ -84,7 +82,7 @@ int main( int argc, char** argv ) {
 			}
 		}
 
-		//check for right depth information
+		// check for right depth information
 		for( node_it = ++( tax->begin() ); node_it != tax->end(); ++node_it ) {
 			alltests = alltests && unittest_assert( node_it.node->parent->data->root_pathlength + 1 == (*node_it)->root_pathlength, "PATHLENGTH_TO_PARENT_EQUALS_ONE (" +  ( (*node_it)->annotation ? (*node_it)->annotation->name : "dummy node" ) + ")" );
 			if( ! alltests ) {
@@ -93,7 +91,7 @@ int main( int argc, char** argv ) {
 			}
 		}
 
-		//check whether unclassified nodes are marked correctly
+		// check whether unclassified nodes are marked correctly
 		for( node_it = ++( tax->begin() ); node_it != tax->end(); ++node_it ) {
 			const TaxonNode* node = node_it.node;
 			if( node->data->is_unclassified ) {
@@ -108,19 +106,19 @@ int main( int argc, char** argv ) {
 			}
 		}
 
-		const TaxonNode* node = taxinter.getNode( 166532 );
+		const TaxonNode* node = taxinter.getNode("166532");
 		if( node ) {
 			alltests = alltests && unittest_assert( node->data->is_unclassified, "UNCLASSIFIED_MARKED (unclassified Potamonautes)" );
 		}
-		node = taxinter.getNode( 713063 );
+		node = taxinter.getNode("713063");
 		if( node ) {
 			alltests = alltests && unittest_assert( node->data->is_unclassified, "UNCLASSIFIED_MARKED (unclassified Tenericutes)" );
 		}
-		node = taxinter.getNode( 39945 );
+		node = taxinter.getNode("39945");
 		if( node ) {
 			alltests = alltests && unittest_assert( node->data->is_unclassified, "UNCLASSIFIED_MARKED (unclassified Mollicutes)" );
 		}
-		node = taxinter.getNode( 575771 );
+		node = taxinter.getNode("575771");
 		if( node ) {
 			alltests = alltests && unittest_assert( node->data->is_unclassified, "UNCLASSIFIED_MARKED (Candidatus Lumbricincola sp. Ef-1)" );
 		}
@@ -135,14 +133,11 @@ int main( int argc, char** argv ) {
 		tax->setRankDistances( default_ranks );
 		cerr << "deleting unmarked nodes succeeded, " << number_nodes - tax->size() << " nodes deleted" << endl;
 
-		//check depth information for specic rank
+		// check depth information for specific rank
 		for( node_it = ++( tax->begin() ); node_it != tax->end(); ++node_it ) {
 			const TaxonNode* node = node_it.node;
 			if( node->data->annotation ) {
 				const string& rank = node->data->annotation->rank;
-
-	// 			std::cerr << node->data->annotation->name << std::endl;
-	// 			std::cerr << "rank: " << rank << " normalized depth: " << node->data->root_pathlength << std::endl;
 
 				if ( rank == "superkingdom" ) {
 					alltests = alltests && unittest_assert( node->data->root_pathlength == 1 , "NORMALIZED_DEPTH (" +  node->data->annotation->name + ")" );
@@ -213,21 +208,19 @@ int main( int argc, char** argv ) {
 	}
 
 
-	{ //check seqid-converter (not really taxonomy)
-		// test sqlite seqid converter
-		StrIDConverter* accessconv = loadStrIDConverterFromFile( accessconverter_filename );
-		StrIDConverter& seqid2taxid = *accessconv;
-	// 	gi2taxid.fail();
-	// 	unittest_assert( gi2taxid[ 39 ] == 9913, "SQLITE_FIXED_GI_LOOKUP" );
-
-		try {
-			seqid2taxid[ "1000000" ];
-		} catch( std::out_of_range e ) {
-			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" );
-		} catch( std::exception e ) {
-			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" ); //why this?
-		}
-	}
+// 	{ // check seqid-converter (not really taxonomy)
+// 		// test sqlite seqid converter
+// 		StrIDConverter* accessconv = loadStrIDConverterFromFile( accessconverter_filename );
+// 		StrIDConverter& seqid2taxid = *accessconv;
+// 
+// 		try {
+// 			seqid2taxid[ "1000000" ];
+// 		} catch( std::out_of_range e ) {
+// 			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" );
+// 		} catch( std::exception e ) {
+// 			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" ); //why this?
+// 		}
+// 	}
 
 	if( alltests ) {
 		cout << std::endl << "All tests ran through!" << endl;
