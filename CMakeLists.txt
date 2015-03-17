@@ -56,8 +56,8 @@ target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_
 #target_link_libraries( extract-fastacomment-ncbifield ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # unittest: constructs the taxonomy from NCBI dump files and tests the structure thoroughly
-#add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
-#target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
+add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
+target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # converter 
 add_executable( converter converter.cpp )
