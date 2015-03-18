@@ -1,4 +1,5 @@
 #include "taxonomyinterface.hh"
+#include "exception.hh"
 #include <algorithm>
 #include <vector>
 
@@ -6,10 +7,7 @@
 
 const TaxonNode* TaxonomyInterface::getNode ( const TaxonID taxid ) const {
 	std::map< TaxonID, TaxonNode* >::const_iterator node_it = tax->taxid2node_.find( taxid );
-	if( node_it == tax->taxid2node_.end() ) {
-// 		std::cerr << "could not find node with TaxID " << taxid << " in taxonmy tree" << std::endl;
-		return NULL;
-	}
+	if(node_it == tax->taxid2node_.end()) BOOST_THROW_EXCEPTION(TaxonNotFound {} << taxid_info{taxid});
 	return node_it->second;
 }
 
@@ -216,25 +214,3 @@ TaxonTree::PathUpIterator TaxonomyInterface::traverseUp( const TaxonNode* node )
 bool TaxonomyInterface::isLeaf(const TaxonNode* node) const {
 	return ! node->first_child;
 }
-
-
-
-// void printPath( Taxonomy* tax, TaxonNode* node, TaxonNode* ancestor ) {
-// 	TaxonomyInterface taxinter( tax );
-// 	printPath( taxinter, node, ancestor );
-// }
-// 
-// 
-// 
-// void printPath( TaxonomyInterface& taxinter, TaxonNode* node, TaxonNode* ancestor ) {
-// 	TaxonNode* tn = node;
-// 	while( tn != ancestor ) {
-// 		if( tn->data->mark_special && tn->data->annotation ) {
-// 			std::cout << "name: " << tn->data->annotation->name <<
-// 				", rank: " << tn->data->annotation->rank <<
-// 				", dist_to_root: " << tn->data->root_pathlength <<
-// 				std::endl;
-// 			tn = tn->parent;
-// 		}
-// 	}
-// }

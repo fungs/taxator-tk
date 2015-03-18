@@ -33,80 +33,74 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "constants.hh"
 #include "types.hh"
 #include "utils.hh"
+#include "exception.hh"
 
 
 
 // converts from access identifier to taxonomic id
 template< typename TypeT > //TODO: add operator[] const (avoid caching, history etc.)
 class AccessIDConverter {
-	public:
-		virtual ~AccessIDConverter() {};
-		virtual TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ = 0;
+public:
+    virtual ~AccessIDConverter() {};
+    virtual TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ = 0;
 };
 
 
 
 template< typename TypeT >
 class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
-	public:
-		AccessIDConverterFlatfileMemory( const std::string& flatfile_filename ) {
-		  parse( flatfile_filename );
+public:
+    AccessIDConverterFlatfileMemory( const std::string& flatfile_filename ) {
+        parse( flatfile_filename );
     }
 
-		TaxonID operator[]( const TypeT& acc ) /*throw( std::out_of_range )*/ {
-      typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find( acc );
-      if( it == accessidconv.end() ) {
-				//std::cerr << "sequence accession key \"" << acc << "\" not found" << std::endl;
-        throw std::out_of_range( boost::lexical_cast<std::string>( acc ) );
-      }
-      return it->second;
-		}
-		
-	private:
-		void parse( const std::string& flatfile_filename ) {
-      std::list< std::string > fields;
-      std::list< std::string >::iterator field_it;
-      std::string line;
-      std::ifstream flatfile( flatfile_filename.c_str() );
-      TypeT acc;
-      while( std::getline( flatfile, line ) ) {
-        if( ignoreLine( line ) ) { continue; }
-        fields.clear();
-        tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
-        field_it = fields.begin();
+    TaxonID operator[]( const TypeT& acc ) { /*throw( std::out_of_range )*/
+        typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find( acc );
+        if( it == accessidconv.end() ) BOOST_THROW_EXCEPTION(TaxonIDNotFound {} << seqid_info {acc});
+        return it->second;
+    }
 
-        try {
-          acc = boost::lexical_cast< TypeT >( *field_it );
-          ++field_it;
-          TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
-					accessidconv[ acc ] = taxid;
-        } catch( boost::bad_lexical_cast e ) {
-          std::cerr << "Could not parse line: " << line << ", skipping..." << std::endl;
-          std::cerr << "key:" << acc << std::endl;
-          std::cerr << "error parsing taxonomic ID: " << *field_it << std::endl;
-          throw e;
+private:
+    void parse( const std::string& flatfile_filename ) {
+        std::list< std::string > fields;
+        std::list< std::string >::iterator field_it;
+        std::string line;
+        std::ifstream flatfile( flatfile_filename.c_str() );
+        TypeT acc;
+        while( std::getline( flatfile, line ) ) {
+            if( ignoreLine( line ) ) {
+                continue;
+            }
+            fields.clear();
+            tokenizeSingleCharDelim( line, fields, default_field_separator, 2 );
+            field_it = fields.begin();
+
+            try {
+                acc = boost::lexical_cast< TypeT >( *field_it );
+                ++field_it;
+                TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
+                accessidconv[ acc ] = taxid;
+            } catch( boost::bad_lexical_cast e ) {
+                std::cerr << "Could not parse line: " << line << ", skipping..." << std::endl;
+                std::cerr << "key:" << acc << std::endl;
+                std::cerr << "error parsing taxonomic ID: " << *field_it << std::endl;
+                throw e;
+            }
         }
-      }
-      flatfile.close();
-		};
+        flatfile.close();
+    };
 
-		typename std::map< TypeT, TaxonID > accessidconv; //TODO: hash_map aka unordered_map would be better
+    typename std::map< TypeT, TaxonID > accessidconv; //TODO: hash_map aka unordered_map would be better
 };
 
 
 
 template< typename TypeT >
 AccessIDConverter< TypeT >* loadAccessIDConverterFromFile( const std::string& filename, unsigned int cachesize = 0 ) {
-  AccessIDConverter< TypeT >* accidconv = NULL;
-	if( ! boost::filesystem::exists( filename ) ) {
-		std::cerr << filename << " does not exists and could thus not be loaded" << std::endl;
-		return NULL;
-	}
-	
-	std::cerr << "loading accession to taxonomic id converter file...";
-  accidconv = new AccessIDConverterFlatfileMemory< TypeT >( filename );
-  std::cerr << " done" << std::endl;
-  return accidconv;
+    AccessIDConverter< TypeT >* accidconv = NULL;
+    if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound {} << file_info {filename});
+    accidconv = new AccessIDConverterFlatfileMemory< TypeT >( filename );
+    return accidconv;
 }
 
 
