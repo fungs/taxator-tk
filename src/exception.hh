@@ -52,12 +52,20 @@ class FileNotFound : public Exception {
     const char *what() const noexcept { return "could not find file"; }
 };
 
+class FileError : public Exception {
+    const char *what() const noexcept { return "could not access file"; }
+};
+
 class ParsingError : public Exception {
   const char *what() const noexcept { return "could not parse record"; }
 };
 
 class EOFError : public Exception {
   const char *what() const noexcept { return "could not read: end of file"; }
+};
+
+class GeneralError : public Exception {
+  const char *what() const noexcept { return "general error"; }
 };
 
 #endif // exception_hh_

@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -313,6 +314,7 @@ int main( int argc, char** argv ) {
       return EXIT_SUCCESS;
     } catch(Exception &e) {
        cerr << "An unrecoverable error occurred." << endl;
+       cerr << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }
 }

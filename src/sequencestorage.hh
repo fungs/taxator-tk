@@ -54,13 +54,15 @@ template < typename StorageStringType = seqan::Dna5String, typename WorkingStrin
 class RandomInmemorySeqStoreRO : public RandomSeqStoreROInterface<WorkingStringType> {
 public:
     RandomInmemorySeqStoreRO ( const std::string& filename ) : format_( Format() ) {
-        std::cerr << "analyzing file '" << filename << "'... ";
+        
+        if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
+        
+        std::cerr << "scanning sequences from '" << filename;
         seqan::MultiSeqFile db_sequences;
         if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
             seqan::split( db_sequences, format_ );
-            std::cerr << "done" << std::endl;
             large_unsigned_int num_records = seqan::length( db_sequences );
-            std::cerr << "importing sequences from '" << filename << "' (total=" << num_records << ")" << std::endl;
+            std::cerr  << "' (total=" << num_records << ")" << std::endl;
             {
                 boost::progress_display eta( num_records - 1, std::cerr ); //progress bar
                 for( large_unsigned_int i = 0; i < num_records; ++i ) {
@@ -73,20 +75,20 @@ public:
                 }
             }
             std::cerr << std::endl;
-        } else {
-            std::cerr << "Could not open input FASTA file \"" << filename << "\"" << std::endl;
-        }
+        } else BOOST_THROW_EXCEPTION(FileError{} << file_info{filename});
     }
 
     RandomInmemorySeqStoreRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
-        std::cerr << "analyzing file '" << filename << "'... ";
+        
+        if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
+        
+        std::cerr << "scanning sequences from '" << filename;
         seqan::MultiSeqFile db_sequences;
         if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
             seqan::split( db_sequences, format_ );
-            std::cerr << "done" << std::endl;
             large_unsigned_int num_records = seqan::length( db_sequences );
             large_unsigned_int effective_num_records = std::min< large_unsigned_int >( num_records, whitelist.size() );
-            std::cerr << "importing sequences from '" << filename << "' (total=" << effective_num_records << ")" << std::endl;
+            std::cerr << "' (total=" << effective_num_records << ")" << std::endl;
             {
                 boost::progress_display eta( effective_num_records - 1, std::cerr ); //progress bar
                 for( large_unsigned_int i = 0; i < num_records; ++i ) {
@@ -103,9 +105,7 @@ public:
                 assert( seqan::length( data_ ) <= effective_num_records );
             }
             std::cerr << std::endl;
-        } else {
-            std::cerr << "Could not open input FASTA file \"" << filename << "\"" << std::endl;
-        }
+        } else BOOST_THROW_EXCEPTION(FileError{} << file_info{filename});
     }
 
     const StorageStringType& getSequence ( const std::string& id ) const {
@@ -132,13 +132,6 @@ public:
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
     };
-
-//     const WorkingStringType getSequenceAuto ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
-//         if ( start < stop ) {
-//             return getSequence( id, start, stop );
-//         }
-//         return getSequenceReverseComplement( id, stop, start );
-//     };
 
 protected:
     seqan::StringSet< StorageStringType > data_;
@@ -197,14 +190,13 @@ class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
 public:
     RandomIndexedSeqstoreRO( const std::string& fasta_filename, const std::string& index_filename ) : index_filename_( index_filename ), write_on_exit_( false ) {
         if ( ! boost::filesystem::exists( index_filename ) )  {
-            std::cerr << "Index \"" << index_filename << "\" for \"" << fasta_filename << "\" not found, building..." << std::endl;
+//             std::cerr << "Index \"" << index_filename << "\" for \"" << fasta_filename << "\" not found, building..." << std::endl;
             if ( seqan::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
-                std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be built." << std::endl;
+                BOOST_THROW_EXCEPTION(GeneralError{} << general_info{"could not build fasta index"} << file_info{index_filename});
                 return;
             } else write_on_exit_ = true;
         } else if ( seqan::read( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
-            std::cerr << "ERROR: FASTA index for " << fasta_filename << " could not be read." << std::endl;
-            //TODO: propagate error
+            BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename});
             return;
         }
 
@@ -228,7 +220,6 @@ public:
         std::map<seqan::CharString, unsigned int>::const_iterator it = refid2position_.find( id.c_str() );
         if( it != refid2position_.end() ) seq_num = it->second;
         else {
-            std::cerr << "Sequence " << id << " not found in sequence file." << std::endl; //TODO. propagate error
             BOOST_THROW_EXCEPTION(SequenceNotFound {} << seqid_info{id});
         }
 
@@ -247,7 +238,7 @@ public:
 
     ~RandomIndexedSeqstoreRO() {
         if ( write_on_exit_ && ! boost::filesystem::exists( index_filename_ ) )
-            if( seqan::write( index_, index_filename_.c_str() ) ) std::cerr << "ERROR: FASTA index could not be written to \"" << index_filename_ << "\"." << std::endl;
+            if( seqan::write( index_, index_filename_.c_str() ) ) BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename_});
     }
 
 protected:
