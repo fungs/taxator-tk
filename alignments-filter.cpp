@@ -138,7 +138,7 @@ int main( int argc, char** argv ) {
         filters.push_back( new BestScorePerReferenceSeqIDFilter< RecordSetType >() );
     }
     if( sort_by_score ) {
-        filters.push_back( new SortByScoreFilter< RecordSetType >() );
+        filters.push_back( new SortFilter< RecordSetType >() );
     }
     if( minpid > 0.0 ) {
         filters.push_back( new MinPIDFilter< RecordSetType >( minpid ) );

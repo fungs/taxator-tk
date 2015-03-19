@@ -42,22 +42,22 @@ public:
     inline const std::string& getQueryIdentifier() const {
         return query_identifier_;
     };
-    inline large_unsigned_int getQueryStart() {
+    inline large_unsigned_int getQueryStart() const {
         return query_start_;
     };
-    inline large_unsigned_int getQueryStop() {
+    inline large_unsigned_int getQueryStop() const {
         return query_stop_;
     };
-    inline large_unsigned_int getQueryLength() {
+    inline large_unsigned_int getQueryLength() const {
         return query_length_;
     };
     inline const std::string& getReferenceIdentifier() const {
         return reference_identifier_;
     };
-    inline large_unsigned_int getReferenceStart() {
+    inline large_unsigned_int getReferenceStart() const {
         return reference_start_;
     };
-    inline large_unsigned_int getReferenceStop() {
+    inline large_unsigned_int getReferenceStop() const {
         return reference_stop_;
     };
     inline float getScore() const {
@@ -66,13 +66,13 @@ public:
     inline double getEValue() const {
         return evalue_;
     };
-    inline large_unsigned_int getIdentities() {
+    inline large_unsigned_int getIdentities() const {
         return identities_;
     };
-    inline large_unsigned_int getAlignmentLength() {
+    inline large_unsigned_int getAlignmentLength() const {
         return alignment_length_;
     };
-    inline const std::string& getAlignmentCode() {
+    inline const std::string& getAlignmentCode() const {
         return alignment_code_;
     };
     inline bool isFiltered() const {
@@ -85,6 +85,12 @@ public:
     inline void filterOut() {
         blacklist_this_ = true;
     };
+    
+    inline bool operator<(const AlignmentRecord& other) const {
+        if (this->getScore() < other.getScore()) return true;
+        if (this->getScore() > other.getScore()) return false;
+        return this->getIdentities() < other.getIdentities();
+    }
 
     void parse( const std::string& line ) {
         if (line.size() <= 1) BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"alignment line too short"});
