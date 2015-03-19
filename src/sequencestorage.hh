@@ -57,7 +57,7 @@ public:
         
         if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
         
-        std::cerr << "scanning sequences from '" << filename;
+        std::cerr << "Loading '" << filename;
         seqan::MultiSeqFile db_sequences;
         if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
             seqan::split( db_sequences, format_ );
@@ -82,7 +82,7 @@ public:
         
         if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
         
-        std::cerr << "scanning sequences from '" << filename;
+        std::cerr << "Loading '" << filename;
         seqan::MultiSeqFile db_sequences;
         if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
             seqan::split( db_sequences, format_ );
@@ -117,7 +117,7 @@ public:
     const WorkingStringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
         const StorageStringType& db_seq = getSequence ( id );
         stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
-        if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
+        if( start > seqan::length( db_seq ) ) BOOST_THROW_EXCEPTION(SequenceRangeError{} << general_info{"invalid position"} << seqid_info{id} << position_info{start});
         WorkingStringType seq = seqan::infix ( db_seq, start - 1, stop );
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
@@ -126,7 +126,7 @@ public:
     const WorkingStringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
         const StorageStringType& db_seq = getSequence ( id );
         stop = std::min< large_unsigned_int >( stop, seqan::length( db_seq ) );
-        if( start > seqan::length( db_seq ) ) std::cerr << "ERROR: start position in \"" << id << "\" is larger than stored sequence length" << std::endl;
+        if( start > seqan::length( db_seq ) ) BOOST_THROW_EXCEPTION(SequenceRangeError{} << general_info{"invalid position"} << seqid_info{id} << position_info{start});
         WorkingStringType cst = seqan::infix ( db_seq, start - 1, stop );
         seqan::ModifiedString< seqan::ModifiedString< WorkingStringType, seqan::ModView< seqan::FunctorComplement< seqan::Dna > > >, seqan::ModReverse> seq( cst );
         assert( seqan::length( seq ) == (stop - start + 1) );

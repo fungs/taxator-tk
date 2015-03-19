@@ -29,35 +29,50 @@ template< typename FactoryType >
 class FileParser {
 public:
     typedef typename FactoryType::value_type RecordType;
-    FileParser( const std::string& filename, FactoryType& factory ) : filehandle_( filename.c_str() ), handle_( filehandle_ ), factory_( factory ), line_num_( 0 ) {}
-    FileParser( std::istream& strm, FactoryType& factory ) : handle_( strm ), factory_( factory ), line_num_( 0 ) {}
-
-    RecordType* next() {
-        while(std::getline(handle_, line_)) {
-            ++line_num_;
-            if ( ignoreLine( line_ ) ) continue;
-
-            try {
-                return factory_.create( line_ );
-            }
-            catch(Exception &e) {
-                e << line_info {line_num_};
-                BOOST_THROW_EXCEPTION(e);
-            }
-        }
-        BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"parser at end of file"});
-        return NULL;
+    
+    FileParser( const std::string& filename, FactoryType& factory ) : filehandle_(filename.c_str()),
+                                                                      handle_(filehandle_),
+                                                                      factory_(factory) {
+        feed();
+    }
+    
+    FileParser( std::istream& strm, FactoryType& factory ) : handle_(strm),
+                                                             factory_(factory) {
+        feed();
     }
 
-    inline void destroy( const RecordType* rec ) const { factory_.destroy( rec ); }
-    inline bool eof() { return handle_.eof(); }
+    RecordType* next() {
+        try {
+            RecordType* ret = factory_.create(line_);
+            feed();
+            return ret;
+        }
+        catch (Exception &e) {
+            e << line_info{line_num_};
+            BOOST_THROW_EXCEPTION(e);
+        }
+        return NULL;  // should never be reached
+    }
+
+    inline void destroy( const RecordType* rec ) const { factory_.destroy(rec); }
+    inline bool eof() { return eof_; }
 
 private:
+    void feed() {
+        while (std::getline(handle_, line_)) {
+            ++line_num_;
+            if (!ignoreLine(line_)) return;
+        }
+        eof_ = true;
+    }
+    
     std::ifstream filehandle_;
     std::istream& handle_;
     std::string line_;
     FactoryType& factory_;
-    unsigned int line_num_;
+    
+    unsigned int line_num_ = 0;
+    bool eof_ = false;
 };
 
 

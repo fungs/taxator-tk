@@ -50,13 +50,13 @@ public:
 template< typename TypeT >
 class AccessIDConverterFlatfileMemory : public AccessIDConverter< TypeT > {
 public:
-    AccessIDConverterFlatfileMemory( const std::string& flatfile_filename ) {
-        parse( flatfile_filename );
+    AccessIDConverterFlatfileMemory( const std::string& flatfile_filename ) : filename_(flatfile_filename) {
+        parse(flatfile_filename);
     }
 
-    TaxonID operator[]( const TypeT& acc ) { /*throw( std::out_of_range )*/
-        typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find( acc );
-        if( it == accessidconv.end() ) BOOST_THROW_EXCEPTION(TaxonIDNotFound {} << seqid_info {acc});
+    TaxonID operator[](const TypeT& acc) { /*throw( std::out_of_range )*/
+        typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find(acc);
+        if(it == accessidconv.end()) BOOST_THROW_EXCEPTION(TaxonMappingNotFound{} << seqid_info{acc} << file_info{filename_});
         return it->second;
     }
 
@@ -80,7 +80,7 @@ private:
                 ++field_it;
                 TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
                 accessidconv[ acc ] = taxid;
-            } catch( boost::bad_lexical_cast e ) {
+            } catch( boost::bad_lexical_cast e ) {  // TODO: pass info via exception
                 std::cerr << "Could not parse line: " << line << ", skipping..." << std::endl;
                 std::cerr << "key:" << acc << std::endl;
                 std::cerr << "error parsing taxonomic ID: " << *field_it << std::endl;
@@ -91,6 +91,7 @@ private:
     };
 
     typename std::map< TypeT, TaxonID > accessidconv; //TODO: hash_map aka unordered_map would be better
+    const std::string filename_;
 };
 
 

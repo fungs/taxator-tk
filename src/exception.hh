@@ -26,26 +26,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 
 // tags
-typedef boost::error_info<struct exception_tag_seqid, const std::string> general_info;
-typedef boost::error_info<struct exception_tag_seqid, const std::string> file_info;
+typedef boost::error_info<struct exception_tag_general, const std::string> general_info;
+typedef boost::error_info<struct exception_tag_file, const std::string> file_info;
 typedef boost::error_info<struct exception_tag_seqid, const std::string> seqid_info;
-typedef boost::error_info<struct exception_tag_seqid, const TaxonID> taxid_info;
-typedef boost::error_info<struct exception_tag_seqid, const uint> line_info;
-
+typedef boost::error_info<struct exception_tag_taxid, const TaxonID> taxid_info;
+typedef boost::error_info<struct exception_tag_line, const uint> line_info;
+typedef boost::error_info<struct exception_tag_position, const uint> position_info;
 
 // exception classes
 class Exception : public boost::exception, public std::exception {};
 
 class SequenceNotFound : public Exception {
-    const char *what() const noexcept { return "could not find sequence identifier"; }
+    const char *what() const noexcept { return "bad sequence identifier"; }
 };
 
 class TaxonNotFound : public Exception {
-    const char *what() const noexcept { return "could not find taxon in taxonomy"; }
+    const char *what() const noexcept { return "bad taxon"; }
 };
 
-class TaxonIDNotFound : public Exception {
-    const char *what() const noexcept { return "could not find taxon identifier in mapping"; }
+class TaxonMappingNotFound : public Exception {
+    const char *what() const noexcept { return "bad taxon identifier mapping"; }
 };
 
 class FileNotFound : public Exception {
@@ -57,15 +57,19 @@ class FileError : public Exception {
 };
 
 class ParsingError : public Exception {
-  const char *what() const noexcept { return "could not parse record"; }
+  const char *what() const noexcept { return "bad record"; }
 };
 
 class EOFError : public Exception {
-  const char *what() const noexcept { return "could not read: end of file"; }
+  const char *what() const noexcept { return "end of file"; }
 };
 
 class GeneralError : public Exception {
   const char *what() const noexcept { return "general error"; }
+};
+
+class SequenceRangeError : public Exception {
+  const char *what() const noexcept { return "bad sequence range"; }  
 };
 
 #endif // exception_hh_

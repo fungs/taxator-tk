@@ -52,9 +52,14 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     FileParser< AlignmentRecordFactory< AlignmentRecordTaxonomy > > parser( cin, fac );
     RecordSetGenerator<AlignmentRecordTaxonomy, RecordSetType>* recgen = NULL; // TODO: boost smpt??
 
-    if(alignments_sorted) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType>( parser );
-    else if (split_alignments) recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
-    else recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+    if (alignments_sorted) { // stupid nesting because template parameters must be const
+        if (split_alignments) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
+        else recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+    }
+    else {
+        if (split_alignments) recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
+        else recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+    }
 
     RecordSetType rset;
     PredictionRecord prec( tax );
@@ -94,9 +99,14 @@ private:
         FileParser< AlignmentRecordFactory< AlignmentRecordTaxonomy > > parser( cin, fac_ );
         RecordSetGenerator<AlignmentRecordTaxonomy, RecordSetType>* recgen = NULL;
 
-        if(alignments_sorted_) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType>( parser );
-        else if (split_alignments_) recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
-        else recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+        if (alignments_sorted_) { // stupid nesting because template parameters must be const
+            if (split_alignments_) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
+            else recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+        }
+        else {
+            if (split_alignments_) recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
+            else recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
+        }
         
         RecordSetType tmprset;
 
@@ -314,6 +324,7 @@ int main( int argc, char** argv ) {
       return EXIT_SUCCESS;
     } catch(Exception &e) {
        cerr << "An unrecoverable error occurred." << endl;
+//        cerr << e.what() << endl;
        cerr << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }

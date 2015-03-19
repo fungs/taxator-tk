@@ -205,7 +205,7 @@ public:
 
         TaxonID taxid;
         try {
-            taxid = acc2taxid_[ getReferenceIdentifier() ];
+            taxid = acc2taxid_[getReferenceIdentifier()];
         }
         catch(Exception &e) {
             BOOST_THROW_EXCEPTION(e << general_info {"bad taxon mapping for alignment reference sequence"});
@@ -293,11 +293,11 @@ public:
     virtual ~RecordSetGenerator() {};
     virtual void getNext( RecordSetType& rset ) = 0;
     virtual bool notEmpty () {
-        return last_record_ ;
+        return record_ ;
     };
 
 private:
-    RecordType* last_record_;
+    RecordType* record_;
 };
 
 
@@ -306,8 +306,8 @@ private:
 // public:
 //     typedef FileParser< RecordType > ParserType;
 // 
-//     RecordSetGeneratorUnsorted(ParserType& parser) : parser_( parser ), last_record_( parser.next()) , tmpindex_(0)  {
-//         last_query_id_ = last_record_ ? &( last_record_->getQueryIdentifier() ) : NULL;
+//     RecordSetGeneratorUnsorted(ParserType& parser) : parser_( parser ), record_( parser.next()) , tmpindex_(0)  {
+//         last_query_id_ = record_ ? &( record_->getQueryIdentifier() ) : NULL;
 //     };
 // 
 //     typedef typename RecordSetType::value_type AlignmentRecordTypePtr;
@@ -315,13 +315,13 @@ private:
 // 
 //     void getNext(RecordSetType& rset) {
 //         if(!split_alignments) {
-//             if(last_record_) {  // always true unless called on empty input
+//             if(record_) {  // always true unless called on empty input
 //                 const std::string& query_id = *last_query_id_;
-//                 rset.push_back(last_record_);
+//                 rset.push_back(record_);
 // 
 //                 while(true) {
 //                     if(parser_.eof()) {
-//                         last_record_ = NULL;
+//                         record_ = NULL;
 //                         break;
 //                     }
 // 
@@ -331,7 +331,7 @@ private:
 //                         rset.push_back( record );
 //                     } else {
 //                         last_query_id_ = &(record->getQueryIdentifier());
-//                         last_record_ = record;
+//                         record_ = record;
 //                         break;
 //                     }
 //                 };
@@ -340,14 +340,14 @@ private:
 // 
 //         else {  // split alignments
 //             if(ranges.empty()) {  // read new query
-//                 if(last_record_) {  // always true unless called on empty input
+//                 if(record_) {  // always true unless called on empty input
 //                     const std::string& query_id = *last_query_id_;
-//                     ranges.push_back(boost::make_tuple(last_record_->getQueryStart(), last_record_->getQueryStop(), last_record_));
-// //                     rset.push_back(last_record_);
+//                     ranges.push_back(boost::make_tuple(record_->getQueryStart(), record_->getQueryStop(), record_));
+// //                     rset.push_back(record_);
 // 
 //                     while(true) {
 //                         if(parser_.eof()) {
-//                             last_record_ = NULL;
+//                             record_ = NULL;
 //                             break;
 //                         }
 // 
@@ -357,7 +357,7 @@ private:
 //                             ranges.push_back(boost::make_tuple(record->getQueryStart(), record->getQueryStop(),record));
 //                         } else {
 //                             last_query_id_ = &(record->getQueryIdentifier());
-//                             last_record_ = record;
+//                             record_ = record;
 //                             break;
 //                         }
 //                     };
@@ -389,13 +389,13 @@ private:
 //     };
 // 
 //     bool notEmpty() {
-//         if(!split_alignments) return last_record_ ;
-//         else return (last_record_ || (ranges.size() > tmpindex_));
+//         if(!split_alignments) return record_ ;
+//         else return (record_ || (ranges.size() > tmpindex_));
 //     };
 // 
 // private:
 //     ParserType& parser_;
-//     RecordType* last_record_;
+//     RecordType* record_;
 //     const std::string* last_query_id_;
 //     large_unsigned_int tmpindex_;
 // 
@@ -403,21 +403,7 @@ private:
 
 
 template<typename RecordType, typename RecordSetType, bool split_alignments>
-class RecordSetGeneratorUnsorted;/* : public RecordSetGenerator< RecordType, RecordSetType > {
-public:
-    typedef FileParser<RecordType> ParserType;
-    RecordSetGeneratorUnsorted(ParserType& parser);
-private:
-    ParserType& parser_;
-    RecordType* last_record_;
-    const std::string* last_query_id_;
-};*/
-
-
-// template< typename RecordType, typename RecordSetType, bool split_alignments >
-// RecordSetGeneratorUnsorted<RecordType, RecordSetType, split_alignments>::RecordSetGeneratorUnsorted(ParserType& parser) : parser_( parser ), last_record_( parser.next())  {
-//         last_query_id_ = last_record_ ? &( last_record_->getQueryIdentifier() ) : NULL;
-// }
+class RecordSetGeneratorUnsorted;
 
 
 template<typename RecordType, typename RecordSetType>
@@ -430,37 +416,46 @@ public:
 
 private:
     ParserType& parser_;
-    RecordType* last_record_;
+    RecordType* record_;
     const std::string* last_query_id_;
-    large_unsigned_int tmpindex_;
     typedef typename RecordSetType::value_type AlignmentRecordTypePtr;
     std::vector< boost::tuple< large_unsigned_int, large_unsigned_int, AlignmentRecordTypePtr > > ranges;
+    
+    large_unsigned_int tmpindex_ = 0;
 
 };
 
 
+// specialization which splits the alignments
 template< typename RecordType, typename RecordSetType >
-RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::RecordSetGeneratorUnsorted(ParserType& parser) : parser_( parser ), last_record_( parser.next()) , tmpindex_(0)  {
-        last_query_id_ = last_record_ ? &( last_record_->getQueryIdentifier() ) : NULL;
+RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::RecordSetGeneratorUnsorted(ParserType& parser) : parser_(parser) {
+        if (parser_.eof()) {
+            record_ = NULL;
+            last_query_id_ = NULL;
+        }
+        else {
+            record_ = parser_.next();
+            last_query_id_ = &(record_->getQueryIdentifier());
+        }
 }
 
 
 template< typename RecordType, typename RecordSetType >
 bool RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::notEmpty() {
-        return (last_record_ || (ranges.size() > tmpindex_));
+        return (record_ || (ranges.size() > tmpindex_));
 }
 
 
 template<typename RecordType, typename RecordSetType>
 void RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::getNext(RecordSetType& rset) {
     if(ranges.empty()) {  // read new query
-        if(last_record_) {  // always true unless called on empty input
+        if(record_) {  // always true unless called on empty input
             const std::string& query_id = *last_query_id_;
-            ranges.push_back(boost::make_tuple(last_record_->getQueryStart(), last_record_->getQueryStop(), last_record_));
+            ranges.push_back(boost::make_tuple(record_->getQueryStart(), record_->getQueryStop(), record_));
 
             while(true) {
                 if(parser_.eof()) {
-                    last_record_ = NULL;
+                    record_ = NULL;
                     break;
                 }
 
@@ -470,12 +465,12 @@ void RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::getNext(Record
                     ranges.push_back(boost::make_tuple(record->getQueryStart(), record->getQueryStop(),record));
                 } else {
                     last_query_id_ = &(record->getQueryIdentifier());
-                    last_record_ = record;
+                    record_ = record;
                     break;
                 }
             };
             std::sort( ranges.begin(), ranges.end() ); //TODO: sort by start is enough (maybe use ordered map)
-        } else BOOST_THROW_EXCEPTION(EOFError {} << general_info {"alignment recordset parser: trying to read from empty input"});
+        } else BOOST_THROW_EXCEPTION(EOFError {} << general_info {"alignment recordset parser: read from empty input"});
     }
 
     // push into queue as separate sets to be treated independently by prediction algorithm
@@ -501,6 +496,7 @@ void RecordSetGeneratorUnsorted<RecordType, RecordSetType, true>::getNext(Record
 }
 
 
+// specialization which doesn't split the alignments
 template<typename RecordType, typename RecordSetType>
 class RecordSetGeneratorUnsorted<RecordType, RecordSetType, false> : public RecordSetGenerator< RecordType, RecordSetType > {
 public:
@@ -511,33 +507,40 @@ public:
 
 private:
     ParserType& parser_;
-    RecordType* last_record_;
+    RecordType* record_;
     const std::string* last_query_id_;
 
 };
 
 
 template< typename RecordType, typename RecordSetType >
-RecordSetGeneratorUnsorted<RecordType, RecordSetType, false>::RecordSetGeneratorUnsorted(ParserType& parser) : parser_( parser ), last_record_( parser.next())  {
-        last_query_id_ = last_record_ ? &( last_record_->getQueryIdentifier() ) : NULL;
+RecordSetGeneratorUnsorted<RecordType, RecordSetType, false>::RecordSetGeneratorUnsorted(ParserType& parser) : parser_(parser) {
+    if (parser_.eof()) {
+        record_ = NULL;
+        last_query_id_ = NULL;
+    }
+    else {
+        record_ = parser_.next();
+        last_query_id_ = &(record_->getQueryIdentifier());
+    }
 }
 
     
 template< typename RecordType, typename RecordSetType >
 bool RecordSetGeneratorUnsorted<RecordType, RecordSetType, false>::notEmpty() {
-        return last_record_ ;
+        return record_ ;
 }
 
 
 template< typename RecordType, typename RecordSetType >
 void RecordSetGeneratorUnsorted< RecordType, RecordSetType, false >::getNext(RecordSetType& rset) {
-    if(last_record_) {  // always true unless called on empty input
+    if(record_) {  // always true unless called on empty input
         const std::string& query_id = *last_query_id_;
-        rset.push_back(last_record_);
+        rset.push_back(record_);
 
         while(true) {
             if(parser_.eof()) {
-                last_record_ = NULL;
+                record_ = NULL;
                 break;
             }
 
@@ -547,49 +550,60 @@ void RecordSetGeneratorUnsorted< RecordType, RecordSetType, false >::getNext(Rec
                 rset.push_back( record );
             } else {
                 last_query_id_ = &(record->getQueryIdentifier());
-                last_record_ = record;
+                record_ = record;
                 break;
             }
         };
-    } else BOOST_THROW_EXCEPTION(EOFError {} << general_info {"alignment recordset parser: trying to read from empty input"});
+    } else BOOST_THROW_EXCEPTION(EOFError {} << general_info {"alignment recordset parser: read from empty input"});
 }
 
 
-template< typename RecordType, typename RecordSetType >
+template< typename RecordType, typename RecordSetType, bool split_alignments >
 class RecordSetGeneratorSorted : public RecordSetGenerator< RecordType, RecordSetType > {
 public:
     typedef FileParser< AlignmentRecordFactory< RecordType> > ParserType;
 
-    RecordSetGeneratorSorted( ParserType& parser ) : parser_( parser ), last_record_( parser.next()) {
-        last_query_id_ = last_record_ ? &( last_record_->getQueryIdentifier() ) : NULL;
-        rstop_ = last_record_->getQueryStop();
+    RecordSetGeneratorSorted( ParserType& parser ) : parser_(parser) {
+        if (parser_.eof()) {
+            record_ = NULL;
+            last_query_id_ = NULL;
+        }
+        else {
+            record_ = parser_.next();
+            last_query_id_ = &(record_->getQueryIdentifier());
+            rstop_ = record_->getQueryStop();
+        }
     }
+
 
     void getNext( RecordSetType& rset ) {
         typedef typename RecordSetType::value_type AlignmentRecordTypePtr;
 
-        while( last_record_ ) {
-
-            AlignmentRecordTypePtr record = last_record_;
+        while( record_ ) {  // TODO: rework
+            AlignmentRecordTypePtr record = record_;
             const std::string& query_id = *last_query_id_;
 
             large_unsigned_int start = record->getQueryStart();
             large_unsigned_int stop = record->getQueryStop();
 
             if(query_id == record->getQueryIdentifier()) {
-                if(start > rstop_) {
-                    last_query_id_ = &(record->getQueryIdentifier());  //TODO: check if necessary!
-                    rstop_ = stop;
-                    return;
+                if (split_alignments) {
+                    if (start > rstop_) {  // split
+                        last_query_id_ = &(record->getQueryIdentifier());  //TODO: check if necessary!
+                        rstop_ = stop;
+                        return;
+                    }
+                    else {  // no split
+                        rstop_ = std::max( record->getQueryStop() , rstop_ );
+                        last_query_id_ = &(record->getQueryIdentifier());
+                        rset.push_back(record);
+                        if (parser_.eof()) record_ = NULL;
+                        else record_ = parser_.next();
+                    }
                 }
-                else {
-                    rstop_ = std::max( record->getQueryStop() , rstop_ );
-                    last_query_id_ = &(record->getQueryIdentifier());
-                    rset.push_back(record);
-                    last_record_ = parser_.next();
-                }
+                else rset.push_back(record);
             }
-            else {
+            else {  // new recordset
                 last_query_id_ = &(record->getQueryIdentifier());
                 rstop_ = stop;
                 return;
@@ -598,12 +612,12 @@ public:
     }
 
     bool notEmpty() {
-        return last_record_;
+        return record_;
     };
 
 private:
     ParserType& parser_;
-    RecordType* last_record_;
+    RecordType* record_;
     const std::string* last_query_id_;
     large_unsigned_int rstop_;
 };
