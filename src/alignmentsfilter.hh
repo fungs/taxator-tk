@@ -263,7 +263,7 @@ class CleanseFDistAlignmentFilter : public SortByScoreFilter< ContainerT > {
 				boost::tie( a, b, c ) = this->taxinter.getInterDistances( n, *it );
 				c_sum += c;
 			}
-			return c_sum/(float)( bestnds.size()*default_rank_number );
+			return c_sum/(float)(bestnds.size()*default_ranks.size());
 		};
 
     TaxonomyInterface taxinter;
@@ -417,7 +417,7 @@ class OutlierDetectionAlignmentFilter : public MaxBitscoreAlignmentFilter< Conta
 		float getDistance( const DataPoint& p1, const DataPoint& p2 ) {
 			int a, b, c;
 			boost::tie( a, b, c ) = this->taxinter.getInterDistances( p2.get<0>(), p1.get<0>() );
-			return c/(float) default_rank_number;
+			return c/(float) default_ranks.size();
 		}
 
 		TaxonomyInterface taxinter;

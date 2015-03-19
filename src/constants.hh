@@ -30,7 +30,6 @@ const char tab = '\t';
 const std::string tab_as_str = {tab};
 const std::string default_field_separator = tab_as_str;
 const std::vector< std::string > default_ranks = { "superkingdom", "phylum", "class", "order", "family", "genus", "species" };
-const int default_rank_number = default_ranks.size();
 const int standard_max_support_stop = -1; // negative values have no effect
 const char default_comment_symbol = '#';
 const char default_mask_symbol = '*';
