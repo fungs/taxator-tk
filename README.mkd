@@ -1,4 +1,4 @@
-# Compilation and Installation
+# Compilation and installation
 
 If you downloaded the source, make sure you installed all needed
 software development packages. You need to have a recent version of the Boost
