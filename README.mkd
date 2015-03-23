@@ -1,4 +1,4 @@
-# Compilation
+# Compilation and Installation
 
 If you downloaded the source, make sure you installed all needed
 software development packages. You need to have a recent version of the Boost
@@ -13,8 +13,6 @@ On a Unix (Linux) system type
 
 and all programs will be built in a sub-directory called "Build-ARCH" where
 ARCH is your computer architecture, e.g. Build-x86_64 for a 64 bit system.
-
-# Installation
 
 There is no installation procedure. Either copy the executables from the build
 directory to your prefered directory in your PATH variable like /usr/local/bin
