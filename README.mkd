@@ -306,7 +306,7 @@ integrated in such. The following considerations were taken:
   subsequences retrieval, data can be held in memory or accessed on-disk via
   indexing.
 
-# Acknowledgements and contact
+# Acknowledgments and contact
 
 We acknowledge the work done by the contributors of the SeqAn and BOOST projects
 as well as the author(s) of the tree.hh classes and all other anonymous
