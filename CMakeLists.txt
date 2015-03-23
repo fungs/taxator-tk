@@ -44,17 +44,6 @@ target_link_libraries( binner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LI
 add_executable( taxknife taxknife.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
 target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
-
-# The following targets are usually not needed or for development and testing: uncomment if needed
-
-# general converter for string or id mappings
-#add_executable( acc2taxid acc2taxid.cpp src/accessconv.cpp )
-#target_link_libraries( acc2taxid ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
-# parses NCBI-style identifiers in the FASTA comment header
-#add_executable( extract-fastacomment-ncbifield extract-fastacomment-ncbifield.cpp src/ncbidata.cpp src/taxontree.cpp )
-#target_link_libraries( extract-fastacomment-ncbifield ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
 # unittest: constructs the taxonomy from NCBI dump files and tests the structure thoroughly
 #add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
 #target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
