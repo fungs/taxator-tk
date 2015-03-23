@@ -189,12 +189,15 @@ reset every time you open a new shell or command line terminal.
 **Note:**
 Make sure you have a mapping file that maps each sequence in your sequence
 collection to a valid NCBI taxonomic identifier. We provide such mappings
-for several refpacks. They can also be found in the RefSeq release catalogue
-but should be checked to match the actual taxonomy. It is crucial that
-the mapping exactly! maps the reference sequences names, as reported by the
-aligner, to taxonomic IDs, as specified in the taxonomy. It is easy to check
-for unmappable reference taxonomic IDs by running the program taxknife in
-"annotation" mode with a list of IDs and looking for the reported errors:
+for several refpacks. A refpack is a pre-built reference collection with a
+fitting taxonomy version and a corresponding mapping from sequence identifier
+to taxon ID. They can also be found in the RefSeq release catalogue
+but should be checked to match the actual taxonomy. If you build your own
+refpack, tt is crucial that the mapping exactly! maps the reference sequences
+names, as reported by the aligner, to taxonomic IDs, as specified in the
+taxonomy. It is easy to check for unmappable reference taxonomic IDs by running
+the program taxknife in "annotation" mode with a list of IDs and looking for the
+reported errors:
 
     taxknife -f 2 --mode annotate < mapping.tax >/dev/null
 
@@ -202,7 +205,7 @@ Invalid IDs can be found in the merged.dmp dump file or online on
 http://www.ncbi.nlm.nih.gov/Taxonomy/taxonomyhome.html
 
 Usual operation in taxator is on a pruned taxonomy with major ranks, so
-transform the mapping by running:
+transform the original mapping by running:
 
     taxknife -f 2 --mode traverse -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax
 
