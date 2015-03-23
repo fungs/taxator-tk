@@ -276,20 +276,17 @@ A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
 
 - **rpa**: Use the LCA of taxa of a dynamic set of reference segments as determined by
   the ordering of pairwise scores of alignments.
-
 - **lca**: Use the Lowest Common Ancestor (LCA) of all reference taxa of the alignments.
-
 - **megan-lca**: Use the LCA of taxa of only the x % best matching references.
-
 - **ic-megan-lca**: Like megan-lca but considers "unclassified" nodes in taxonomy.
 
 # Tips
 
 - Use taxator with FASTA indices, e.g. on a solid state drive
-
+- Avoid spaces in the sequence identifiers (compatability problems with many aligners)
+- Use short sequence identifiers for smaller data files
 - Adjust the number of alignments as input to your sample sizes and make a test
   run with different numbers to ensure not loosing many details.
-
 - Make sure to use the C locale or sorting might not give the correct sorting.
   You can force correct sorting by setting the environment variable like this:
   "export LC_COLLATE=C", ensure there is enough availabe space under /tmp
@@ -305,7 +302,6 @@ integrated in such. The following considerations were taken:
 
 - All tree operations, especially the lowest common ancestor finding
   are implemented in constant time.
-
 - The RPA algorithm depends on sequence random access. To ensure fast
   subsequences retrieval, data can be held in memory or accessed on-disk via
   indexing.
