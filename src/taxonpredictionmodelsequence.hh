@@ -602,7 +602,7 @@ protected:
     typedef std::list<typename ContainerT::value_type> active_list_type_;
     QStorType& query_sequences_;
     const DBStorType& db_sequences_;
-    SortByScoreFilter< active_list_type_ > sort_;
+    SortFilter< active_list_type_ > sort_;
     compareTupleFirstLT< boost::tuple< int, uint >, 0 > tuple_1_cmp_le_;
 
 private:

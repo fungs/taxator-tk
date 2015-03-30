@@ -173,7 +173,7 @@ const std::string MinMaxBitscoreFilter< ContainerT >::description = "MinMaxBitsc
 
 
 template< typename ContainerT, typename Comparator = std::greater< float > >
-class SortByScoreFilter : public AlignmentsFilter< ContainerT > { //includes masked records
+class SortFilter : public AlignmentsFilter< ContainerT > { //includes masked records
 	public:
 		typedef typename ContainerT::value_type AlignmentRecordPtrType;
 
@@ -196,7 +196,7 @@ class SortByScoreFilter : public AlignmentsFilter< ContainerT > { //includes mas
 };
 
 template< typename ContainerT, typename Comparator >
-const std::string SortByScoreFilter< ContainerT, Comparator >::description = "SortByScoreFilter";
+const std::string SortFilter< ContainerT, Comparator >::description = "SortFilter";
 
 
 
@@ -206,7 +206,7 @@ const std::string SortByScoreFilter< ContainerT, Comparator >::description = "So
 
 // experimental filter that takes a core set of good alignments and a taxonomy-distance [0,1] cutoff for all remaining
 template< typename ContainerT >
-class CleanseFDistAlignmentFilter : public SortByScoreFilter< ContainerT > {
+class CleanseFDistAlignmentFilter : public SortFilter< ContainerT > {
 	public:
 		CleanseFDistAlignmentFilter( Taxonomy* tax, const float t1, const float t2 ) : taxinter( tax ), coreset_threshold( 1.0 - t1 ), cutoff( t2 ) {
 			//min_rel_bs( t1 )
@@ -215,7 +215,7 @@ class CleanseFDistAlignmentFilter : public SortByScoreFilter< ContainerT > {
 
 		void filter( ContainerT& recordset ) {
 			if( ! recordset.empty() ) {
-				SortByScoreFilter< ContainerT >::filter( recordset );
+				SortFilter< ContainerT >::filter( recordset );
 
 				typename ContainerT::iterator record_it = recordset.begin();
 				std::list< const TaxonNode* > bestnodes;
