@@ -11,7 +11,7 @@ BioboxesBinningFormat::BioboxesBinningFormat(
 {
     // TODO: check values with regexp
     
-    writeHeaderStd(sampleid, taxonomyid);
+    writeHeader (sampleid, taxonomyid);
     writeHeaderCustom(custom_header_tags);
     writeHeaderColumnTags();
     writeHeaderColumnTagsCustom();
