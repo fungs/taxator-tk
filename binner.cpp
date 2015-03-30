@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/predictionranges.hh"
 #include "src/fastnodemap.hh"
 #include "src/exception.hh"
+#include "src/bioboxes.hh"
 
 using namespace std;
 
@@ -301,6 +302,8 @@ int main ( int argc, char** argv ) {
 
         std::cerr << "binning step... ";
         std::ofstream binning_debug_output( log_filename.c_str() );
+        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, "dummy_sample", "dummy_taxonomy");
+        
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             if( it->empty() ) continue;
             boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
@@ -329,9 +332,11 @@ int main ( int argc, char** argv ) {
                     if ( rank_pid < min_pid ) break;
                     predict_node = &*pit;
                 } while ( pit != target_node );
-                std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << tab << prec->getQueryLength() << endline;
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), predict_node->data->taxid);  // TODO: add additional columns
+//                 std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << tab << prec->getQueryLength() << endline;
             } else {
-                std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << tab << prec->getQueryLength() << endline;
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), prec->getUpperNode()->data->taxid);  // TODO: add additional columns
+//                 std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << tab << prec->getQueryLength() << endline;
             }
         }
         std::cerr << " done" << std::endl;

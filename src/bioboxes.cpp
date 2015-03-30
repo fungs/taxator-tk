@@ -2,20 +2,21 @@
 #include "constants.hh"
 
 BioboxesBinningFormat::BioboxesBinningFormat(
-    const BioboxesBinningFormat::ColumnTags cols,
+    const BioboxesBinningFormat::ColumnTags cols,  // TODO: make template argument
     const std::string& sampleid,
     const std::string& taxonomyid,
-    const std::ostream& ostr,
-    const std::vector<std::tuple<std::string, std::string> custom_header_tags)
+    std::ostream& ostr,
+    const std::vector<std::tuple<std::string, std::string>> custom_header_tags,
+    const std::vector<std::string> custom_column_tags)
         : ostr_(ostr), cols_(cols)
 {
     // TODO: check values with regexp
     
     writeHeader (sampleid, taxonomyid);
     writeHeaderCustom(custom_header_tags);
-    writeHeaderColumnTags();
-    writeHeaderColumnTagsCustom();
-    ostr_ << endline << endline << std::flush();
+    writeHeaderColumnTags(cols);
+    writeHeaderColumnTagsCustom(custom_column_tags);
+    ostr_ << endline << endline << std::flush;
 }
 
 

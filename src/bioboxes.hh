@@ -21,19 +21,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef bioboxes_hh_
 #define bioboxes_hh_
 
+#include <iostream>
 #include <ostream>
 #include <vector>
 #include <tuple>
 
 class BioboxesBinningFormat{  // implements Bioboxes.org binning format 0.9
 public:
+    enum class ColumnTags {
+        taxid,
+        binid,
+        taxid_binid
+    };
+    
     BioboxesBinningFormat(
-        const Columns cols,
+        const ColumnTags cols,
         const std::string& sampleid,
         const std::string& taxonomyid = "",
-        const std::ostream& ostr,
-        const auto custom_header_tags = std::vector<std::tuple<std::string, std::string>>(),
-        const auto custom_column_tags = std::vector<std::string>()
+        std::ostream& ostr = std::cout,
+        const std::vector<std::tuple<std::string, std::string>> custom_header_tags = std::vector<std::tuple<std::string, std::string>>(),  // TODO: easier syntax?
+        const std::vector<std::string> custom_column_tags = std::vector<std::string>()  // TODO: easier syntax?
         );
     
     void writeBodyLine(
@@ -47,25 +54,19 @@ public:
         const std::string& taxid
     );
     
-    enum class ColumnTags {
-        taxid,
-        binid,
-        taxid_binid
-    };
-    
 private:
     void writeHeader(const std::string& sampleid, const std::string& taxonomyid);
     
-    void writeHeaderCustom(const std::vector<std::tuple<std::string, std::string>& custom_header_tags);
+    void writeHeaderCustom(const std::vector<std::tuple<std::string, std::string>>& custom_header_tags);
     
     void writeHeaderColumnTags(const ColumnTags cols);
     
     void writeHeaderColumnTagsCustom(const std::vector<std::string>& custom_column_tags);
     
-    const std::ostream& ostr_;
+    std::ostream& ostr_;
     const ColumnTags cols_;
     const std::string format_version_ = "0.9.0";
     const std::string custom_tag_prefix_ = "TaxatorTK";
 };
 
-#endif bioboxes_hh_
+#endif // bioboxes_hh_
