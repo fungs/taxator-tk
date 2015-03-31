@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/predictionranges.hh"
 #include "src/fastnodemap.hh"
 #include "src/exception.hh"
+#include "src/bioboxes.hh"
 
 using namespace std;
 
@@ -45,7 +46,7 @@ int main ( int argc, char** argv ) {
     bool delete_unmarked;
     large_unsigned_int min_support_in_sample( 0 );
     float signal_majority_per_sequence, min_support_in_sample_percentage( 0. );
-    string min_support_in_sample_str, log_filename;
+    string min_support_in_sample_str, log_filename, sample_identifier;
     large_unsigned_int min_support_per_sequence;
     boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -54,6 +55,7 @@ int main ( int argc, char** argv ) {
     visible_options.add_options()
     ( "help,h", "show help message" )
     ( "advanced-options", "show advanced program options" )
+    ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
     ( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
     ( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
     ( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
@@ -301,6 +303,11 @@ int main ( int argc, char** argv ) {
 
         std::cerr << "binning step... ";
         std::ofstream binning_debug_output( log_filename.c_str() );
+        const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
+        const std::vector<std::string> custom_column_tags = {"Support", "Length"};
+        std::vector<std::string> extra_cols(2);
+        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
+        
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             if( it->empty() ) continue;
             boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
@@ -310,7 +317,6 @@ int main ( int argc, char** argv ) {
                 prec = prec_sptr.get();
             } else { // pass-through segment prediction for whole sequence
                 prec = &it->front();
-                // 			prec->setBinningType( PredictionRecordBinning::single );
             }
             // apply user-defined constrain
             if ( prec->getUpperNode() != root_node && ! pid_per_rank.empty() ) {
@@ -329,9 +335,13 @@ int main ( int argc, char** argv ) {
                     if ( rank_pid < min_pid ) break;
                     predict_node = &*pit;
                 } while ( pit != target_node );
-                std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << tab << prec->getQueryLength() << endline;
+                extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(predict_node));
+                extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), predict_node->data->taxid, extra_cols);
             } else {
-                std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << tab << prec->getQueryLength() << endline;
+                extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(prec->getUpperNode()));
+                extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), prec->getUpperNode()->data->taxid, extra_cols);
             }
         }
         std::cerr << " done" << std::endl;
