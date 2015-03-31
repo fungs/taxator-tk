@@ -89,7 +89,7 @@ namespace details {
 			const TaxonNode* node = &*it->get<0>();
 			std::map< const TaxonNode*, float >::iterator find_it = supports.find( node );
 			if ( find_it != supports.end() ) find_it->second += it->get<2>()[ it->get<0>()->data->root_pathlength ]; //count total support of node
-			else find_it = supports.insert( std::make_pair< const TaxonNode*, float >( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
+			else find_it = supports.insert( std::make_pair( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
 			
 // 			std::cerr << "node partial total support: " << find_it->second << std::endl;
 			

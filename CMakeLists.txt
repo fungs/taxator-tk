@@ -26,7 +26,7 @@ else()
 endif()
 
 include_directories( "includes-external" )
-set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
 
 # apply filtering to alignments file
 add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp src/accessconv.cpp )
@@ -45,8 +45,8 @@ add_executable( taxknife taxknife.cpp src/taxontree.cpp src/taxonomyinterface.cp
 target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # unittest: constructs the taxonomy from NCBI dump files and tests the structure thoroughly
-#add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
-#target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
+add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
+target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # converter 
 add_executable( converter converter.cpp )
