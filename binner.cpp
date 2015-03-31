@@ -46,7 +46,7 @@ int main ( int argc, char** argv ) {
     bool delete_unmarked;
     large_unsigned_int min_support_in_sample( 0 );
     float signal_majority_per_sequence, min_support_in_sample_percentage( 0. );
-    string min_support_in_sample_str, log_filename;
+    string min_support_in_sample_str, log_filename, sample_identifier;
     large_unsigned_int min_support_per_sequence;
     boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -55,6 +55,7 @@ int main ( int argc, char** argv ) {
     visible_options.add_options()
     ( "help,h", "show help message" )
     ( "advanced-options", "show advanced program options" )
+    ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
     ( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
     ( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
     ( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
@@ -305,7 +306,7 @@ int main ( int argc, char** argv ) {
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("ProgramVersion", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
-        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, "dummy_sample", "dummy_taxonomy", std::cout, custom_header_tags, custom_column_tags);
+        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, custom_header_tags, custom_column_tags);
         
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             if( it->empty() ) continue;

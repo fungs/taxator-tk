@@ -136,6 +136,10 @@ class TaxonomyInterface {
 		}
 		
 		bool isLeaf( const TaxonNode* node ) const;
+    
+    const std::string& getVersion() {
+        return tax->version_;
+    };
 
 	private:
 		const Taxonomy* const tax;

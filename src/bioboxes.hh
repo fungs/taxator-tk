@@ -43,6 +43,8 @@ public:
         const std::vector<std::string> custom_column_tags = std::vector<std::string>()  // TODO: easier syntax?
         );
     
+    ~BioboxesBinningFormat();
+    
     void writeBodyLine(
         const std::string& sequenceid,
         const std::string& singleid
@@ -78,7 +80,7 @@ private:
     
     std::ostream& ostr_;
     const ColumnTags cols_;
-    const std::string format_version_ = "0.9.0";
+    const std::string format_version_ = "0.9.1";
     const std::string custom_tag_prefix_ = "TaxatorTK";
 };
 

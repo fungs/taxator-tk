@@ -12,11 +12,22 @@ BioboxesBinningFormat::BioboxesBinningFormat(
 {
     // TODO: check values with regexp
     
+    ostr_ << "# This is the Bioboxes binning output format at" << endline
+          << "# https://github.com/bioboxes/rfc/tree/master/data-format" << endline;
+          
     writeHeader (sampleid, taxonomyid);
     writeHeaderCustom(custom_header_tags);
+    ostr_ << endline;
+    
     writeHeaderColumnTags(cols);
     writeHeaderColumnTagsCustom(custom_column_tags);
     ostr_ << endline << std::flush;
+}
+
+
+BioboxesBinningFormat::~BioboxesBinningFormat()
+{
+    ostr_ << std::flush;
 }
 
 
@@ -26,7 +37,6 @@ void BioboxesBinningFormat::writeHeader(const std::string& sampleid, const std::
     ostr_ << "@Version:" << format_version_ << endline;
     ostr_ << "@SampleID:" << sampleid << endline;
     if(!taxonomyid.empty()) ostr_ << "@TaxonomyID:" << taxonomyid << endline;
-    ostr_ << endline;
 }
 
 
