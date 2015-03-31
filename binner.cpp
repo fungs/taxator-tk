@@ -302,7 +302,10 @@ int main ( int argc, char** argv ) {
 
         std::cerr << "binning step... ";
         std::ofstream binning_debug_output( log_filename.c_str() );
-        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, "dummy_sample", "dummy_taxonomy");
+        const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("ProgramVersion", program_version)};
+        const std::vector<std::string> custom_column_tags = {"Support", "Length"};
+        std::vector<std::string> extra_cols(2);
+        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, "dummy_sample", "dummy_taxonomy", std::cout, custom_header_tags, custom_column_tags);
         
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             if( it->empty() ) continue;
@@ -313,7 +316,6 @@ int main ( int argc, char** argv ) {
                 prec = prec_sptr.get();
             } else { // pass-through segment prediction for whole sequence
                 prec = &it->front();
-                // 			prec->setBinningType( PredictionRecordBinning::single );
             }
             // apply user-defined constrain
             if ( prec->getUpperNode() != root_node && ! pid_per_rank.empty() ) {
@@ -332,11 +334,13 @@ int main ( int argc, char** argv ) {
                     if ( rank_pid < min_pid ) break;
                     predict_node = &*pit;
                 } while ( pit != target_node );
-                binning_output.writeBodyLine(prec->getQueryIdentifier(), predict_node->data->taxid);  // TODO: add additional columns
-//                 std::cout << prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << prec->getSupportAt(predict_node) << tab << prec->getQueryLength() << endline;
+                extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(predict_node));
+                extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), predict_node->data->taxid, extra_cols);
             } else {
-                binning_output.writeBodyLine(prec->getQueryIdentifier(), prec->getUpperNode()->data->taxid);  // TODO: add additional columns
-//                 std::cout << prec->getQueryIdentifier() << tab << prec->getUpperNode()->data->taxid << tab << prec->getSupportAt(prec->getUpperNode()) << tab << prec->getQueryLength() << endline;
+                extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(prec->getUpperNode()));
+                extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
+                binning_output.writeBodyLine(prec->getQueryIdentifier(), prec->getUpperNode()->data->taxid, extra_cols);
             }
         }
         std::cerr << " done" << std::endl;

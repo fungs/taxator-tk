@@ -6,7 +6,7 @@ BioboxesBinningFormat::BioboxesBinningFormat(
     const std::string& sampleid,
     const std::string& taxonomyid,
     std::ostream& ostr,
-    const std::vector<std::tuple<std::string, std::string>> custom_header_tags,
+    const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags,
     const std::vector<std::string> custom_column_tags)
         : ostr_(ostr), cols_(cols)
 {
@@ -16,7 +16,7 @@ BioboxesBinningFormat::BioboxesBinningFormat(
     writeHeaderCustom(custom_header_tags);
     writeHeaderColumnTags(cols);
     writeHeaderColumnTagsCustom(custom_column_tags);
-    ostr_ << endline << endline << std::flush;
+    ostr_ << endline << std::flush;
 }
 
 
@@ -30,7 +30,7 @@ void BioboxesBinningFormat::writeHeader(const std::string& sampleid, const std::
 }
 
 
-void BioboxesBinningFormat::writeHeaderCustom(const std::vector<std::tuple<std::string, std::string>>& custom_header_tags)
+void BioboxesBinningFormat::writeHeaderCustom(const std::vector<std::tuple<const std::string, const std::string>>& custom_header_tags)
 {
     for(auto it = custom_header_tags.begin(); it != custom_header_tags.end(); ++it) {
         ostr_ << "@_" << custom_tag_prefix_ << '_' << std::get<0>(*it) << ':' << std::get<1>(*it) << endline;
@@ -61,7 +61,28 @@ void BioboxesBinningFormat::writeBodyLine(const std::string& sequenceid, const s
 }
 
 
+void BioboxesBinningFormat::writeBodyLine(const std::string& sequenceid, const std::string& singleid, const std::vector< std::string >& columns_custom)
+{
+    ostr_ << sequenceid << tab << singleid;
+    for(auto it = columns_custom.begin(); it != columns_custom.end(); ++it) {
+        ostr_ << tab << *it;
+    }
+    ostr_ << endline;
+}
+
+
+
 void BioboxesBinningFormat::writeBodyLine(const std::string& sequenceid, const std::string& binid, const std::string& taxid)
 {
     ostr_ << sequenceid << tab << binid << tab << taxid << endline;
+}
+
+
+void BioboxesBinningFormat::writeBodyLine(const std::string& sequenceid, const std::string& binid, const std::string& taxid, const std::vector< std::string >& columns_custom)
+{
+    ostr_ << sequenceid << tab << binid << tab << taxid;
+    for(auto it = columns_custom.begin(); it != columns_custom.end(); ++it) {
+        ostr_ << tab << *it;
+    }
+    ostr_ << endline;
 }

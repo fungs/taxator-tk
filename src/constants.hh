@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <vector>
 #include <boost/iterator/iterator_concepts.hpp>
 
+const std::string program_version = "1.3";
 const char endline = '\n';
 const char tab = '\t';
 const std::string tab_as_str = {tab};

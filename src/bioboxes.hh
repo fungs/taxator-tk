@@ -39,13 +39,19 @@ public:
         const std::string& sampleid,
         const std::string& taxonomyid = "",
         std::ostream& ostr = std::cout,
-        const std::vector<std::tuple<std::string, std::string>> custom_header_tags = std::vector<std::tuple<std::string, std::string>>(),  // TODO: easier syntax?
+        const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = std::vector<std::tuple<const std::string, const std::string>>(),  // TODO: easier syntax?
         const std::vector<std::string> custom_column_tags = std::vector<std::string>()  // TODO: easier syntax?
         );
     
     void writeBodyLine(
         const std::string& sequenceid,
         const std::string& singleid
+    );
+    
+    void writeBodyLine(
+        const std::string& sequenceid,
+        const std::string& singleid,
+        const std::vector<std::string>& columns_custom
     );
 
     void writeBodyLine(
@@ -54,10 +60,17 @@ public:
         const std::string& taxid
     );
     
+    void writeBodyLine(
+        const std::string& sequenceid,
+        const std::string& binid,
+        const std::string& taxid,
+        const std::vector<std::string>& columns_custom
+    );
+    
 private:
     void writeHeader(const std::string& sampleid, const std::string& taxonomyid);
     
-    void writeHeaderCustom(const std::vector<std::tuple<std::string, std::string>>& custom_header_tags);
+    void writeHeaderCustom(const std::vector<std::tuple<const std::string, const std::string>>& custom_header_tags);
     
     void writeHeaderColumnTags(const ColumnTags cols);
     
