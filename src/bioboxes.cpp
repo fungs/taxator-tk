@@ -6,14 +6,16 @@ BioboxesBinningFormat::BioboxesBinningFormat(
     const std::string& sampleid,
     const std::string& taxonomyid,
     std::ostream& ostr,
+    const std::string& custom_tag_prefix,
     const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags,
     const std::vector<std::string> custom_column_tags)
-        : ostr_(ostr), cols_(cols)
+        : ostr_(ostr), cols_(cols), custom_tag_prefix_(custom_tag_prefix)
 {
     // TODO: check values with regexp
     
-    ostr_ << "# This is the Bioboxes binning output format at" << endline
-          << "# https://github.com/bioboxes/rfc/tree/master/data-format" << endline;
+    ostr_ << "# This is the bioboxes.org binning output format at" << endline
+          << "# https://github.com/bioboxes/rfc/tree/master/data-format"
+          << endline << endline;
           
     writeHeader (sampleid, taxonomyid);
     writeHeaderCustom(custom_header_tags);

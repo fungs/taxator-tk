@@ -303,10 +303,10 @@ int main ( int argc, char** argv ) {
 
         std::cerr << "binning step... ";
         std::ofstream binning_debug_output( log_filename.c_str() );
-        const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("ProgramVersion", program_version)};
+        const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
-        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, custom_header_tags, custom_column_tags);
+        BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
         
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             if( it->empty() ) continue;

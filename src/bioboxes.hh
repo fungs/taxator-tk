@@ -39,6 +39,7 @@ public:
         const std::string& sampleid,
         const std::string& taxonomyid = "",
         std::ostream& ostr = std::cout,
+        const std::string& custom_tag_prefix = std::string(),
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = std::vector<std::tuple<const std::string, const std::string>>(),  // TODO: easier syntax?
         const std::vector<std::string> custom_column_tags = std::vector<std::string>()  // TODO: easier syntax?
         );
@@ -80,8 +81,8 @@ private:
     
     std::ostream& ostr_;
     const ColumnTags cols_;
+    const std::string custom_tag_prefix_;
     const std::string format_version_ = "0.9.1";
-    const std::string custom_tag_prefix_ = "TaxatorTK";
 };
 
 #endif // bioboxes_hh_
