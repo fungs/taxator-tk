@@ -74,7 +74,6 @@ int main ( int argc, char** argv ) {
 
     po::variables_map vm;
     po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
-    po::notify ( vm );
 
     if ( vm.count ( "help" ) ) {
         cout << visible_options << endl;
@@ -85,6 +84,8 @@ int main ( int argc, char** argv ) {
         cout << hidden_options << endl;
         return EXIT_SUCCESS;
     }
+    
+    po::notify ( vm );
 
     if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 
