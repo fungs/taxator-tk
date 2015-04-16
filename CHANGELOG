@@ -5,6 +5,7 @@ v. 1.3 taxator-tk (git)
 * rewrite of RPA with better handling of input alignments and speed improvements
 * C++11 compatibility
 * exception handling
+* bioboxes output format
 
 v. 1.2 taxator-tk (=SVN r63)
 ============================
