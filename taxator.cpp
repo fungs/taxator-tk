@@ -232,6 +232,7 @@ int main( int argc, char** argv ) {
     po::options_description visible_options ( "Allowed options" );
     visible_options.add_options()
     ( "help,h", "show help message")
+    ( "citation", "show citation info" )
     ( "advanced-options", "show advanced program options" )
     ( "algorithm,a", po::value< string >( &algorithm )->default_value( "rpa" ), "set the algorithm that is used to predict taxonomic ids from alignments" )
     ( "seqid-taxid-mapping,g", po::value< string >( &accessconverter_filename ), "filename of seqid->taxid mapping for reference" )
@@ -262,10 +263,14 @@ int main( int argc, char** argv ) {
 
     po::variables_map vm;
     po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
-    po::notify ( vm );
 
     if ( vm.count ( "help" ) ) {
         cout << visible_options << endl;
+        return EXIT_SUCCESS;
+    }
+
+    if ( vm.count ( "citation" ) ) {
+        cout << citation_note << endl;
         return EXIT_SUCCESS;
     }
 
@@ -273,6 +278,8 @@ int main( int argc, char** argv ) {
         cout << hidden_options << endl;
         return EXIT_SUCCESS;
     }
+
+    po::notify ( vm );  // check required etc.
 
     if( ! vm.count( "ranks" ) ) {  // set to fallback if not given
         ranks = default_ranks;

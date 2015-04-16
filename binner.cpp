@@ -54,6 +54,7 @@ int main ( int argc, char** argv ) {
     po::options_description visible_options ( "Allowed options" );
     visible_options.add_options()
     ( "help,h", "show help message" )
+    ( "citation", "show citation info" )
     ( "advanced-options", "show advanced program options" )
     ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
     ( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
@@ -80,12 +81,17 @@ int main ( int argc, char** argv ) {
         return EXIT_SUCCESS;
     }
 
+    if ( vm.count ( "citation" ) ) {
+        cout << citation_note << endl;
+        return EXIT_SUCCESS;
+    }
+
     if ( vm.count ( "advanced-options" ) ) {
         cout << hidden_options << endl;
         return EXIT_SUCCESS;
     }
     
-    po::notify ( vm );
+    po::notify ( vm );  // check required etc.
 
     if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 
