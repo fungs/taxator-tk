@@ -9,7 +9,7 @@ programs or sample refpacks for taxonomic assignment, please go to the
 Issues which apply to the taxator-tk core can be filed in the
 [official GitHub repository](https://github.com/fungs/taxator-tk/).
 
-## Program source code license
+## Code licensing
 The taxator-tk source is licensend under the GPLv3 and builds on the following software components:
 
 SeqAn (BSD license)
