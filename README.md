@@ -6,6 +6,8 @@ This is the source code for the taxator toolkit. If you are looking for pre-pack
 programs or sample refpacks for taxonomic assignment, please go to the
 [official download page](http://algbio.cs.uni-duesseldorf.de/software/).
 
+Issues concerning the extended version (binaries, workflow scripts etc.) which you have downloaded from the official download page should be mailed to us (see contact below).
+
 Issues which apply to the taxator-tk core can be filed in the
 [official GitHub repository](https://github.com/fungs/taxator-tk/).
 
