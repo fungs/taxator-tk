@@ -283,20 +283,3 @@ integrated in such. The following considerations were taken:
 - The RPA algorithm depends on sequence random access. To ensure fast
   subsequences retrieval, data can be held in memory or accessed on-disk via
   indexing.
-
-# Acknowledgments and contact
-
-We acknowledge the work done by the contributors of the SeqAn and BOOST projects
-as well as the author(s) of the tree.hh classes and all other anonymous
-contributors.
-
-For any questions, feedback or complaints, contact
-johannes.droege@uni-duesseldorf.de
-
-Please, if you use this software and publish a paper, cite
-
-    J. Dröge, I. Gregor, and A. C. McHardy 
-    Taxator-tk: precise taxonomic assignment of metagenomes by fast approximation of evolutionary neighborhoods
-    Bioinformatics 2015 31: 817-824.
-    doi: 10.1093/bioinformatics/btu745
-
