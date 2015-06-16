@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "types.hh"
 #include "taxontree.hh"
 
+
 class TaxonomyInterface {
 	public:
 		TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {} //TODO: make all inline or define in header
@@ -135,12 +136,13 @@ class TaxonomyInterface {
 		}
 		
 		bool isLeaf( const TaxonNode* node ) const;
+    
+    const std::string& getVersion() {
+        return tax->version_;
+    };
 
 	private:
 		const Taxonomy* const tax;
 };
-
-// void printPath( TaxonomyInterface& taxinter, TaxonNode* node, TaxonNode* ancestor );
-// void printPath( Taxonomy* tax, TaxonNode* node, TaxonNode* ancestor );
 
 #endif // taxonomyinterface_hh_

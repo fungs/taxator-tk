@@ -26,8 +26,7 @@ else()
 endif()
 
 include_directories( "includes-external" )
-#set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
 
 # apply filtering to alignments file
 add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp src/accessconv.cpp )
@@ -38,7 +37,7 @@ add_executable( taxator taxator.cpp src/taxontree.cpp src/taxonomyinterface.cpp 
 target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} )
 
 # apply filtering to predictions file
-add_executable( binner binner.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp )
+add_executable( binner binner.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp src/bioboxes.cpp )
 target_link_libraries( binner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # apply filtering to predictions file new version
@@ -49,21 +48,6 @@ target_link_libraries( binner_new ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTE
 add_executable( taxknife taxknife.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
 target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
-
-# The following targets are usually not needed or for development and testing: uncomment if needed
-
-# general converter for string or id mappings
-#add_executable( acc2taxid acc2taxid.cpp src/accessconv.cpp )
-#target_link_libraries( acc2taxid ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
-# parses NCBI-style identifiers in the FASTA comment header
-#add_executable( extract-fastacomment-ncbifield extract-fastacomment-ncbifield.cpp src/ncbidata.cpp src/taxontree.cpp )
-#target_link_libraries( extract-fastacomment-ncbifield ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
 # unittest: constructs the taxonomy from NCBI dump files and tests the structure thoroughly
-#add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
-#target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
-
-# converter 
-add_executable( converter converter.cpp )
-target_link_libraries( converter ${Boost_PROGRAM_OPTIONS_LIBRARY} )
+add_executable( unittest_ncbitaxonomy unittest_ncbitaxonomy.cpp src/ncbidata.cpp src/accessconv.cpp src/taxontree.cpp src/taxonomyinterface.cpp )
+target_link_libraries( unittest_ncbitaxonomy ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )

@@ -27,16 +27,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 const char endline = '\n';
 const char tab = '\t';
-const std::string tab_as_str = "\t";
-const std::string default_field_separator = "\t";
-const std::string default_ranks_carray[7] =  { "superkingdom", "phylum", "class", "order", "family", "genus", "species" };
-const std::vector< std::string > default_ranks( default_ranks_carray, default_ranks_carray+7 );
-const int default_rank_number = 7;
+const std::string tab_as_str = {tab};
+const std::string default_field_separator = tab_as_str;
+const std::vector< std::string > default_ranks = { "superkingdom", "phylum", "class", "order", "family", "genus", "species" };
 const int standard_max_support_stop = -1; // negative values have no effect
 const char default_comment_symbol = '#';
 const char default_mask_symbol = '*';
 const std::string empty_string;
-
 const std::string ENVVAR_TAXONOMY_NCBI = "TAXATORTK_TAXONOMY_NCBI";
 
 namespace newick {
@@ -46,4 +43,13 @@ namespace newick {
 	const std::string treestop = ";\n";
 }
 
+const std::string program_version = "1.3";
+const std::string citation_note = u8R"(
+J. Dröge, I. Gregor, and A. C. McHardy
+Taxator-tk: precise taxonomic assignment of metagenomes by fast approximation of evolutionary neighborhoods
+Bioinformatics 2015 31: 817-824.
+doi: 10.1093/bioinformatics/btu745
+)";
+
 #endif //constants_hh_
+

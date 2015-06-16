@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-Taxonomy* parseNCBIFlatFiles( const std::string& names, const std::string& nodes, const std::vector< std::string >* ranks_to_mark = NULL );
+Taxonomy* parseNCBIFlatFiles( const std::string& names, const std::string& nodes, const std::string& version, const std::vector< std::string >* ranks_to_mark = NULL );
 
 
 

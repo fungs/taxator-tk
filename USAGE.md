@@ -1,25 +1,3 @@
-# Compilation
-
-If you downloaded the source, make sure you installed all needed
-software development packages. You need to have a recent version of the Boost
-C++ libararies (www.boost.org) installed (>= version 1.34), including the
-development header files. You will also need the build management tool
-"cmake" >= version 2.6 and the UNIX tools "make" and "uname" which should be
-contained in a standard installation.
-
-On a Unix (Linux) system type
-
-    ./build.sh
-
-and all programs will be built in a sub-directory called "Build-ARCH" where
-ARCH is your computer architecture, e.g. Build-x86_64 for a 64 bit system.
-
-# Installation
-
-There is no installation procedure. Either copy the executables from the build
-directory to your prefered directory in your PATH variable like /usr/local/bin
-or execute them by prefixing them with the build directory.
-
 # Usage
 
 Basic concept:
@@ -189,12 +167,15 @@ reset every time you open a new shell or command line terminal.
 **Note:**
 Make sure you have a mapping file that maps each sequence in your sequence
 collection to a valid NCBI taxonomic identifier. We provide such mappings
-for several refpacks. They can also be found in the RefSeq release catalogue
-but should be checked to match the actual taxonomy. It is crucial that
-the mapping exactly! maps the reference sequences names, as reported by the
-aligner, to taxonomic IDs, as specified in the taxonomy. It is easy to check
-for unmappable reference taxonomic IDs by running the program taxknife in
-"annotation" mode with a list of IDs and looking for the reported errors:
+for several refpacks. A refpack is a pre-built reference collection with a
+fitting taxonomy version and a corresponding mapping from sequence identifier
+to taxon ID. They can also be found in the RefSeq release catalogue
+but should be checked to match the actual taxonomy. If you build your own
+refpack, tt is crucial that the mapping exactly! maps the reference sequences
+names, as reported by the aligner, to taxonomic IDs, as specified in the
+taxonomy. It is easy to check for unmappable reference taxonomic IDs by running
+the program taxknife in "annotation" mode with a list of IDs and looking for the
+reported errors:
 
     taxknife -f 2 --mode annotate < mapping.tax >/dev/null
 
@@ -202,7 +183,7 @@ Invalid IDs can be found in the merged.dmp dump file or online on
 http://www.ncbi.nlm.nih.gov/Taxonomy/taxonomyhome.html
 
 Usual operation in taxator is on a pruned taxonomy with major ranks, so
-transform the mapping by running:
+transform the original mapping by running:
 
     taxknife -f 2 --mode traverse -r species genus family order class phylum superkingdom < mapping.tax > newmapping.tax
 
@@ -273,20 +254,17 @@ A typical efficient pipeline with BLAST+ and taxator on 4 CPU cores
 
 - **rpa**: Use the LCA of taxa of a dynamic set of reference segments as determined by
   the ordering of pairwise scores of alignments.
-
 - **lca**: Use the Lowest Common Ancestor (LCA) of all reference taxa of the alignments.
-
 - **megan-lca**: Use the LCA of taxa of only the x % best matching references.
-
 - **ic-megan-lca**: Like megan-lca but considers "unclassified" nodes in taxonomy.
 
 # Tips
 
 - Use taxator with FASTA indices, e.g. on a solid state drive
-
+- Avoid spaces in the sequence identifiers (compatability problems with many aligners)
+- Use short sequence identifiers for smaller data files
 - Adjust the number of alignments as input to your sample sizes and make a test
   run with different numbers to ensure not loosing many details.
-
 - Make sure to use the C locale or sorting might not give the correct sorting.
   You can force correct sorting by setting the environment variable like this:
   "export LC_COLLATE=C", ensure there is enough availabe space under /tmp
@@ -302,16 +280,6 @@ integrated in such. The following considerations were taken:
 
 - All tree operations, especially the lowest common ancestor finding
   are implemented in constant time.
-
 - The RPA algorithm depends on sequence random access. To ensure fast
   subsequences retrieval, data can be held in memory or accessed on-disk via
   indexing.
-
-# Acknowledgements and contact
-
-We acknowledge the work done by the contributors of the SeqAn and BOOST projects
-as well as the author(s) of the tree.hh classes and all other anonymous
-contributors.
-
-For any questions, feedback or complaints, contact
-johannes.droege@uni-duesseldorf.de
