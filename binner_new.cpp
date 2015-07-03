@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //#include "src/predictionranges.hh"
 #include "src/fastnodemap.hh"
 //#include "src/taxalist.hh"
+#include "src/bioboxes.hh"
 
 
 
@@ -126,8 +127,8 @@ namespace details {
 			const TaxonNode* node = &*it->get<0>();
 			std::map< const TaxonNode*, float >::iterator find_it = supports.find( node );
 			if ( find_it != supports.end() ) find_it->second += it->get<2>()[ it->get<0>()->data->root_pathlength ]; //count total support of node
-			else find_it = supports.insert( std::make_pair< const TaxonNode*, float >( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
-
+			//else find_it = supports.insert( std::make_pair< const TaxonNode*, float >( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
+                        else find_it = supports.insert( std::make_pair( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
 // 			std::cerr << "node partial total support: " << find_it->second << std::endl;
 
 			if ( find_it->second > max_support ) { //TODO: if tie, stop?
@@ -644,14 +645,18 @@ class TaxaList{
                 for(PathEntry::iterator node = path->begin(); node != path->end(); ++node){
                     TaxonNodeValues root_values = *--path->end();
                     if(find(taxids.begin(),taxids.end(),node->taxid) == taxids.end()){
+                        debug_out << node->support << ">" <<root_values.support*path_treshold ;
                         if(node->support > root_values.support*path_treshold){
+                            debug_out << " took; ";
                             outlist.push_back(*node);
                             taxids.push_back(node->taxid);
+                        }else{
+                        debug_out << " out; ";
                         }
                     }
                     
                 }
-            }
+            }debug_out << "\n";
             
             for(std::list<TaxonNodeValues>::iterator node= outlist.begin(); node != outlist.end(); ++node){
                 debug_out << node->taxid << ", ";
@@ -919,7 +924,7 @@ int main ( int argc, char** argv ) {
 	bool delete_unmarked;
 	large_unsigned_int min_support_in_sample( 0 );
 	float signal_majority_per_sequence, min_support_in_sample_percentage( 0. ), treshold_, mratio_, ptreshold_;
-	string min_support_in_sample_str, tax_list_input, log_filename, source_binning, support_mode, blacklist_file, whitelist_file, realdata_file, filter_by_, sample_path_, algorithm_;
+	string min_support_in_sample_str, tax_list_input, log_filename, source_binning, support_mode, blacklist_file, whitelist_file, realdata_file, filter_by_, sample_path_, algorithm_,sample_identifier;
 	large_unsigned_int min_support_per_sequence;
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -950,6 +955,7 @@ int main ( int argc, char** argv ) {
         
 
         
+        
 
 	po::options_description hidden_options("Hidden options");
 	hidden_options.add_options()
@@ -965,6 +971,8 @@ int main ( int argc, char** argv ) {
 	po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
 	po::notify ( vm );
 
+        std::cerr << "input data:" << algorithm_ << " : " << ptreshold_ << "\n";
+        
 	if ( vm.count ( "help" ) ) {
 		cout << visible_options << endl;
 		return EXIT_SUCCESS;
@@ -1011,7 +1019,8 @@ int main ( int argc, char** argv ) {
 		}
 	}
 	// parse taxa-list is given
-
+        
+        try {
 	//STEP 0: PARSING INPUT
 
 	// setup parser for primary input file (that determines the output order)
@@ -1127,8 +1136,10 @@ std::ofstream binning_debug_output( log_filename.c_str() );
             }
         }
         else if(algorithm_ == "rma"){
+            
             std::list<TaxonNodeValues> nodelist = taxalist.getMajorityPredictionsRecs(*query_it, mratio_, ptreshold_, binning_debug_output);
             taxalist.add(nodelist);
+            
         }
     }
     
@@ -1141,6 +1152,10 @@ std::ofstream binning_debug_output( log_filename.c_str() );
     std::cerr << "reduced by " << filter_by_ << " with "<<treshold_<<"\n";
     taxalist.print_taxa_prosp(sample_path_);
     
+   
+    
+    
+    
         const TaxonNode* root_node = taxinter.getRoot();
 
 
@@ -1152,16 +1167,16 @@ std::ofstream binning_debug_output( log_filename.c_str() );
 	// Prediction Record Binning weg !!!!!!!!!
     //taxalist.print();
 	//std::cerr << "binning step... ";
-	
         //std::ofstream binning_debug_output( log_filename.c_str() );
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
         BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
-
+ 
         
 	for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
-		if( it->empty() ) continue;
+            
+            if( it->empty() ) continue;
 		boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
 		const PredictionRecordBinning* output_prec;
 		//if ( it->size() > 1 ) { //run combination algo for sequence segments
@@ -1171,12 +1186,22 @@ std::ofstream binning_debug_output( log_filename.c_str() );
             boost::ptr_list< PredictionRecordBinning >& predictions = *it;
             PredictionRecordBinning* prec = new PredictionRecordBinning (tax.get());
 			{ // copy values
-                const PredictionRecordBinning tmp = predictions.front();
-                prec->setQueryIdentifier( tmp.getQueryIdentifier() );
-                prec->setQueryLength( tmp.getQueryLength() );
+                //const PredictionRecordBinning tmp = predictions.front();
+                //const PredictionRecordBinning tmp = it->front();
+                //std::cerr << "ID:" <<tmp.getQueryIdentifier() << "\n";
+                //prec->setQueryIdentifier( tmp.getQueryIdentifier() );
+                prec->setQueryIdentifier( it->front().getQueryIdentifier() );
+                
+                //std::cerr << tmp.getQueryLength() << "\n";
+                //std::cerr << it->front().getQueryLength() << "\n";
+                //prec->setQueryLength( tmp.getQueryLength() );
+                prec->setQueryLength( it->front().getQueryLength() );
                 prec->setQueryFeatureBegin( 1 ); //TODO: range select
-                prec->setQueryFeatureEnd( tmp.getQueryLength() ); //TODO: range select
+                //prec->setQueryFeatureEnd( tmp.getQueryLength() ); //TODO: range select
+                prec->setQueryFeatureEnd( it->front().getQueryLength() );
             }
+            
+            //std::cerr << prec->getQueryLength() << "\n";
 
             // initialize temporary data structure (list of tuples)
             medium_unsigned_int summed_support = 0;
@@ -1267,7 +1292,6 @@ std::ofstream binning_debug_output( log_filename.c_str() );
 // 			output_prec->setBinningType( PredictionRecordBinning::single );
 		//}
 		// apply user-defined constrain
-                
 		if ( output_prec->getUpperNode() != root_node && ! pid_per_rank.empty() ) {
 			const double seqlen = static_cast< double >( output_prec->getQueryLength() );
 			float min_pid = 0.; //enforce consistency when walking down
@@ -1284,12 +1308,27 @@ std::ofstream binning_debug_output( log_filename.c_str() );
 				if ( rank_pid < min_pid ) break;
 				predict_node = &*pit;
 			} while ( pit != target_node );
-			std::cout << output_prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << output_prec->getSupportAt(predict_node, true) << endline;
+                        
+			extra_cols[0] = boost::lexical_cast<std::string>(output_prec->getSupportAt(predict_node));
+                        extra_cols[1] = boost::lexical_cast<std::string>(output_prec->getQueryLength());
+                        binning_output.writeBodyLine(output_prec->getQueryIdentifier(), predict_node->data->taxid, extra_cols);
+                        //std::cout << output_prec->getQueryIdentifier() << tab << predict_node->data->taxid << tab << output_prec->getSupportAt(predict_node, true) << endline;
 		} else {
-			std::cout << output_prec->getQueryIdentifier() << tab << output_prec->getUpperNode()->data->taxid << tab << output_prec->getSupportAt(output_prec->getUpperNode(), true) << endline;
+                        extra_cols[0] = boost::lexical_cast<std::string>(output_prec->getSupportAt(output_prec->getUpperNode()));
+                        extra_cols[1] = boost::lexical_cast<std::string>(output_prec->getQueryLength());
+                        binning_output.writeBodyLine(output_prec->getQueryIdentifier(), output_prec->getUpperNode()->data->taxid, extra_cols);
+			//std::cout << output_prec->getQueryIdentifier() << tab << output_prec->getUpperNode()->data->taxid << tab << output_prec->getSupportAt(output_prec->getUpperNode(), true) << endline;
 		}
 	}
-	//std::cerr << " done" << std::endl;
+        
+	std::cerr << " done" << std::endl;
 	return EXIT_SUCCESS;
+        }catch(Exception &e) {
+           
+        cerr << "An unrecoverable error occurred : " << e.what() << endl;
+        
+        return EXIT_FAILURE;
+        }
+        
 }
 
