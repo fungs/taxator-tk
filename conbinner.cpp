@@ -46,19 +46,18 @@ po::variables_map vm;
 po::store(po::parse_command_line(argc, argv, desc), vm);
 
 if ( vm.count ( "help" ) ) {
-    cout << desc << endl;
+    std::cout << desc << std::endl;
     return EXIT_SUCCESS;
 }
 
 po::notify ( vm );  // check required etc.
 
 // create taxonomy
-bool delete_unmarked = true;
 //std::vector< std::string > ranks =  default_ranks;
 boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
-if( ! tax ) return EXIT_FAILURE;
-if( ! ranks.empty() && delete_unmarked ) tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
-TaxonomyInterface taxinter ( tax.get() );
+if(!tax) return EXIT_FAILURE;
+tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
+TaxonomyInterface taxinter (tax.get());
 
 
 BioboxesParser bio_parser_1(file_name1);

@@ -939,6 +939,7 @@ int main ( int argc, char** argv ) {
 	po::options_description visible_options ( "Allowed options" );
 	visible_options.add_options()
 	( "help,h", "show help message" )
+	( "citation", "show citation info" )
 	( "advanced-options", "show advanced program options" )
         ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
 	( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
@@ -959,7 +960,7 @@ int main ( int argc, char** argv ) {
         //( "sample-path-name",po::value< string >(&sample_path_)->default_value(""),"path to sample file with name")
         ( "algorithm,a",po::value< string >(&algorithm_)->default_value("rma"),"algorithm choose raa(read all alignments) or rma(read majority alignments)");
         
-
+	
         
         
 
@@ -975,7 +976,6 @@ int main ( int argc, char** argv ) {
 
 	po::variables_map vm;
 	po::store ( po::command_line_parser ( argc, argv ).options ( all_options ).run(), vm );
-	po::notify ( vm );
 
         //std::cerr << "input data:" << algorithm_ << " : " << ptreshold_ << "\n";
         
@@ -984,10 +984,18 @@ int main ( int argc, char** argv ) {
 		return EXIT_SUCCESS;
 	}
 
+
+	if ( vm.count ( "citation" ) ) {
+		cout << citation_note << endl;
+		return EXIT_SUCCESS;
+	}
+
 	if ( vm.count ( "advanced-options" ) ) {
 		cout << hidden_options << endl;
 		return EXIT_SUCCESS;
 	}
+
+	po::notify ( vm );
 
 	if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 
