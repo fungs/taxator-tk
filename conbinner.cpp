@@ -39,17 +39,23 @@ namespace po = boost::program_options;
 po::options_description desc("Allowed options");
 desc.add_options()
     ("help,h", "produce help message")
-    ("file1,f", po::value<std::string>(&file_name1), "filename")
-    ("file2,g", po::value<std::string>(&file_name2), "filename");
+    ("file1,f", po::value<std::string>(&file_name1)->required(), "filename")
+    ("file2,g", po::value<std::string>(&file_name2)->required(), "filename");
 
 po::variables_map vm;
 po::store(po::parse_command_line(argc, argv, desc), vm);
-po::notify(vm);
+
+if ( vm.count ( "help" ) ) {
+    cout << desc << endl;
+    return EXIT_SUCCESS;
+}
+
+po::notify ( vm );  // check required etc.
 
 // create taxonomy
 bool delete_unmarked = true;
-std::vector< std::string > ranks =  default_ranks;
-boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );
+//std::vector< std::string > ranks =  default_ranks;
+boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
 if( ! tax ) return EXIT_FAILURE;
 if( ! ranks.empty() && delete_unmarked ) tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
 TaxonomyInterface taxinter ( tax.get() );
