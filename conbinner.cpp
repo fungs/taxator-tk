@@ -34,18 +34,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 int main ( int argc, char** argv ) {
 
 std::string file_name1, file_name2;    
-    
+
 namespace po = boost::program_options;
 po::options_description desc("Allowed options");
 desc.add_options()
     ("help,h", "produce help message")
     ("file1,f", po::value<std::string>(&file_name1), "filename")
-    ("file2,g", po::value<std::string>(&file_name2), "filename")
-;
+    ("file2,g", po::value<std::string>(&file_name2), "filename");
 
 po::variables_map vm;
 po::store(po::parse_command_line(argc, argv, desc), vm);
-po::notify(vm);  
+po::notify(vm);
 
 // create taxonomy
 bool delete_unmarked = true;
@@ -63,7 +62,6 @@ RowValues* row2;
 const TaxonNode* outnode;
 
 std::cout << bio_parser_1.getHeader();
-
 
 while(true){
     row1 = bio_parser_1.getNext();
