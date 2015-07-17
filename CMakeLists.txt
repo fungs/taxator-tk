@@ -45,7 +45,7 @@ add_executable( opbinner opbinner.cpp src/taxontree.cpp src/taxonomyinterface.cp
 target_link_libraries( opbinner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # merge predictionfiles
-add_executable( conbinner binning_merger.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp src/bioboxes.cpp)
+add_executable( conbinner conbinner.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp src/bioboxes.cpp)
 target_link_libraries( conbinner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
 # taxknife 

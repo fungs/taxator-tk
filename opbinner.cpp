@@ -940,6 +940,7 @@ int main ( int argc, char** argv ) {
 	visible_options.add_options()
 	( "help,h", "show help message" )
 	( "advanced-options", "show advanced program options" )
+        ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
 	( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
 	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
 	( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")

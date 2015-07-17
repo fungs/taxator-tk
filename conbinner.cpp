@@ -64,6 +64,7 @@ const TaxonNode* outnode;
 
 std::cout << bio_parser_1.getHeader();
 
+
 while(true){
     row1 = bio_parser_1.getNext();
     row2 = bio_parser_2.getNext();
