@@ -25,6 +25,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <ostream>
 #include <vector>
 #include <tuple>
+#include <fstream>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
+
 
 class BioboxesBinningFormat{  // implements Bioboxes.org binning format 0.9
 public:
@@ -83,6 +87,86 @@ private:
     const ColumnTags cols_;
     const std::string custom_tag_prefix_;
     const std::string format_version_ = "0.9.1";
+};
+
+
+struct RowValues {
+        std::string seqid;
+        std::string taxid;
+        std::string binid;
+        std::string taxid_binid;
+        std::vector<std::string> extra_cols;
+        std::string line;
+    };
+
+
+class BioboxesParser{
+public:
+    enum class ColumnTags {
+        taxid,
+        binid,
+        taxid_binid
+    };
+    
+    
+    //typedef std::vector<std::string> row_values;
+    //row_values current_vals;
+    
+    
+    BioboxesParser(std::string filename) : filehandle(filename), handle(filehandle){
+        //TODO make input more Variable // read header exactly
+        std::string line;
+        while(std::getline( handle, line )){
+            header += line + "\n";
+            if(boost::starts_with(line,"@@")){
+                std::vector<std::string> SplitVec;
+                boost::split( SplitVec, line, boost::is_any_of("\t"), boost::token_compress_on );
+                num_columns = SplitVec.size();
+                break;
+            }
+        }
+    };
+    
+    inline void destroyRow( const RowValues* row ) const {
+        delete row;
+    }
+    
+    bool ignoreLine(std::string line){
+        return line.empty();
+    }
+    
+    RowValues* getNext(){
+        std::string line;
+        RowValues* row = new RowValues();
+        while( std::getline( handle, line ) ) {    
+            if(ignoreLine( line )) continue;
+            std::vector<std::string> SplitVec; // #2: Search for tokens
+            boost::split( SplitVec, line, boost::is_any_of("\t"), boost::token_compress_on ); 
+            row->seqid = SplitVec[0];
+            row->taxid = SplitVec[1];
+            row->extra_cols = SplitVec;
+            row->line = line;
+            return row;
+            std::cout << line << "\n";
+        }
+        destroyRow(row);
+        return NULL;
+    };
+    
+    std::string getHeader(){
+        return header;
+    };
+        
+private:
+    std::ifstream filehandle;
+    std::istream& handle;
+    std::string header = "";
+    int num_columns;
+    //std::ostream& ostr_;
+    const ColumnTags cols_;
+    const std::string custom_tag_prefix_;
+    const std::string format_version_ = "0.9.1";
+    
 };
 
 #endif // bioboxes_hh_

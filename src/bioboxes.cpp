@@ -98,3 +98,32 @@ void BioboxesBinningFormat::writeBodyLine(const std::string& sequenceid, const s
     }
     ostr_ << endline;
 }
+
+
+//BioboxesParser::BioboxesParser(std::string filename) : filehandle(filename.c_str()), handle(filehandle){
+//    bool header_read = false;
+//    std::string line;
+//    int num_cols;
+//    
+//    //std::ifstream filehandle;
+//    //std::istream& handle;
+//    
+//    std::cout << filename ;
+//    
+//    
+//    /*
+//    std::ifstream biobox_file(filename.c_str());
+//    
+//    
+//    if (biobox_file.is_open())
+//    {
+//        while ( getline (biobox_file,line) )
+//        {
+//            std::cout << line << '\n';
+//        }
+//        biobox_file.close();
+//  }*/
+//
+//}
+//
+//BioboxesParser::~BioboxesParser(){}

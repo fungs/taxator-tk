@@ -90,7 +90,10 @@ const TaxonNode* TaxonomyInterface::getLCC ( const TaxonNode* A, const TaxonNode
 	if( isParentOf( B, A ) ) {
 		return A;
 	}
-	return getLCA( A, B );
+        else if( isParentOf( A, B )){
+            return B;
+        }
+        return getLCA( A, B );
 }
 
 
