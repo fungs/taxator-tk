@@ -956,7 +956,7 @@ int main ( int argc, char** argv ) {
         ( "filter-treshold",po::value< float >(&treshold_)->default_value(.01),"value for treshold")
         ( "filter-by",po::value< string >(&filter_by_)->default_value("support"),"which value should be filtered")
         ( "path-treshold",po::value<float>(&ptreshold_)->default_value(0.7),"cut off support at majority path")
-        ( "majority_ratio",po::value<float>(&mratio_)->default_value(0.7),"needs *value* majority to build majority path")
+        ( "majority-ratio",po::value<float>(&mratio_)->default_value(0.7),"needs *value* majority to build majority path")
         //( "sample-path-name",po::value< string >(&sample_path_)->default_value(""),"path to sample file with name")
         ( "algorithm,a",po::value< string >(&algorithm_)->default_value("rma"),"algorithm choose raa(read all alignments) or rma(read majority alignments)");
         
@@ -1158,10 +1158,11 @@ std::ofstream binning_debug_output( log_filename.c_str() );
     
     if(taxalist.size() == 0){
         std::cerr << "Under the current parameters no taxa could be found.";
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
+    else taxalist.reduce_by(filter_by_,treshold_);
    // std::cerr << "read alignments\n";
-    taxalist.reduce_by(filter_by_,treshold_);
+    
    // std::cerr << "reduced by " << filter_by_ << " with "<<treshold_<<"\n";
    // taxalist.print_taxa_prosp(sample_path_);
     
