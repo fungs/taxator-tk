@@ -31,23 +31,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/scoped_ptr.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-//#include <boost/algorithm/string.hhp>
 #include "boost/filesystem.hpp"
 #include "src/taxontree.hh"
 #include "src/ncbidata.hh"
 #include "src/constants.hh"
 #include "src/predictionrecordbinning.hh"
 #include "src/taxonomyinterface.hh"
-//#include "src/predictionranges.hh"
+#include "src/predictionranges.hh"
 #include "src/fastnodemap.hh"
-//#include "src/taxalist.hh"
 #include "src/bioboxes.hh"
-
 
 
 using namespace std;
 
- struct TaxonNodeValues {
+struct TaxonNodeValues {
             string taxid;
             large_unsigned_int number;
             large_unsigned_int support;
@@ -62,188 +59,51 @@ using namespace std;
                 return taxid;
             }
         };
+        
  typedef std::list< TaxonNodeValues > PathEntry ;
  typedef std::list< PathEntry > PathList ;
 
-namespace details {
-	typedef boost::tuple< Taxonomy::CPathDownIterator, std::vector<medium_unsigned_int>, std::vector<medium_unsigned_int>, bool > TupleRangeCombine;
-	typedef std::list< TupleRangeCombine > TupleRangeCombineList;
-
-	template < int i >
-	bool all( const TupleRangeCombineList& tlist ) {
-		for ( TupleRangeCombineList::const_iterator it = tlist.begin(); it != tlist.end(); ++it ) if ( ! it->get<i>() ) return false;
-		return true;
-	}
-
-	template < int i >
-	bool any( const TupleRangeCombineList& tlist ) {
-		for ( TupleRangeCombineList::const_iterator it = tlist.begin(); it != tlist.end(); ++it ) if ( it->get<i>() ) return true;
-		return false;
-	}
-
-	template < int i >
-	bool removeIf( TupleRangeCombineList& tlist ) {
-		bool tmp = false;
-		for ( TupleRangeCombineList::iterator it = tlist.begin(); it != tlist.end(); ) {
-			if ( it->get<i>() ) {
-				it = tlist.erase( it );
-				tmp = true;
-			}	else ++it;
-		}
-		return tmp;
-	}
-
-	void getSupport( const TupleRangeCombineList& tlist, medium_unsigned_int& direct_support, medium_unsigned_int& total_support ) {
-		medium_unsigned_int direct = 0;
-		medium_unsigned_int indirect = 0;
-		for ( TupleRangeCombineList::const_iterator it = tlist.begin(); it != tlist.end(); ++it ) {
-			direct += it->get<1>()[ it->get<0>()->data->root_pathlength ];
-			indirect += it->get<2>()[ it->get<0>()->data->root_pathlength ];
-		}
-		direct_support = direct;
-		total_support = indirect;
-// 		std::cerr << "return support values: (" << static_cast<int>( direct_support ) << "," << static_cast<int>( total_support ) << ")" << std::endl;
-	}
-
-	void setPathEndState( TupleRangeCombineList& tlist ) {
-		for ( TupleRangeCombineList::iterator it = tlist.begin(); it != tlist.end(); ++it ) it->get<3>() = it->get<0>()->data->root_pathlength == (it->get<1>().size() - 1);
-	}
-
-	void stepDown( TupleRangeCombineList& tlist ) {
-		for ( TupleRangeCombineList::iterator it = tlist.begin(); it != tlist.end(); ++it ) it->get<0>()++;
-	}
-
-	bool reduceToMajority( TupleRangeCombineList& tlist ) { //2-pass function operating on small lists
-// 		std::cerr << "reduceToMajority: list contains " << tlist.size() << " elements before" << std::endl;
-
-		if ( tlist.size() < 2 ) return false;
-
-		std::map< const TaxonNode*, float > supports;
-		const TaxonNode* max_node = NULL;
-		float max_support = .0;
-
-		// pass 1: count and remember highest score
-		for ( TupleRangeCombineList::iterator it = tlist.begin(); it != tlist.end(); ++it ) {
-			const TaxonNode* node = &*it->get<0>();
-			std::map< const TaxonNode*, float >::iterator find_it = supports.find( node );
-			if ( find_it != supports.end() ) find_it->second += it->get<2>()[ it->get<0>()->data->root_pathlength ]; //count total support of node
-			//else find_it = supports.insert( std::make_pair< const TaxonNode*, float >( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
-                        else find_it = supports.insert( std::make_pair( node, it->get<2>()[ it->get<0>()->data->root_pathlength ] ) ).first;
-// 			std::cerr << "node partial total support: " << find_it->second << std::endl;
-
-			if ( find_it->second > max_support ) { //TODO: if tie, stop?
-				max_support = find_it->second;
-				max_node = node;
-			}
-		}
-
-		if ( supports.size() == 1 ) return false;
-
-		// pass 2: keep majority, remove rest
-		for ( TupleRangeCombineList::iterator it = tlist.begin(); it != tlist.end(); ) {
-			if ( it->get<0>() != max_node ) it = tlist.erase( it );
-			else ++it;
-		}
-
-// 		std::cerr << "reduceToMajority: list contains " << tlist.size() << " elements after" << std::endl;
-		return true;
-	}
-}
-
-//
-//class MajorityTreeNode{
-//    public:
-//        MajorityTreeNode(TaxonNodeValues nodedata){
-//        TaxonNodeValues data = nodedata;
-//        std::list<MajorityTreeNode> chidlren; 
-//        }
-//};
-//
-//class MajorityTree{
-//    public:
-//        MajorityTree(){
-//            MajorityTreeNode root_node;
-//        }
-//    
-//    void add_path(PathEntry path){
-//    
-//    }
-//};
-
-
-
 class TaxaList{
     public:
-        TaxaList(TaxonomyInterface taxint, string whitelist, string blacklist, string realdata): taxinter_(taxint){
-        num_taxa = 0;
-        total_taxa = 0;
-        total_support = 0;
-        total_length = 0;
-        root_node = taxinter_.getRoot();
-        
-       
+        TaxaList(TaxonomyInterface taxint, string whitelist, string blacklist): taxinter_(taxint){
+            num_taxa = 0;
+            total_taxa = 0;
+            total_support = 0;
+            total_length = 0;
+            root_node = taxinter_.getRoot();
 
-        if(whitelist != ""){
-            string line;
-            ifstream infile (whitelist.c_str());
-            if (infile.is_open()){
-                while( getline(infile, line)){
-                    string taxa = line.c_str();
-                    const TaxonNode* current = taxinter_.getNode(taxa);
-                    while(current != root_node){
-                        taxa = current->data->taxid;
-                        //std::cerr << taxa << "\n";
-                        if(whitelist_.find(taxa) == whitelist_.end()){
-                            whitelist_.insert(taxa);
-                            //taxa_prosperties[taxa] = boost::make_tuple(std::numeric_limits<int>::max(), std::numeric_limits<large_unsigned_int>::max());
+            if(whitelist != ""){
+                string line;
+                ifstream infile (whitelist.c_str());
+                if (infile.is_open()){
+                    while( getline(infile, line)){
+                        string taxa = line.c_str();
+                        const TaxonNode* current = taxinter_.getNode(taxa);
+                        while(current != root_node){
+                            taxa = current->data->taxid;
+                            //std::cerr << taxa << "\n";
+                            if(whitelist_.find(taxa) == whitelist_.end()){
+                                whitelist_.insert(taxa);
+                                //taxa_prosperties[taxa] = boost::make_tuple(std::numeric_limits<int>::max(), std::numeric_limits<large_unsigned_int>::max());
+                            }
+                            current = current->parent;
                         }
-                        current = current->parent;
                     }
                 }
             }
-        }
-        //std::cerr << "whitelist loaded \n";
 
-        if(blacklist != ""){
-            string line;
-            ifstream infile (whitelist.c_str());
-            if (infile.is_open()){
-                while( getline(infile, line)){
-                    string taxa = line.c_str();
-                    if(blacklist_.find(taxa) == blacklist_.end()){
-                        blacklist_.insert(taxa);
-                    }
-                }
-            }
-        }
-
-        //std::cerr << "blacklist loaded \n";
-        
-        if(realdata != ""){
-            string line;
-            ifstream infile (realdata.c_str());
-            if (infile.is_open()){
-                while( getline(infile, line)){
-                    string taxa = line.c_str();
-                    const TaxonNode* current = taxinter_.getNode(taxa);
-                    while(current != root_node){
-                        taxa = current->data->taxid;
-                        //std::cerr << taxa << "\n";
-                        if(realdata_.find(taxa) == realdata_.end()){
-                            realdata_.insert(taxa);
-                
+            if(blacklist != ""){
+                string line;
+                ifstream infile (whitelist.c_str());
+                if (infile.is_open()){
+                    while( getline(infile, line)){
+                        string taxa = line.c_str();
+                        if(blacklist_.find(taxa) == blacklist_.end()){
+                            blacklist_.insert(taxa);
                         }
-                        current = current->parent;
                     }
                 }
             }
-            
-            //std::set< std::string >::iterator it;
-            //for(it = realdata_.begin(); it != realdata_.end(); ++it){
-           //     std::cerr << *it << "\n";
-            //}
-        }
-        
         }
 
         typedef std::set< std::string > TaxaSet;
@@ -262,85 +122,9 @@ class TaxaList{
         int size(){
             return taxalist.size();
         }
-        
-//      function prints out comparison from realdata to estimated data
-        
-//        void print_taxa_prosp(string sample_path){
-//            int in_sample;
-//            int positive = 0;
-//            int false_ = 0;
-//            int false_positive = 0;
-//            int false_negative = 0;
-//            int true_positive = 0;
-//            int true_negative = 0;
-//            int number_of_taxa = taxa_prosperties.size();
-//            std::ofstream info_stream((sample_path+string("_info.txt")).c_str());
-//            std::ofstream list_file((sample_path+string("_list.tsv")).c_str());
-//            
-//            info_stream << "total support\t" << total_support << "\n";
-//            info_stream << "total number of taxa\t" << total_taxa << "\n";
-//            info_stream << "total length\t" << total_length << "\n";
-//            info_stream << "mean length\t" << total_length/total_taxa << "\n";
-//            info_stream << "number of different taxa in sample\t" << number_of_taxa << "\n";
-//            info_stream << "actual number (after filter)\t" << (number_of_taxa-filtered_taxa) << "\n" 
-//                        << "number of occuring in the sample(from real data)\t" << realdata_.size() << "\n\n\n";
-//            
-//            list_file << "#taxid\tnumber of samples\tsupport\tlength\tival\tsupport%\tmean support\tmean length\tmean ival\trank\tin list\tin sample\tcorrect\n";
-//               
-//            for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
-//                if(realdata_.find(it->first) != realdata_.end()){in_sample = 1;}
-//                else{in_sample = 0 ;}
-//                string taxid = it->first, rank;
-//                int num_taxa, filtered, correct(0);
-//                large_unsigned_int support, length, dep_support;
-//                float ival;
-//                
-//                boost::tuples::tie(num_taxa, support, length, ival, rank, dep_support ,filtered) = it->second;
-//                
-//                if(int(filtered && in_sample)){
-//                    correct = 1;
-//                    true_positive += 1;
-//                }else if(int(!filtered && !in_sample)){
-//                    correct = 1;
-//                    true_negative += 1;
-//                }
-//                positive += correct;
-//                if(not correct){
-//                    if (filtered) false_positive += 1;
-//                    else false_negative +=1;
-//                    false_ +=1;
-//                }
-//                
-//                list_file << std::fixed << taxid << "\t" << num_taxa << "\t" << support << "\t" << length << "\t" << ival << "\t"
-//                          << double(support)/double(length) << "\t" // percentage of support 
-//                          << double(support)/double(num_taxa) << "\t" // mean support
-//                          << length/num_taxa << "\t" // mean length
-//                          << ival/num_taxa << "\t" // mean ival
-//                          << rank << "\t"//rank
-//                          << filtered << "\t"
-//                          << in_sample << "\t"
-//                          << correct << "\n"
-//                        ;
-//            }
-//            
-//            info_stream << "positive\t" << positive << "\n";
-//            info_stream << "true positive\t" << true_positive << "\n";
-//            info_stream << "true negative\t" << true_negative << "\n";
-//            info_stream << "false\t" << false_ << "\n";
-//            info_stream << "false positive\t" << false_positive << "\n";
-//            info_stream << "false negative\t" << false_negative << "\n";
-//            
-//        }
 
         bool is_in_list(std::string taxid){
-            //return taxalist.find(taxid) != taxalist.end() && 
             return taxa_prosperties.find(taxid)->second.get<6>();
-            
-        }
-
-        void add(std::string taxid){
-            taxalist.insert(taxid);
-            //std::cerr << "add" << taxid << "\n";
         }
         
         typedef std::list< TaxonNodeValues > PathEntry ;
@@ -500,7 +284,7 @@ class TaxaList{
             typedef std::map<int, boost::tuple<PathEntry, PathEntry::reverse_iterator, bool,PathEntry::reverse_iterator> > NumberedPaths;
             NumberedPaths numbered_paths;
             int pathnumber = 0;
-            int root_support = paths.begin()->rbegin()->support;
+            //int root_support = paths.begin()->rbegin()->support;
             //float majority_support = float(root_support)*majority_ratio;
             
             
@@ -585,12 +369,9 @@ class TaxaList{
                     for(NumberedPaths::iterator npath = numbered_paths.begin();npath != numbered_paths.end(); ++npath ){
                         ppaths.push_back(npath->second.get<0>());
                     }
-                break;
-                }
-                if ((float(maxsupport)/float(level_support)) < majority_ratio || all_paths_ended){
                     break;
                 }
-                
+                if (max_support_ratio < majority_ratio || all_paths_ended){ break; }
                 else{
                     for(NumberedPaths::iterator npath = numbered_paths.begin();npath != numbered_paths.end(); ++npath ){
                         if(npath->second.get<1>() != npath->second.get<3>()){
@@ -670,6 +451,10 @@ class TaxaList{
 
 // TODO merge ?
         
+        void add(std::string taxid){
+            taxalist.insert(taxid);
+        }
+        
         void add(std::list<TaxonNodeValues> input_nodes){
             for(std::list<TaxonNodeValues>::iterator node = input_nodes.begin(); node != input_nodes.end(); ++node){
                 
@@ -720,8 +505,6 @@ class TaxaList{
             const TaxonNode* current_node = prec.getUpperNode();
             const TaxonNode* start_node = current_node;
 
-            //for(TaxonomyInterface::CPathUpIterator)
-
             while(current_node != root_node){
                 string taxid = current_node->data->taxid;
 
@@ -748,10 +531,8 @@ class TaxaList{
                     taxa_prosperties[taxid].get<5>() = prec.getSupportAt(start_node); //TODO reduce to one variable
                     taxa_prosperties[taxid].get<6>() = 1;
                     
-                    //supportlist_[taxid] = emptylist;
                     supportlist_[taxid].push_back(prec.getSupportAt(current_node));
                 }
-                //else if(taxa_prosperties[taxid].get<0>() != std::numeric_limits<int>::max()){
                 else{
                     taxa_prosperties[taxid].get<0>() += 1;
                     taxa_prosperties[taxid].get<1>() += prec.getSupportAt_full(current_node);
@@ -769,56 +550,6 @@ class TaxaList{
             }
         }
 
-// deprecated
-//        void reduce_by_support(float treshold){
-//            int erased_tax = 0;
-//            filtered_taxa = 0;
-//            uint total_support_treshold = total_support*treshold;
-//            std::set< std::string > to_erase;
-//            
-//            //support-filter
-//            
-//            for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
-//                //std::cerr << it->first << " - " << it->second.get<1>() << ": "<< total_support_treshold;
-//                if( it->second.get<1>() < total_support_treshold && whitelist_.find(it->first) == whitelist_.end()){
-//                    //std::cerr << "erased\n";
-//                    erased_tax += it->second.get<0>();
-//                    to_erase.insert(it->first);
-//                    it->second.get<6>() = 0;
-//                    filtered_taxa += 1;
-//                    //taxalist.erase(it->first);
-//                    //taxa_prosperties.erase(it);
-//                }
-//                //else std::cerr << "\n";
-//            }
-//            for(std::set< string >::iterator it = to_erase.begin();it != to_erase.end(); ++it ){
-//                //taxalist.erase(*it);
-//                //taxa_prosperties.erase(*it);
-//            }
-//            //total_taxa -= erased_tax;
-//            
-//            //add parents of all not filtered taxa
-//            
-//            for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
-//                if(it->second.get<6>()){
-//                    const TaxonNode* current_node = taxinter_.getNode(it->first)->parent;
-//                    
-//                    while(current_node != root_node){
-//                        taxa_prosperties.find(current_node->data->taxid)->second.get<6>() = 1;
-//                        current_node = current_node->parent;
-//                    }
-//                }
-//            }
-//            
-//            filtered_taxa = 0;
-//            
-//            for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
-//                if(!it->second.get<6>()){
-//                    filtered_taxa += 1;
-//                }
-//            }
-//        }
-        
         void reduce_by(string filter_type, float treshold){
             if(total_taxa == 0){std::cerr << "no taxa read \n";return;}
             int erased_tax = 0;
@@ -826,52 +557,26 @@ class TaxaList{
             large_unsigned_int mean_total_support = total_support/total_taxa; 
             std::set< std::string > to_erase;
             int filtered = 0;
-            //support-filter
             for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
                 if(filter_type == "number_per_taxa") filtered = it->second.get<0>() < total_taxa*treshold;
                 if(filter_type == "support") filtered = it->second.get<1>() < total_support*treshold;
-                if(filter_type == "mean_support"){
-                    filtered = it->second.get<1>()/it->second.get<0>() < mean_total_support*treshold;
-                    //std::cerr << it->second.get<1>()/it->second.get<0>() << " < " << mean_total_support*treshold << " " << filtered << "\n";
-                
-                }
+                if(filter_type == "mean_support"){filtered = it->second.get<1>()/it->second.get<0>() < mean_total_support*treshold;}
                 if(filter_type == "median_support"){
                     large_unsigned_int median_support = get_median(supportlist_[it->first]);
                     filtered = median_support < mean_total_support*treshold ;
-                    //std::cerr << median_support << " < " << mean_total_support*treshold << " " << filtered << "\n";
-                
                 }
-                
-                if(filter_type == "length"){
-                    filtered = it->second.get<2>() < treshold ;
-                    //std::cerr << median_support << " < " << mean_total_support*treshold << " " << filtered << "\n";
-                
-                }
-                
-                if(filtered && whitelist_.find(it->first) == whitelist_.end()){
-                    //std::cerr << "erased\n";    
+                if(filter_type == "length"){filtered = it->second.get<2>() < treshold ;}
+
+                if(filtered && whitelist_.find(it->first) == whitelist_.end()){  
                     erased_tax += it->second.get<0>();
                     to_erase.insert(it->first);
                     it->second.get<6>() = 0;
                     filtered_taxa += 1;
-                    //taxalist.erase(it->first);
-                    //taxa_prosperties.erase(it);
                 }
-                
-                //for(std::set<std::string>::iterator erit)
-                //else std::cerr << "\n";
             }
             
-            //for(std::set< string >::iterator it = to_erase.begin();it != to_erase.end(); ++it ){
-                //taxalist.erase(*it);
-                //taxa_prosperties.erase(*it);
-            //}
-            //total_taxa -= erased_tax;
-            
             //add parents of all not filtered taxa
-            
             for(taxa_list::iterator it = taxa_prosperties.begin(); it != taxa_prosperties.end(); ++it){
-                //std::cerr << "check if" << it->first << "is filtered\n";
                 if(it->second.get<6>()){
                     const TaxonNode* current_node = taxinter_.getNode(it->first)->parent;
                     
@@ -914,7 +619,7 @@ class TaxaList{
         int num_taxa,total_taxa;
         large_unsigned_int total_support, filtered_taxa, total_length;
         const TaxonNode* root_node;
-        TaxaSet taxalist, whitelist_, blacklist_, realdata_;
+        TaxaSet taxalist, whitelist_, blacklist_;
         taxa_list taxa_prosperties;
         supportlist supportlist_;
         const std::string taxafile_name_;
@@ -927,9 +632,9 @@ int main ( int argc, char** argv ) {
 
 	vector< string > ranks, files;
 	bool delete_unmarked;
-	large_unsigned_int min_support_in_sample( 0 );
-	float signal_majority_per_sequence, min_support_in_sample_percentage( 0. ), treshold_, mratio_, ptreshold_;
-	string min_support_in_sample_str, tax_list_input, log_filename, source_binning, support_mode, blacklist_file, whitelist_file, realdata_file, filter_by_, sample_path_, algorithm_,sample_identifier;
+	////large_unsigned_int min_support_in_sample( 0 );float min_support_in_sample_percentage( 0. ), str min_support_in_sample_str,
+	float signal_majority_per_sequence,  treshold_, mratio_, ptreshold_;
+	string  tax_list_input, log_filename, source_binning, support_mode, blacklist_file, whitelist_file, filter_by_, sample_path_, algorithm_,sample_identifier;
 	large_unsigned_int min_support_per_sequence;
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -952,7 +657,7 @@ int main ( int argc, char** argv ) {
 	( "support-mode,e",po::value< std::string >(&support_mode)->default_value("total"),"support mode - direct or total")//TODO is this right ?
         ( "whitelist",po::value< std::string >(&whitelist_file)->default_value(""),"give a whitelist")
         ( "blacklist",po::value< std::string >(&blacklist_file)->default_value(""),"add blacklist")
-        ( "real-data",po::value< std::string >(&realdata_file)->default_value(""),"real data list")
+        //( "real-data",po::value< std::string >(&realdata_file)->default_value(""),"real data list")
         ( "filter-treshold",po::value< float >(&treshold_)->default_value(.01),"value for treshold")
         ( "filter-by",po::value< string >(&filter_by_)->default_value("support"),"which value should be filtered")
         ( "path-treshold",po::value<float>(&ptreshold_)->default_value(0.7),"cut off support at majority path")
@@ -967,7 +672,7 @@ int main ( int argc, char** argv ) {
 	po::options_description hidden_options("Hidden options");
 	hidden_options.add_options()
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set ranks at which to do predictions" )
-	( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
+	////( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" );
 
@@ -1000,8 +705,8 @@ int main ( int argc, char** argv ) {
 	if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 
 	// interpret given sample support
-	if ( min_support_in_sample_str.find( '.' ) == std::string::npos ) min_support_in_sample = boost::lexical_cast< large_unsigned_int >( min_support_in_sample_str );
-	else min_support_in_sample_percentage = boost::lexical_cast< float >( min_support_in_sample_str );
+	////if ( min_support_in_sample_str.find( '.' ) == std::string::npos ) min_support_in_sample = boost::lexical_cast< large_unsigned_int >( min_support_in_sample_str );
+	////else min_support_in_sample_percentage = boost::lexical_cast< float >( min_support_in_sample_str );
 
 	set< string > additional_files;
 
@@ -1010,7 +715,7 @@ int main ( int argc, char** argv ) {
 	if( ! tax ) return EXIT_FAILURE;
 	if( ! ranks.empty() && delete_unmarked ) tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
 	TaxonomyInterface taxinter ( tax.get() );
-        TaxaList taxalist (taxinter,whitelist_file,blacklist_file,realdata_file);
+        TaxaList taxalist (taxinter,whitelist_file,blacklist_file);
 
 
 	map< const string*, float > pid_per_rank;
@@ -1178,44 +883,30 @@ std::ofstream binning_debug_output( log_filename.c_str() );
 	// evidence for sub-ranges. This algorithm considers only support. Signal
 	// strength and interpolation values are ignored. This heuristic seems quite
 	// robust
-	// Prediction Record Binning weg !!!!!!!!!
-    //taxalist.print();
-	//std::cerr << "binning step... ";
-        //std::ofstream binning_debug_output( log_filename.c_str() );
+	// TODO Prediction Record Binning weg !!!!!!!!!
+        
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
         BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
- 
-        
+         
 	for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
             
             if( it->empty() ) continue;
 		boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
 		const PredictionRecordBinning* output_prec;
-		//if ( it->size() > 1 ) { //run combination algo for sequence segments
+		
             using namespace details;
             TupleRangeCombineList tlist;
-            //TaxonomyInterface taxinter( tax.get() );
+
             boost::ptr_list< PredictionRecordBinning >& predictions = *it;
             PredictionRecordBinning* prec = new PredictionRecordBinning (tax.get());
-			{ // copy values
-                //const PredictionRecordBinning tmp = predictions.front();
-                //const PredictionRecordBinning tmp = it->front();
-                //std::cerr << "ID:" <<tmp.getQueryIdentifier() << "\n";
-                //prec->setQueryIdentifier( tmp.getQueryIdentifier() );
+            {
                 prec->setQueryIdentifier( it->front().getQueryIdentifier() );
-                
-                //std::cerr << tmp.getQueryLength() << "\n";
-                //std::cerr << it->front().getQueryLength() << "\n";
-                //prec->setQueryLength( tmp.getQueryLength() );
                 prec->setQueryLength( it->front().getQueryLength() );
-                prec->setQueryFeatureBegin( 1 ); //TODO: range select
-                //prec->setQueryFeatureEnd( tmp.getQueryLength() ); //TODO: range select
+                prec->setQueryFeatureBegin( 1 );
                 prec->setQueryFeatureEnd( it->front().getQueryLength() );
             }
-            
-            //std::cerr << prec->getQueryLength() << "\n";
 
             // initialize temporary data structure (list of tuples)
             medium_unsigned_int summed_support = 0;
@@ -1244,30 +935,27 @@ std::ofstream binning_debug_output( log_filename.c_str() );
             }
 
 
-            medium_unsigned_int direct_support_thresh = std::max( static_cast< medium_unsigned_int >( signal_majority_per_sequence*summed_support ), static_cast< medium_unsigned_int >(min_support_per_sequence) );
+            ////medium_unsigned_int direct_support_thresh = std::max( static_cast< medium_unsigned_int >( signal_majority_per_sequence*summed_support ), static_cast< medium_unsigned_int >(min_support_per_sequence) );
             medium_unsigned_int direct_support, total_support;
             std::vector< boost::tuple<const TaxonNode*, medium_unsigned_int, medium_unsigned_int, bool> > path;
-            //const TaxonNode* root_node = taxinter.getRoot();
-
-            //
-            //medium_unsigned_int total_support_tresh = std::max( )
-
+            
             // set values for root node (TODO: put into initialization loop)
             setPathEndState( tlist );
             getSupport( tlist, direct_support, total_support );
 
             // walk down each path
-            int lower_direct_node_index = -1;
+            // is this right ? using fallbackmode ?
+            ////int lower_direct_node_index = -1;
             int running_index = 0;
 
             while ( ! tlist.empty() ) {
                 const TaxonNode* node = &*tlist.front().get<0>();
-                if( vm["support-mode"].as<string>() == "direct" ){
-                    if ( direct_support >= direct_support_thresh ) lower_direct_node_index = running_index;
-                }
-                else{
-                    if ( total_support >= direct_support_thresh ) lower_direct_node_index = running_index;
-                }
+                ////if( vm["support-mode"].as<string>() == "direct" ){
+                ////    if ( direct_support >= direct_support_thresh ) lower_direct_node_index = running_index;
+                ////}
+                ////else{
+                ////    if ( total_support >= direct_support_thresh ) lower_direct_node_index = running_index;
+                ////}
                 path.push_back( boost::make_tuple( node, direct_support, total_support, false ) );
                 removeIf<3>( tlist ); //remove paths that have ended
                 stepDown( tlist ); //forward PathIterators
