@@ -163,7 +163,7 @@ private:
     std::string header = "";
     int num_columns;
     //std::ostream& ostr_;
-    const ColumnTags cols_;
+    //const ColumnTags cols_;
     const std::string custom_tag_prefix_;
     const std::string format_version_ = "0.9.1";
     
