@@ -99,8 +99,14 @@ while(true){
                 std::cout << "\t" << *it;
             }
         }
-        else{
+        else if (outnode->data->taxid == row2->taxid){// new
             std::cout << "\t" << row2->taxid;
+            for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
+                std::cout << "\t" << *it;
+            }
+        }
+        else{
+            std::cout << "\t" << outnode->data->taxid;
             for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
                 std::cout << "\t" << *it;
             }
