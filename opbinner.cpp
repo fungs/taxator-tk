@@ -633,8 +633,8 @@ int main ( int argc, char** argv ) {
 	vector< string > ranks, files;
 	bool delete_unmarked;
 	////large_unsigned_int min_support_in_sample( 0 );float min_support_in_sample_percentage( 0. ), str min_support_in_sample_str,
-	float signal_majority_per_sequence,  treshold_, mratio_, ptreshold_;
-	string  tax_list_input, log_filename, source_binning, support_mode, blacklist_file, whitelist_file, filter_by_, sample_path_, algorithm_,sample_identifier;
+	float treshold_, mratio_, ptreshold_;//signal_majority_per_sequence,  
+	string log_filename, source_binning, support_mode, blacklist_file, whitelist_file, filter_by_, sample_path_, algorithm_,sample_identifier;
 	large_unsigned_int min_support_per_sequence;
 	boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -647,22 +647,13 @@ int main ( int argc, char** argv ) {
 	( "citation", "show citation info" )
 	( "advanced-options", "show advanced program options" )
         ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
-	( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
-	( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
+	//( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
+	//( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
 	( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
 	( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (replaces standard input, use \"-\" to specify a combination of both)" )
 	( "logfile,l", po::value< std::string >( &log_filename )->default_value( "opbinning.log" ), "specify name of file for logging (appending lines)" )
-	( "taxalist,t",po::value< std::string >(&tax_list_input)->default_value("none"),"use list for taxa in sample")
-	( "source-binning,b",po::value< std::string >(&source_binning)->default_value("none"),"source binning file - used to analyze taxa distribution")
-	( "support-mode,e",po::value< std::string >(&support_mode)->default_value("total"),"support mode - direct or total")//TODO is this right ?
-        ( "whitelist",po::value< std::string >(&whitelist_file)->default_value(""),"give a whitelist")
-        ( "blacklist",po::value< std::string >(&blacklist_file)->default_value(""),"add blacklist")
-        //( "real-data",po::value< std::string >(&realdata_file)->default_value(""),"real data list")
-        ( "filter-treshold",po::value< float >(&treshold_)->default_value(.01),"value for treshold")
-        ( "filter-by",po::value< string >(&filter_by_)->default_value("support"),"which value should be filtered")
-        ( "path-treshold",po::value<float>(&ptreshold_)->default_value(0.7),"cut off support at majority path")
-        ( "majority-ratio",po::value<float>(&mratio_)->default_value(0.7),"needs *value* majority to build majority path")
-        //( "sample-path-name",po::value< string >(&sample_path_)->default_value(""),"path to sample file with name")
+	//( "source-binning,b",po::value< std::string >(&source_binning)->default_value("none"),"source binning file - used to analyze taxa distribution")
+	
         ( "algorithm,a",po::value< string >(&algorithm_)->default_value("rma"),"algorithm choose raa(read all alignments) or rma(read majority alignments)");
         
 	
@@ -672,7 +663,15 @@ int main ( int argc, char** argv ) {
 	po::options_description hidden_options("Hidden options");
 	hidden_options.add_options()
 	( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set ranks at which to do predictions" )
-	////( "sample-min-support,m", po::value< std::string >( &min_support_in_sample_str )->default_value( "0" ), "minimum support in positions (>=1) or fraction of total support (<1) for any taxon" )
+        ( "whitelist",po::value< std::string >(&whitelist_file)->default_value(""),"give a whitelist")
+        ( "blacklist",po::value< std::string >(&blacklist_file)->default_value(""),"add blacklist")
+        
+        ( "filter-treshold",po::value< float >(&treshold_)->default_value(.01),"value for treshold")
+        ( "filter-by",po::value< string >(&filter_by_)->default_value("support"),"which value should be filtered")
+        ( "path-treshold",po::value<float>(&ptreshold_)->default_value(0.7),"cut off support at majority path")
+        ( "majority-ratio",po::value<float>(&mratio_)->default_value(0.7),"needs *value* majority to build majority path")
+        ( "support-mode,e",po::value< std::string >(&support_mode)->default_value("total"),"support mode - direct or total")//TODO is this right ?
+        
 	( "preallocate-num-queries", po::value< boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type >( & num_queries_preallocation )->default_value( 5000 ), "advanced parameter for better memory allocation, set to number of query sequences or similar (no need to be set)" )
 	( "delete-notranks,d", po::value< bool >( &delete_unmarked )->default_value( true ), "delete all nodes that don't have any of the given ranks (make sure that input taxons are at those ranks)" );
 
@@ -863,17 +862,8 @@ std::ofstream binning_debug_output( log_filename.c_str() );
     
     if(taxalist.size() == 0){
         std::cerr << "Under the current parameters no taxa could be found.";
-        //exit(EXIT_FAILURE);
     }
     else taxalist.reduce_by(filter_by_,treshold_);
-   // std::cerr << "read alignments\n";
-    
-   // std::cerr << "reduced by " << filter_by_ << " with "<<treshold_<<"\n";
-   // taxalist.print_taxa_prosp(sample_path_);
-    
-   
-    
-    
     
         const TaxonNode* root_node = taxinter.getRoot();
 
