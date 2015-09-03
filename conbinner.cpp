@@ -33,14 +33,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int main ( int argc, char** argv ) {
 
-std::string file_name1, file_name2;    
+std::string file_name1, file_name2, use_extra_columns;    
 
 namespace po = boost::program_options;
 po::options_description desc("Allowed options");
 desc.add_options()
     ("help,h", "produce help message")
     ("file1,f", po::value<std::string>(&file_name1)->required(), "filename")
-    ("file2,g", po::value<std::string>(&file_name2)->required(), "filename");
+    ("file2,g", po::value<std::string>(&file_name2)->required(), "filename")
+    ("extra-columns",po::value<std::string>(&use_extra_columns)->default_value("off"),"To use extra columns \"on\" else \"off\"");
 
 po::variables_map vm;
 po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -87,30 +88,36 @@ while(true){
 //        }
         
         std::cout << row1->seqid ;
-        if(row1->taxid == row2->taxid){
-            std::cout << "\t" <<row1->taxid;
-            for(std::vector<std::string>::iterator it = row1->extra_cols.begin()+2;it != row1->extra_cols.end();it++){
-                std::cout << "\t" << *it;
+        
+        if(use_extra_columns == "on"){
+            if(row1->taxid == row2->taxid){
+                std::cout << "\t" <<row1->taxid;
+                for(std::vector<std::string>::iterator it = row1->extra_cols.begin()+2;it != row1->extra_cols.end();it++){
+                    std::cout << "\t" << *it;
+                }
+            }
+            else if(outnode->data->taxid == row1->taxid){
+                std::cout << "\t" <<row1->taxid;
+                for(std::vector<std::string>::iterator it = row1->extra_cols.begin()+2;it != row1->extra_cols.end();it++){
+                    std::cout << "\t" << *it;
+                }
+            }
+            else if (outnode->data->taxid == row2->taxid){// new
+                std::cout << "\t" << row2->taxid;
+                for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
+                    std::cout << "\t" << *it;
+                }
+            }
+            else{
+                std::cout << "\t" << outnode->data->taxid;
+                for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
+                    std::cout << "\t" << *it;
+                }
             }
         }
-        else if(outnode->data->taxid == row1->taxid){
-            std::cout << "\t" <<row1->taxid;
-            for(std::vector<std::string>::iterator it = row1->extra_cols.begin()+2;it != row1->extra_cols.end();it++){
-                std::cout << "\t" << *it;
-            }
-        }
-        else if (outnode->data->taxid == row2->taxid){// new
-            std::cout << "\t" << row2->taxid;
-            for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
-                std::cout << "\t" << *it;
-            }
-        }
-        else{
-            std::cout << "\t" << outnode->data->taxid;
-            for(std::vector<std::string>::iterator it = row2->extra_cols.begin()+2;it != row2->extra_cols.end();it++){
-                std::cout << "\t" << *it;
-            }
-        }
+        
+        else std::cout << "\t" << outnode->data->taxid;
+        
         std::cout << "\n";
     }
     else break;
