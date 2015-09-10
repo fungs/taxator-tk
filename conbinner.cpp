@@ -53,6 +53,8 @@ if ( vm.count ( "help" ) ) {
 
 po::notify ( vm );  // check required etc.
 
+typedef std::map< std::string, RowValues* > tax_file_map;
+
 // create taxonomy
 //std::vector< std::string > ranks =  default_ranks;
 boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
@@ -65,14 +67,29 @@ BioboxesParser bio_parser_1(file_name1);
 BioboxesParser bio_parser_2(file_name2);
 RowValues* row1;
 RowValues* row2;
+tax_file_map tfmap_1;
+tax_file_map tfmap_2;
 const TaxonNode* outnode;
 
 std::cout << bio_parser_1.getHeader();
 
 while(true){
     row1 = bio_parser_1.getNext();
+    if(row1){
+        tfmap_1[row1->seqid] = row1;
+    }
+    
     row2 = bio_parser_2.getNext();
+    if(row2){
+        tfmap_2[row2->seqid] = row2;
+    }
+    if(not row1 and not row2) break;
+}
 
+
+for(tax_file_map::iterator it = tfmap_1.begin(); it != tfmap_1.end(); it++){
+    row1 = it->second;
+    row2 = tfmap_2[it->first];//TODO exception - get - find 
     if(row1 && row2){
         assert(row1->seqid == row2->seqid);
         if(row1->taxid == row2->taxid) outnode = taxinter.getNode(row1->taxid);
@@ -120,7 +137,7 @@ while(true){
         
         std::cout << "\n";
     }
-    else break;
+    //else break;
 };
 
 }
