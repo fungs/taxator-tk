@@ -6,9 +6,11 @@ The taxator-tk suite uses simple, text-based and, if possible, standard intermed
 
 ### Formatting
 
-The input alignments to the program 'taxator' are given as TAB-separated columns with UNIX line breaks ('\n'). Comment lines start with a '#'. The fields are defined as
+The input alignments to the program 'taxator' are given as TAB-separated columns with UNIX line breaks ('\n'). Comment lines start with a '#'. Empty lines are also ignored.
 
 ### Columns
+
+The fields are defined as
 
 1. query identifier
 2. query start position (1-based, inclusive)
