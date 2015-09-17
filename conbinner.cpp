@@ -34,15 +34,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int main ( int argc, char** argv ) {
 
-std::string filenames_input,file_name1,file_name2, use_extra_columns;    
+std::string filenames_input, use_extra_columns, consensus_method;    
 std::list<std::string> filenames, sequence_ids;
+
 
 namespace po = boost::program_options;
 po::options_description desc("Allowed options");
 desc.add_options()
     ("help,h", "produce help message")
     ("files,f", po::value<std::string>(&filenames_input)->required(), "filename")
-    //("file2,g", po::value<std::string>(&file_name2)->required(), "filename")
+    ("method,m", po::value<std::string>(&consensus_method)->default_value("LCC"),"Method to find consensus taxa (LCA/LCC)")
     ("extra-columns",po::value<std::string>(&use_extra_columns)->default_value("off"),"To use extra columns \"on\" else \"off\"");
 
 po::variables_map vm;
@@ -54,6 +55,9 @@ if ( vm.count ( "help" ) ) {
 }
 
 po::notify ( vm );  // check required etc.
+
+
+
 
 typedef std::map< std::string, RowValues* > tax_file_map;
 std::list<boost::tuple<std::string,tax_file_map>> file_maps;
@@ -76,15 +80,39 @@ for(auto it = filenames.begin(); it != filenames.end(); ++it){
     
     file_maps.push_back(boost::tuple<std::string,tax_file_map>(bio_parser.getHeader(),current_map));
 }
-// create taxonomy
-//std::vector< std::string > ranks =  default_ranks;
+// TODO check taxonomy versions
 
+// create taxonomy
+
+//std::vector< std::string > ranks =  default_ranks;
 boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &default_ranks ) );
 if(!tax) return EXIT_FAILURE;
 tax->deleteUnmarkedNodes(); //collapse taxonomy to contain only specified ranks
 TaxonomyInterface taxinter (tax.get());
 
-// find classifications in each file for each sequence id and make LCC/LCA
+
+//TaxonNode* (*get_consensus)(TaxonID, TaxonID) = static_cast<const TaxonNode* (TaxonomyInterface::*)(TaxonID, TaxonID)>(&TaxonomyInterface::getLCC);
+
+//const TaxonNode* (TaxonomyInterface::*getConsensusTaxon)(const TaxonID, const TaxonID) const = NULL;
+typedef std::list<const TaxonNode*> T;
+const TaxonNode* (TaxonomyInterface::*getConsensusTaxon)(const T&) const = NULL;
+
+//std::cerr << (taxinter.*getConsensusTaxon)("356","1224")->data->taxid << std::endl;
+
+if(consensus_method == "LCC"){
+    //getConsensusTaxon = static_cast<const TaxonNode* (TaxonomyInterface::*)(const TaxonID, const TaxonID) const>(&TaxonomyInterface::getLCC);
+    getConsensusTaxon = static_cast<const TaxonNode* (TaxonomyInterface::*)(const T&) const>(&TaxonomyInterface::getLCC<T>);
+}
+else if(consensus_method == "LCA"){
+//    getConsensusTaxon = static_cast<const TaxonNode* (TaxonomyInterface::*)(const TaxonID, const TaxonID) const>(&TaxonomyInterface::getLCA);
+    getConsensusTaxon = static_cast<const TaxonNode* (TaxonomyInterface::*)(const T&) const>(&TaxonomyInterface::getLCA<T>);
+}
+else{
+    return EXIT_FAILURE;
+}
+
+// output first read header
+std::cout << file_maps.begin()->get<0>() << "\n";
 
 const TaxonNode* outnode;
 
@@ -95,8 +123,12 @@ for(auto id = sequence_ids.begin(); id != sequence_ids.end(); ++id){
             taxon_nodes.push_back(taxinter.getNode(file_iterator->get<1>()[*id]->taxid));
         }
     }
-    outnode = taxinter.getLCC(taxon_nodes);
+    //outnode = taxinter.getLCC(taxon_nodes)
+    outnode = (taxinter.*getConsensusTaxon)(taxon_nodes);
+    std::cout << *id << "\t" << outnode->data->taxid << "\t" << 1 << "\t" << 1 <<"\n";// use trenner/nl from header
 }
+
+ 
 
 
 //return;
@@ -176,5 +208,9 @@ for(auto id = sequence_ids.begin(); id != sequence_ids.end(); ++id){
 //    }
 //    //else break;
 //};
+
+}
+
+void writeConsensusLine(){
 
 }
