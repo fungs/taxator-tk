@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define bioboxes_hh_
 
 #include <iostream>
+#include <map>
 #include <ostream>
 #include <vector>
 #include <tuple>
@@ -108,6 +109,8 @@ public:
         taxid_binid
     };
     
+    bool has_taxatortk_support=false;
+    bool has_taxatortk_length=false;
     
     //typedef std::vector<std::string> row_values;
     //row_values current_vals;
@@ -122,8 +125,20 @@ public:
                 std::vector<std::string> SplitVec;
                 boost::split( SplitVec, line, boost::is_any_of("\t"), boost::token_compress_on );
                 num_columns = SplitVec.size();
+                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxtatorTK_Support") != SplitVec.end()) has_taxatortk_support = true;
+                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxtatorTK_Length") != SplitVec.end()) has_taxatortk_support = true;
                 break;
             }
+            else if(boost::starts_with(line,"#")) comments_.push_back(line);
+            else if(boost::starts_with(line,"@")){
+                std::vector<std::string> tmp_tuple;
+                boost::split(tmp_tuple, line, boost::is_any_of(":"),boost::token_compress_on);
+                headervariables_[*tmp_tuple.begin()]=*(++tmp_tuple.begin());
+                
+            }
+        }
+        for(auto head = headervariables_.begin();head != headervariables_.end();++head){
+            std::cout << "header" <<head->first << ":" << head->second << "\n";
         }
     };
     
@@ -161,11 +176,17 @@ private:
     std::ifstream filehandle;
     std::istream& handle;
     std::string header = "";
+    
+    std::vector<std::string> comments_;
+    std::map< std::string, std::string > headervariables_;
+    
     int num_columns;
     //std::ostream& ostr_;
     //const ColumnTags cols_;
+    
     const std::string custom_tag_prefix_;
     const std::string format_version_ = "0.9.1";
+    
     
 };
 
