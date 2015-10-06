@@ -111,6 +111,7 @@ public:
     
     bool has_taxatortk_support=false;
     bool has_taxatortk_length=false;
+    int index_tk_support,index_tk_length;
     
     //typedef std::vector<std::string> row_values;
     //row_values current_vals;
@@ -125,8 +126,19 @@ public:
                 std::vector<std::string> SplitVec;
                 boost::split( SplitVec, line, boost::is_any_of("\t"), boost::token_compress_on );
                 num_columns = SplitVec.size();
-                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxtatorTK_Support") != SplitVec.end()) has_taxatortk_support = true;
-                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxtatorTK_Length") != SplitVec.end()) has_taxatortk_support = true;
+                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxatorTK_Support") != SplitVec.end()){
+                    has_taxatortk_support = true;
+                    index_tk_support = std::find(SplitVec.begin(),SplitVec.end(),"_TaxatorTK_Support")-SplitVec.begin();
+                }
+                if(std::find(SplitVec.begin(),SplitVec.end(),"_TaxatorTK_Length") != SplitVec.end()) {
+                    has_taxatortk_length = true;
+                    index_tk_length = std::find(SplitVec.begin(),SplitVec.end(),"_TaxatorTK_Length")-SplitVec.begin();
+                    std::cerr << index_tk_length;
+                    
+                }
+                for(auto x = SplitVec.begin();x != SplitVec.end();++x){
+                    std::cerr<<*x<<"\n";
+                }
                 break;
             }
             else if(boost::starts_with(line,"#")) comments_.push_back(line);
@@ -138,7 +150,7 @@ public:
             }
         }
         for(auto head = headervariables_.begin();head != headervariables_.end();++head){
-            std::cout << "header" <<head->first << ":" << head->second << "\n";
+            std::cerr <<head->first << ":" << head->second << "\n";
         }
     };
     
@@ -170,6 +182,10 @@ public:
     
     std::string getHeader(){
         return header;
+    };
+    
+    std::map<std::string, std::string> getHeaderMap(){
+        return headervariables_;
     };
         
 private:
