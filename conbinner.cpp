@@ -60,7 +60,9 @@ po::notify ( vm );  // check required etc.
 
 
 typedef std::map< std::string, RowValues* > tax_file_map;
-std::list<boost::tuple<std::string,tax_file_map>> file_maps;
+std::list<boost::tuple< std::string, tax_file_map, bool, int, int> > file_maps;
+std::list< std::map < std::string, std::string > > parser_list;
+bool taxator_tk = false;
 
 tokenizeSingleCharDelim(filenames_input, filenames, ",");
 for(auto it = filenames.begin(); it != filenames.end(); ++it){
@@ -68,6 +70,7 @@ for(auto it = filenames.begin(); it != filenames.end(); ++it){
     tax_file_map current_map;
     RowValues* row;
     BioboxesParser bio_parser(*it);
+    //?std::vector<std::string> 
     
     row = bio_parser.getNext();
     while(row){
@@ -77,10 +80,26 @@ for(auto it = filenames.begin(); it != filenames.end(); ++it){
         current_map[row->seqid] = row;
         row = bio_parser.getNext();
     }
-    
-    file_maps.push_back(boost::tuple<std::string,tax_file_map>(bio_parser.getHeader(),current_map));
+    taxator_tk = taxator_tk or bio_parser.has_taxatortk_support;
+    file_maps.push_back(boost::tuple< std::string, tax_file_map, bool ,int , int>(bio_parser.getHeader(),current_map,bio_parser.has_taxatortk_support,bio_parser.index_tk_support,bio_parser.index_tk_length));
+    parser_list.push_back(bio_parser.getHeaderMap());
 }
-// TODO check taxonomy versions
+
+// check taxonomy versions
+
+for(auto head_it = parser_list.begin(); head_it != parser_list.end(); ++ head_it){
+    std::string current_tax_id = "";
+    //std::map<std::string,std::string> currentHead = head_it->getHeaderMap();
+    if(head_it->find("TaxonomyID") != head_it->end()){
+        if(current_tax_id == ""){
+            current_tax_id = head_it->at("TaxonomyID");
+        }else{
+            assert(current_tax_id == head_it->at("TaxonomyID") && "Binning files have different taxonomic IDs.");
+        }
+        
+    }
+}
+
 
 // create taxonomy
 
@@ -118,18 +137,31 @@ const TaxonNode* outnode;
 
 for(auto id = sequence_ids.begin(); id != sequence_ids.end(); ++id){
     std::list<const TaxonNode*> taxon_nodes;
+    std::list<int> taxtk_support;
+    std::list<int> taxtk_length;
     for(auto file_iterator = file_maps.begin();file_iterator != file_maps.end(); ++file_iterator){
         if(file_iterator->get<1>().find(*id) != file_iterator->get<1>().end()){
             taxon_nodes.push_back(taxinter.getNode(file_iterator->get<1>()[*id]->taxid));
+            //std::cerr<<file_iterator->get<2>()<<"\n";
+            if(file_iterator->get<2>()==true){  
+                taxtk_support.push_back(stoi(file_iterator->get<1>()[*id]->extra_cols[file_iterator->get<3>()]));
+                taxtk_length.push_back(stoi(file_iterator->get<1>()[*id]->extra_cols[file_iterator->get<4>()]));  
+            }
+        
         }
+        
     }
     //outnode = taxinter.getLCC(taxon_nodes)
     outnode = (taxinter.*getConsensusTaxon)(taxon_nodes);
-    std::cout << *id << "\t" << outnode->data->taxid << "\t" << 1 << "\t" << 1 <<"\n";// use trenner/nl from header
+    
+    if(taxator_tk){
+        std::cout << *id << "\t" << outnode->data->taxid << "\t" << *std::max_element(taxtk_support.begin(),taxtk_support.end()) << "\t" 
+                  << *std::max_element(taxtk_length.begin(),taxtk_length.end()) <<"\n";// use trenner/nl from header
+    }
+    else {
+        std::cout << *id << "\t" << outnode->data->taxid << "\n";
+    }
 }
-
- 
-
 
 //return;
 //BioboxesParser bio_parser_1(file_name1);
