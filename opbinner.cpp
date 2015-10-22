@@ -112,12 +112,15 @@ class TaxaList{
         iterator begin() {return taxalist.begin();}
         iterator end() {return taxalist.end();}
 
-        void print(){
-            std::set< std::string >::iterator it;
-            for(it = taxalist.begin(); it != taxalist.end(); ++it){
-                std::cerr << "taxa: " << *it << "\n";
-            }
-        }
+        typedef std::list< TaxonNodeValues > PathEntry ;
+        typedef std::list< PathEntry > PathList ;
+        
+        //void print(){
+        //    std::set< std::string >::iterator it;
+        //    for(it = taxalist.begin(); it != taxalist.end(); ++it){
+        //        std::cerr << "taxa: " << *it << "\n";
+        //    }
+        //}
 
         int size(){
             return taxalist.size();
@@ -126,10 +129,7 @@ class TaxaList{
         bool is_in_list(std::string taxid){
             return taxa_prosperties.find(taxid)->second.get<6>();
         }
-        
-        typedef std::list< TaxonNodeValues > PathEntry ;
-        typedef std::list< PathEntry > PathList ;
-        
+
         void print_paths(PathList paths, std::ofstream &debug_out){
             for(PathList::iterator path = paths.begin(); path != paths.end(); ++path){
                 for(PathEntry::reverse_iterator node = path->rbegin(); node != path->rend(); ++node){
@@ -216,6 +216,7 @@ class TaxaList{
             
             int max_root_distance = 0;
             
+            // make summary map with root-distance key
             for(PathList::iterator path = paths.begin();path != paths.end(); ++path){
                 for(PathEntry::iterator node = path->begin();node != path->end(); ++node){
                     int root_distance = 0;
@@ -240,7 +241,7 @@ class TaxaList{
             }
             
            
-            
+            // Merge Paths
             PathList tmp_pathlist;
             
             for(PathList::iterator path = paths.begin();path != paths.end(); ++path){
