@@ -54,3 +54,15 @@ doi://10.1093/bioinformatics/btu745](http://bioinformatics.oxfordjournals.org/co
 * The calculation of the prediction score (column 6) was suspended for technical reasons prior to taxator-tk version 1.1 and should be revived until version 1.5, again.
 * The repetition of some fields and tags currently wastes some disk space. However, the GFF3 file is quite small compared to alignments and can be compressed using gzip or similar. For better tracking of information in the prediction part, we might introduce feature identifiers in the future.
 * rtax was added for version 1.4 to enable a nearest-neighbor classification scheme or a mixture of schemes in the consensus binning algorithm.
+
+## Primary binning output
+
+The assignment of input FASTA sequences (usually contigs) are generated in the bioboxes.org binning format (version 0.9). Please see the [official format specification](https://github.com/bioboxes/rfc/blob/4bb19a633a6a969c2332f1f298852114c5f89b1b/data-format/binning.mkd).  In addition to the mandatory columns and tags, taxator-tk provides the following:
+
+* the recommended `TaxonomyID` header tag which provides a tree hash of the taxonomy tree
+* a column with tag `_TaxatorTK_Support` which gives the number of nonredundantly, exactly matching positions in the taxon
+* a column with tag `_TaxatorTK_Length` which provides the original sequence length
+
+### Notes
+* Dividing the support by the sequence length give and abstract percentage identity which can be puzzled together from multiple genomes. This is an underestimate because gaps between assigned segments are expected to have zero matching positions.
+* These values are propagated to secondary binning output files such as the summary files. The values in the summary files are simple the accumulated version of the corresponding columns in the binning output file.
