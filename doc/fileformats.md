@@ -66,3 +66,6 @@ The assignment of input FASTA sequences (usually contigs) are generated in the b
 ### Notes
 * Dividing the support by the sequence length give and abstract percentage identity which can be puzzled together from multiple genomes. This is an underestimate because gaps between assigned segments are expected to have zero matching positions.
 * These values are propagated to secondary binning output files such as the summary files. The values in the summary files are simple the accumulated version of the corresponding columns in the binning output file.
+
+## FASTA input
+The input file must be a valid (multiple) FASTA format. The identifier which is given in the alignments must match the FASTA full FASTA header. In particular, the full identifier including whitespace characters must be reported by the aligner in the alignments format to match the corresponding FASTA sequence entry. Since different aligners behave differently on whitespace characters, you are adviced to strip the identifiers to short, unique alphanumeric strings. This also helps to reduce the memory overhead.
