@@ -330,9 +330,8 @@ int main( int argc, char** argv ) {
       }
       return EXIT_SUCCESS;
     } catch(Exception &e) {
-       cerr << "An unrecoverable error occurred." << endl;
-//        cerr << e.what() << endl;
-       cerr << boost::diagnostic_information(e) << endl;
+       cerr << "An unrecoverable error occurred: " << e.what() << endl;
+       cerr << endl << "Here is some debugging information to locate the problem:" << endl << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }
 }
