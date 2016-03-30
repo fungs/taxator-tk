@@ -482,7 +482,8 @@ int main( int argc, char** argv ) {
       }
       return EXIT_SUCCESS;
     } catch(Exception &e) {
-       cerr << "An unrecoverable error occurred." << endl;
+        cerr << "An unrecoverable error occurred."<< endl;
+        cerr << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }
 }

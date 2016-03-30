@@ -1,23 +1,3 @@
-# Compile and install
-
-If you downloaded the source, make sure you installed all needed
-software development packages. You need to have a recent version of the Boost
-C++ libararies (www.boost.org) installed (>= version 1.34), including the
-development header files. You will also need the build management tool
-"cmake" >= version 2.6 and the UNIX tools "make" and "uname" which should be
-contained in a standard installation.
-
-On a Unix (Linux) system type
-
-    ./build.sh
-
-and all programs will be built in a sub-directory called "Build-ARCH" where
-ARCH is your computer architecture, e.g. Build-x86_64 for a 64 bit system.
-
-There is no installation procedure. Either copy the executables from the build
-directory to your prefered directory in your PATH variable like /usr/local/bin
-or execute them by prefixing them with the build directory.
-
 # Usage
 
 Basic concept:
@@ -303,20 +283,3 @@ integrated in such. The following considerations were taken:
 - The RPA algorithm depends on sequence random access. To ensure fast
   subsequences retrieval, data can be held in memory or accessed on-disk via
   indexing.
-
-# Acknowledgments and contact
-
-We acknowledge the work done by the contributors of the SeqAn and BOOST projects
-as well as the author(s) of the tree.hh classes and all other anonymous
-contributors.
-
-For any questions, feedback or complaints, contact
-johannes.droege@uni-duesseldorf.de
-
-Please, if you use this software and publish a paper, cite
-
-    J. Dröge, I. Gregor, and A. C. McHardy 
-    Taxator-tk: precise taxonomic assignment of metagenomes by fast approximation of evolutionary neighborhoods
-    Bioinformatics 2015 31: 817-824.
-    doi: 10.1093/bioinformatics/btu745
-
