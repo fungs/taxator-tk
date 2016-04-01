@@ -142,7 +142,7 @@ void loadMapFromFile( const std::string& filename, std::map< KeyT, ValueT >& map
 				key = boost::lexical_cast< KeyT >( *field_it++ );
 				value = boost::lexical_cast< ValueT >( *field_it );
 				map_fill.insert( std::make_pair( key, value ) );
-			} catch( boost::bad_lexical_cast e ) {
+			} catch( boost::bad_lexical_cast& ) {
 				std::cerr << "loadMapFromFile(): could not parse this line: '" << line << "'" << std::endl;
 			}
 			fields.clear();

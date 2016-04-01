@@ -118,31 +118,31 @@ public:
                 reference_start_ = boost::lexical_cast< large_unsigned_int >( fields[5] );
                 reference_stop_ = boost::lexical_cast< large_unsigned_int >( fields[6] );
 
-            } catch(boost::bad_lexical_cast &e) {
+            } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad position number or query length"});
             }
 
             try {
                 score_ = boost::lexical_cast< float >( fields[7] );
-            } catch(boost::bad_lexical_cast &e) {
+            } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad score"});
             }
 
             try {
                 evalue_ = boost::lexical_cast< double >( fields[8] );
-            } catch(boost::bad_lexical_cast &e) {
+            } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad E-value"});
             }
 
             try {
                 identities_ = boost::lexical_cast< large_unsigned_int >( fields[9] );
-            } catch(boost::bad_lexical_cast &e) {
+            } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad identity value"});
             }
 
             try {
                 alignment_length_ = boost::lexical_cast< large_unsigned_int >( fields[10] );
-            } catch(boost::bad_lexical_cast &e) {
+            } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad alignment length"});
             }
 

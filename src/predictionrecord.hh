@@ -188,14 +188,14 @@ public:
 
 
 
-        } catch ( boost::bad_lexical_cast& e ) {
+        } catch ( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse feature position number" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 feature position"} );
         }
 
         try {
             setSignalStrength( fields[5] == "." ? std::numeric_limits< float >::quiet_NaN() : boost::lexical_cast< float >( fields[5] ) );
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse signal strength (score field) in input" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 taxonomic signal score"} );
         }
@@ -348,7 +348,7 @@ protected:
                 setBestReferenceTaxon(rtax_node);
                 return;
             }
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info {"bad GFF3 key value"} << general_info{key});
         }
     }

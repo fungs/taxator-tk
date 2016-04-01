@@ -240,7 +240,7 @@ class PredictionsParser {
 					qid = *field_it++;
 					taxid_pred = boost::lexical_cast< unsigned int >( *field_it );
 					return;
-				} catch ( boost::bad_lexical_cast e ) {
+				} catch ( boost::bad_lexical_cast& ) {
 					std::cerr << "PredictionsParser: Could not parse line '" << line << '\'' << std::endl;
 					fields.clear();
 				}
