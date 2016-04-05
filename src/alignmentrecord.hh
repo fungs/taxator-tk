@@ -636,8 +636,7 @@ void records2Nodes( const ContainerT1& recordset, const TaxonomyInterface& taxin
     while( it != recordset.end() ) {
         if( !(*it)->isFiltered() ) {
             TaxonID taxid = acc2taxid[ (*it)->getReferenceIdentifier() ];
-            node = taxinter.getNode( taxid );
-            refnodes.push_back( node );
+            refnodes.insert(refnodes.end(), taxinter.getNode( taxid ) );
         }
         ++it;
     }
@@ -648,14 +647,8 @@ void records2Nodes( const ContainerT1& recordset, const TaxonomyInterface& taxin
 template< typename ContainerT1, typename ContainerT2 >
 void records2Nodes( const ContainerT1& recordset, ContainerT2& refnodes ) {
     typename ContainerT1::const_iterator record_it = recordset.begin();
-    const TaxonNode* node;
     while( record_it != recordset.end() ) {
-        if( !(*record_it)->isFiltered() ) {
-            node = (*record_it)->getReferenceNode();
-            if( node ) {
-                refnodes.push_back( node );
-            }
-        }
+        if( !(*record_it)->isFiltered() ) refnodes.insert(refnodes.end(), (*record_it)->getReferenceNode() );
         ++record_it;
     }
 }

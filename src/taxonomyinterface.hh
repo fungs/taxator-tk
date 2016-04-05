@@ -29,120 +29,115 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class TaxonomyInterface {
-	public:
-		TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {} //TODO: make all inline or define in header
-		
-		TaxonomyInterface( const TaxonomyInterface& taxinter ) : tax( taxinter.tax ) {}
+  public:
+    TaxonomyInterface( const Taxonomy* taxtree ) : tax( taxtree ) {} //TODO: make all inline or define in header
+    
+    TaxonomyInterface( const TaxonomyInterface& taxinter ) : tax( taxinter.tax ) {}
 
-		const TaxonNode* getNode( const TaxonID taxid ) const;
-		const TaxonNode* getRoot() const;
-		small_unsigned_int getMaxDepth() { return tax->max_depth_; }
+    const TaxonNode* getNode( const TaxonID taxid ) const;
+    const TaxonNode* getRoot() const;
+    small_unsigned_int getMaxDepth() { return tax->max_depth_; }
 
-		const std::string& getRank( const TaxonNode* node ) const;
-		const std::string& getRank( const TaxonID taxid ) const;
-		
-		const std::string& getRankInternal( const std::string& rank ) const;
-		
-		const std::string& getName( const TaxonNode* node ) const;
-		const std::string& getName( const TaxonID taxid ) const;
+    const std::string& getRank( const TaxonNode* node ) const;
+    const std::string& getRank( const TaxonID taxid ) const;
+    
+    const std::string& getRankInternal( const std::string& rank ) const;
+    
+    const std::string& getName( const TaxonNode* node ) const;
+    const std::string& getName( const TaxonID taxid ) const;
 
-		bool isParentOf( const TaxonNode* A, const TaxonNode* B ) const;
-		bool isParentOf( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+    bool isParentOf( const TaxonNode* A, const TaxonNode* B ) const;
+    bool isParentOf( const TaxonID A_taxid, const TaxonID B_taxid ) const;
 
-		// if you know that one node is probably closer to the LCA than the other, set it to A (less traversal steps)
-		const TaxonNode* getLCA( const TaxonNode* A, const TaxonNode* B ) const;
-		const TaxonNode* getLCA( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+    // if you know that one node is probably closer to the LCA than the other, set it to A (less traversal steps)
+    const TaxonNode* getLCA( const TaxonNode* A, const TaxonNode* B ) const;
+    const TaxonNode* getLCA( const TaxonID A_taxid, const TaxonID B_taxid ) const;
 
-		const TaxonNode* getLCC( const TaxonNode* A, const TaxonNode* B ) const;
-		const TaxonNode* getLCC( const TaxonID A_taxid, const TaxonID B_taxid ) const;
-
-
-
-		template < typename ContainerT >
-		const TaxonNode* getLCA( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
-			if( nodescontainer.empty() ) {
-				return NULL;
-			}
-
-			typename ContainerT::const_iterator node_it = nodescontainer.begin();
-			const TaxonNode* tmplca = *node_it++;
-			while( node_it != nodescontainer.end() ) {
-				tmplca = getLCA( tmplca, *node_it );
-				++node_it;
-			}
-			return tmplca;
-		}
+    const TaxonNode* getLCC( const TaxonNode* A, const TaxonNode* B ) const;
+    const TaxonNode* getLCC( const TaxonID A_taxid, const TaxonID B_taxid ) const;
 
 
 
-		template < typename ContainerT >
-		const TaxonNode* getLCC( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
-			if( nodescontainer.empty() ) {
-				return NULL;
-			}
-			// we need to start with lowest overall concept
-			std::pair< const TaxonNode*, small_unsigned_int > lowest( NULL, 0 );
-			for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
-				if( (*node_it)->data->root_pathlength >= lowest.second ) {
-					lowest.first = *node_it;
-					lowest.second = (*node_it)->data->root_pathlength;
-				}
-			}
-			const TaxonNode* tmplcc = lowest.first;
-			for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
-				tmplcc = getLCC( tmplcc, *node_it );
-			}
-			return tmplcc;
-		}
+    template < typename ContainerT >
+    const TaxonNode* getLCA( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
+      if( nodescontainer.empty() ) {
+        return NULL;
+      }
+
+      typename ContainerT::const_iterator node_it = nodescontainer.begin();
+      const TaxonNode* tmplca = *node_it++;
+      while( node_it != nodescontainer.end() ) {
+        tmplca = getLCA( tmplca, *node_it );
+        ++node_it;
+      }
+      return tmplca;
+    }
 
 
 
-		template < typename ContainerT >
-		const TaxonNode* getICLCA( ContainerT nodescontainer ) const { //TODO: handle taxid not found
-			if( nodescontainer.empty() ) {
-				return NULL;
-			}
+    template < typename ContainerT >
+    const TaxonNode* getLCC( const ContainerT& nodescontainer ) const { //TODO: handle taxid not found
+      if( nodescontainer.empty() ) return NULL;
+      
+      // we need to start with lowest overall concept
+      std::pair< const TaxonNode*, small_unsigned_int > lowest( NULL, 0 );
+      for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
+        if( (*node_it)->data->root_pathlength >= lowest.second ) {
+          lowest.first = *node_it;
+          lowest.second = (*node_it)->data->root_pathlength;
+        }
+      }
+      const TaxonNode* tmplcc = lowest.first;
+      for( typename ContainerT::const_iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
+        tmplcc = getLCC( tmplcc, *node_it );
+      }
+      return tmplcc;
+    }
 
-			//const TaxonNode* root = getRoot();
-			for( typename ContainerT::iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it ) {
-				if( (*node_it)->data->is_unclassified ) {
-					*node_it = mapUnclassified( *node_it );
-				}
-			}
 
-			return getLCC( nodescontainer );
-		}
 
-		const TaxonNode* mapUnclassified( const TaxonNode* node ) const;
-		const TaxonNode* mapUnclassified( TaxonID taxid ) const;
+    template < typename ContainerT >
+    const TaxonNode* getICLCA( ContainerT nodescontainer ) const { //TODO: handle taxid not found
+      if( nodescontainer.empty() ) return NULL;
+      std::set<const TaxonNode*> nodes;
+      for(typename ContainerT::iterator node_it = nodescontainer.begin(); node_it != nodescontainer.end(); ++node_it) {
+        if((*node_it)->data->is_unclassified) nodes.insert(mapUnclassified(*node_it));
+        else nodes.insert(*node_it);
+      }
 
-		std::pair< small_unsigned_int, small_unsigned_int > getPathLength( const TaxonNode* A, const TaxonNode* B ) const;
-		std::pair< small_unsigned_int, small_unsigned_int > getPathLength( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+      return getLCC(nodes);
+    }
 
-		boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > getInterDistances( const TaxonNode* A, const TaxonNode* B ) const;
-		boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > getInterDistances( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+    const TaxonNode* mapUnclassified( const TaxonNode* node ) const;
+    const TaxonNode* mapUnclassified( TaxonID taxid ) const;
 
-		small_unsigned_int getPathLengthToParent( const TaxonNode* A, const TaxonNode* B ) const;
-		small_unsigned_int getPathLengthToParent( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+    std::pair< small_unsigned_int, small_unsigned_int > getPathLength( const TaxonNode* A, const TaxonNode* B ) const;
+    std::pair< small_unsigned_int, small_unsigned_int > getPathLength( const TaxonID A_taxid, const TaxonID B_taxid ) const;
 
-		const std::string& getNameAtRank( const TaxonNode* node, const std::string& rank ) const;
-		const std::string& getNameAtRank( const TaxonNode* node, const std::string* internal_rank ) const;
-		
-		Taxonomy::PathUpIterator traverseUp( const TaxonNode* node ) const;
-		
-		template< typename T >
-		T traverseDown( const TaxonNode* node ) const {
-			return T( tax->begin().node, node );
-		}
-		
-		bool isLeaf( const TaxonNode* node ) const;
+    boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > getInterDistances( const TaxonNode* A, const TaxonNode* B ) const;
+    boost::tuple< small_unsigned_int, small_unsigned_int, small_unsigned_int > getInterDistances( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+
+    small_unsigned_int getPathLengthToParent( const TaxonNode* A, const TaxonNode* B ) const;
+    small_unsigned_int getPathLengthToParent( const TaxonID A_taxid, const TaxonID B_taxid ) const;
+
+    const std::string& getNameAtRank( const TaxonNode* node, const std::string& rank ) const;
+    const std::string& getNameAtRank( const TaxonNode* node, const std::string* internal_rank ) const;
+    
+    Taxonomy::PathUpIterator traverseUp( const TaxonNode* node ) const;
+    
+    template< typename T >
+    T traverseDown( const TaxonNode* node ) const {
+      return T( tax->begin().node, node );
+    }
+    
+    bool isLeaf( const TaxonNode* node ) const;
     
     const std::string& getVersion() {
         return tax->version_;
     };
 
-	private:
-		const Taxonomy* const tax;
+  private:
+    const Taxonomy* const tax;
 };
 
 #endif // taxonomyinterface_hh_

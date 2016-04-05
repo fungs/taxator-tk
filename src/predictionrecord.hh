@@ -44,7 +44,7 @@ public:
     PredictionRecordBase( const PredictionRecordBase& rec ) : taxinter_( rec.taxinter_ ) {}
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length ) {
-        initialize( query_identifier, query_length, 0, query_length );
+        initialize( query_identifier, query_length, 1, query_length );
     }
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length, large_unsigned_int feature_begin, large_unsigned_int feature_end ) {
@@ -98,7 +98,7 @@ public:
     const TaxonNode* getLowerNode() const {
         return lower_node_;
     }
-    const TaxonNode* getRtax() const {
+    const TaxonNode* getBestReferenceTaxon() const {
         return rtax_;
     }
 
