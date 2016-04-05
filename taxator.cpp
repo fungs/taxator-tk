@@ -305,7 +305,7 @@ int main( int argc, char** argv ) {
       // choose appropriate prediction model from command line parameters
       //TODO: "address of temporary warning" is annoying but life-time is guaranteed until function returns
       if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "simple-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "ic-megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
