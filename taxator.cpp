@@ -51,7 +51,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
     FileParser< AlignmentRecordFactory< AlignmentRecordTaxonomy > > parser( cin, fac );
     RecordSetGenerator<AlignmentRecordTaxonomy, RecordSetType>* recgen = NULL; // TODO: boost smpt??
-
+    
     if (alignments_sorted) { // stupid nesting because template parameters must be const
         if (split_alignments) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
         else recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
@@ -62,6 +62,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     }
 
     RecordSetType rset;
+    
     PredictionRecord prec( tax );
 
     std::cout << GFF3Header();
@@ -72,7 +73,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
         std::cout << prec;
     }
 
-    delete recgen;
+//     delete recgen;
 }
 
 class BoostProducer {
@@ -304,9 +305,9 @@ int main( int argc, char** argv ) {
       // choose appropriate prediction model from command line parameters
       //TODO: "address of temporary warning" is annoying but life-time is guaranteed until function returns
       if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      else if( algorithm == "simple-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      else if( algorithm == "ic-megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "rpa" ) {
           typedef seqan::String< seqan::Dna5 > StringType;
@@ -330,9 +331,8 @@ int main( int argc, char** argv ) {
       }
       return EXIT_SUCCESS;
     } catch(Exception &e) {
-       cerr << "An unrecoverable error occurred." << endl;
-//        cerr << e.what() << endl;
-       cerr << boost::diagnostic_information(e) << endl;
+       cerr << "An unrecoverable error occurred: " << e.what() << endl;
+       cerr << endl << "Here is some debugging information to locate the problem:" << endl << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }
 }

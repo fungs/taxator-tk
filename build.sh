@@ -3,6 +3,9 @@
 # build-$architecture, using one processor core
 # you need to have the dependencies fullfilled, see README
 
+set -o errexit
+set -o nounset
+
 arch="$(uname -m)"
 bdir="Build-$arch"
 
@@ -13,4 +16,5 @@ cd "$bdir"
 cmake ../
 
 echo "Compiling source code in $bdir"
-make && echo "Programs successfully built in $bdir, check it out!"
+make
+echo "Programs successfully built in $bdir, check it out!"

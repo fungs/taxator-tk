@@ -73,19 +73,13 @@ public:
             }
 
             float max_bs = (*record_it++)->getScore();
-
-            for( ; record_it != recordset.end(); ++record_it ) {
-                if( ! (*record_it)->isFiltered() && (*record_it)->getScore() > max_bs ) {
-                    max_bs = (*record_it)->getScore();
-                }
-            }
-
+            for( ; record_it != recordset.end(); ++record_it ) if( ! (*record_it)->isFiltered() && (*record_it)->getScore() > max_bs ) max_bs = (*record_it)->getScore();
+              
             // scan for maximum set
-            for( ; record_it != recordset.end(); ++record_it ) {
+            for( record_it = recordset.begin(); record_it != recordset.end(); ++record_it ) {
                 if( ! (*record_it)->isFiltered() ) {
-                    if( (*record_it)->getScore() == max_bs ) {
-                        best_records.push_back( *record_it );
-                    } else {
+                    if( (*record_it)->getScore() == max_bs ) best_records.push_back( *record_it );
+                    else {
                         if( (*record_it)->getScore() > max_bs ) {
                             best_records.clear();
                             best_records.push_back( *record_it );
@@ -107,7 +101,6 @@ public:
     const std::list< AlignmentRecordPtrType >& getBests() {
         return best_records;
     }
-
 
 private:
     std::list< AlignmentRecordPtrType > best_records;
@@ -355,10 +348,11 @@ const std::string MinScoreTopPercentFilter< ContainerT >::description = "MinScor
 template< typename ContainerT >
 class MinScoreMaxEvalueTopPercentFilter : public AlignmentsFilter< ContainerT > {
 public:
-    MinScoreMaxEvalueTopPercentFilter( const float ms, const float ev, const float tp ) : minscore( ms ), maxevalue( ev ), toppercent( tp ) {};
+    MinScoreMaxEvalueTopPercentFilter( const float ms, const float ev, const float tp ) : minscore( ms ), maxevalue( ev ), toppercent( tp ), support_(0) {};
 
     void filter( ContainerT& recordset ) {
         float max_bitscore = .0;
+        support_ = 0;
         for( typename ContainerT::iterator record_it = recordset.begin(); record_it != recordset.end(); ++record_it ) {
             if( ! (*record_it)->isFiltered() ) {
                 if( (*record_it)->getScore() < minscore || (*record_it)->getEValue() > maxevalue ) {
@@ -366,6 +360,7 @@ public:
                 } else {
                     if( (*record_it)->getScore() > max_bitscore ) {
                         max_bitscore = (*record_it)->getScore();
+                        support_++;
                     }
                 }
             }
@@ -379,11 +374,14 @@ public:
             }
         }
     }
+    
+    unsigned int getSupport() { return support_; }
 
 private:
     const float minscore;
     const float maxevalue;
     const float toppercent;
+    unsigned int support_;
     static const std::string description;
 };
 
@@ -610,44 +608,25 @@ const std::string BestScorePerReferenceTaxIDFilter< ContainerT >::description = 
 
 
 
-
-
-// the following filters are supervised: they expect the taxid of the query sequence to be known and contained in the name (needs redesign)
-
 template< typename ContainerT >
-class RemoveUnclassifiedQueriesFilter : public AlignmentsFilter< ContainerT > {
+class RemoveUnclassifiedFilter : public AlignmentsFilter< ContainerT > {
 public:
-    RemoveUnclassifiedQueriesFilter( StrIDConverter& accessconv, Taxonomy* tax, const std::string& extract_re ) : identifier_regex_( extract_re ), seqid2taxid( accessconv ), taxinter( tax ) {
+  RemoveUnclassifiedFilter() {}
+  
+  void filter( ContainerT& recordset ) {
+    for( auto rec_it=recordset.begin(); rec_it != recordset.end(); ++rec_it) {
+      if((*rec_it)->getReferenceNode()->data->is_unclassified) (*rec_it)->filterOut();
     }
-
-    void filter( ContainerT& recordset ) {
-        if( ! recordset.empty() ) {
-            typename ContainerT::iterator record_it = recordset.begin();
-            const std::string seqid = extractIdentifier( (*record_it)->getQueryIdentifier() );
-            if( taxinter.getNode( seqid2taxid[ seqid ] )->data->is_unclassified ) { //TODO: case taxid not found
-                for( ; record_it != recordset.end(); ++record_it ) {
-                    (*record_it)->filterOut();
-                }
-            }
-        }
-    }
+  }
 private:
-    const std::string extractIdentifier( const std::string& whole_name ) {
-        boost::cmatch re_results;
-        assert( boost::regex_match( whole_name.c_str(), re_results, identifier_regex_ ) );
-        assert(  re_results.size() > 1 );
-        return std::string( re_results[1].first, re_results[1].second );
-    }
-
-    const boost::regex identifier_regex_;
-    static const std::string description;
-    StrIDConverter& seqid2taxid;
-    TaxonomyInterface taxinter;
+  static const std::string description;
 };
 
 template< typename ContainerT >
-const std::string RemoveUnclassifiedQueriesFilter< ContainerT >::description = "RemoveUnclassifiedQueriesFilter";
+const std::string RemoveUnclassifiedFilter< ContainerT >::description = "RemoveUnclassifiedFilter";
 
+
+// the following filters are supervised: they expect the taxid of the query sequence to be known and contained in the name (needs redesign)
 
 
 template< typename ContainerT >
@@ -661,7 +640,7 @@ public:
             TaxonID qtax;
             try {
                 qtax = staxon_[ (*record_it)->getQueryIdentifier() ];
-            } catch ( std::out_of_range ) {
+            } catch ( std::out_of_range& ) {
                 std::cerr << "No mapping for query identifier \"" << (*record_it)->getQueryIdentifier() << "\", masking all alignments..." << std::endl;
                 while( record_it != recordset.end() ) (*record_it++)->filterOut();
                 return;
@@ -671,7 +650,7 @@ public:
                     if( qtax == rtaxon_[ (*record_it)->getReferenceIdentifier() ] ) {
                         (*record_it)->filterOut();
                     }
-                } catch ( std::out_of_range ) {
+                } catch ( std::out_of_range& ) {
                     (*record_it)->filterOut();
                     std::cerr << "No mapping for reference identifier \"" << (*record_it)->getReferenceIdentifier() << "\", masking alignment..." << std::endl;
                 }
@@ -743,7 +722,7 @@ public:
                     }
                     ++record_it;
                 }
-            } catch ( std::out_of_range e ) { //mask all records
+            } catch ( std::out_of_range& ) { //mask all records
                 std::cerr << "RemoveIdentTaxIDFilter: Could not map sequence id " << seqid << " to TaxID";
                 std::cerr << ", skipping all records for record set..." << std::endl;
                 while( record_it != recordset.end() ) {

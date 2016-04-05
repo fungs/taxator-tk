@@ -44,7 +44,7 @@ public:
     PredictionRecordBase( const PredictionRecordBase& rec ) : taxinter_( rec.taxinter_ ) {}
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length ) {
-        initialize( query_identifier, query_length, 0, query_length );
+        initialize( query_identifier, query_length, 1, query_length );
     }
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length, large_unsigned_int feature_begin, large_unsigned_int feature_end ) {
@@ -98,7 +98,7 @@ public:
     const TaxonNode* getLowerNode() const {
         return lower_node_;
     }
-    const TaxonNode* getRtax() const {
+    const TaxonNode* getBestReferenceTaxon() const {
         return rtax_;
     }
 
@@ -188,14 +188,14 @@ public:
 
 
 
-        } catch ( boost::bad_lexical_cast& e ) {
+        } catch ( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse feature position number" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 feature position"} );
         }
 
         try {
             setSignalStrength( fields[5] == "." ? std::numeric_limits< float >::quiet_NaN() : boost::lexical_cast< float >( fields[5] ) );
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse signal strength (score field) in input" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 taxonomic signal score"} );
         }
@@ -348,7 +348,7 @@ protected:
                 setBestReferenceTaxon(rtax_node);
                 return;
             }
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info {"bad GFF3 key value"} << general_info{key});
         }
     }
