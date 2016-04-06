@@ -292,15 +292,25 @@ int main( int argc, char** argv ) {
                   taxid = boost::lexical_cast< TaxonID >( *field_it );
                   node = interface.getNode( taxid );
                   cout << buffer.str();
+                  
                   const TaxonNode* root = interface.getRoot();
-                  for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
-                    if ( allnodes || it->data->mark_special ) {
-                      if( it->data->annotation ) cout << it->data->annotation->name << ';';
-                      else cout << "node_without_annotation;";
+                  Taxonomy::CPathDownIterator it( root, node );
+                  while(true) {
+                    if (allnodes || it->data->mark_special) {
+                      if( it->data->annotation ) cout << it->data->annotation->name;
+                      else cout << "node_without_annotation";
+                      break;
                     }
+                    if(it == node) break;
+                    ++it;
                   }
-                  if ( allnodes || node->data->mark_special ) cout << node->data->annotation->name << ';';
-                  if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                  while ( it != node ) {
+                    ++it;
+                    if ( allnodes || it->data->mark_special ) {
+                      if( it->data->annotation ) cout << ';' << it->data->annotation->name;
+                      else cout << ";node_without_annotation";
+                    }
+                  };
                   cout << endl;
                   
                 } catch ( TaxonNotFound& ) {
@@ -341,12 +351,21 @@ int main( int argc, char** argv ) {
                     taxid = boost::lexical_cast< TaxonID >( *field_it );
                     node = interface.getNode( taxid );
                     cout << buffer.str();
+                    
                     const TaxonNode* root = interface.getRoot();
-                    for ( Taxonomy::CPathDownIterator it( root, node ); it != node; ++it ) {
-                      if ( allnodes || it->data->mark_special ) cout << it->data->taxid << ';';
+                    Taxonomy::CPathDownIterator it( root, node );
+                    while(true) {
+                      if (allnodes || it->data->mark_special) {
+                        cout << it->data->taxid;
+                        break;
+                      }
+                      if(it == node) break;
+                      ++it;
                     }
-                    if ( allnodes || node->data->mark_special ) cout << node->data->taxid << ';';
-                    if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while ( it != node ) {
+                      ++it;
+                      if ( allnodes || it->data->mark_special ) cout << ';' << it->data->taxid;
+                    };
                     cout << endl;
                     
                   } catch ( TaxonNotFound& ) {
