@@ -59,7 +59,7 @@ class NewickTaxonFilter : public TaxonFilter {
 			for (small_unsigned_int i = 0; i < rank_names.size(); ++i ) {
 				const std::string& rank = taxinter.getRankInternal( rank_names[i] );
 				if( rank.empty() ) {
-					std::cerr << "Rank '" << rank_names_[i] << "' not found in taxonomy, ignoring..." << std::endl;
+					std::cerr << "Rank '" << rank_names_[i] << "' not found in taxonomy, ignoring." << std::endl;
 					continue;
 				}
 				ranks_[&rank] = i;
@@ -79,8 +79,8 @@ class NewickTaxonFilter : public TaxonFilter {
         }
         newicklists[depth][node]; //standard constructor = std::list<std::string&>>();
       } catch ( TaxonNotFound &e ) {
-        if( TaxonID const * taxid = boost::get_error_info<taxid_info>(e) ) std::cerr << "Could not find node with taxid " << *taxid << " in the taxonomy, skipping record..." << std::endl;
-        else std::cerr << "Could not find node by its taxid in the taxonomy, skipping record..." << std::endl;
+        if( TaxonID const * taxid = boost::get_error_info<taxid_info>(e) ) std::cerr << "Could not find node with taxid " << *taxid << " in the taxonomy, skipping record." << std::endl;
+        else std::cerr << "Could not find node by its taxid in the taxonomy, skipping record." << std::endl;
       }
 		};
 		

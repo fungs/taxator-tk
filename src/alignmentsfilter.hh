@@ -641,7 +641,7 @@ public:
             try {
                 qtax = staxon_[ (*record_it)->getQueryIdentifier() ];
             } catch ( std::out_of_range& ) {
-                std::cerr << "No mapping for query identifier \"" << (*record_it)->getQueryIdentifier() << "\", masking all alignments..." << std::endl;
+                std::cerr << "No mapping for query identifier \"" << (*record_it)->getQueryIdentifier() << "\", masking all alignments." << std::endl;
                 while( record_it != recordset.end() ) (*record_it++)->filterOut();
                 return;
             }
@@ -652,7 +652,7 @@ public:
                     }
                 } catch ( std::out_of_range& ) {
                     (*record_it)->filterOut();
-                    std::cerr << "No mapping for reference identifier \"" << (*record_it)->getReferenceIdentifier() << "\", masking alignment..." << std::endl;
+                    std::cerr << "No mapping for reference identifier \"" << (*record_it)->getReferenceIdentifier() << "\", masking alignment." << std::endl;
                 }
                 ++record_it;
             }
@@ -723,8 +723,7 @@ public:
                     ++record_it;
                 }
             } catch ( std::out_of_range& ) { //mask all records
-                std::cerr << "RemoveIdentTaxIDFilter: Could not map sequence id " << seqid << " to TaxID";
-                std::cerr << ", skipping all records for record set..." << std::endl;
+                std::cerr << "RemoveIdentTaxIDFilter: Could not map sequence id " << seqid << " to TaxID, skipping all records for record set." << std::endl;
                 while( record_it != recordset.end() ) {
                     (*record_it)->filterOut();
                     ++record_it;

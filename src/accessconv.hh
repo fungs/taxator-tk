@@ -81,7 +81,7 @@ private:
                 TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
                 accessidconv[ acc ] = taxid;
             } catch( boost::bad_lexical_cast &e ) {  // TODO: pass info via exception
-                std::cerr << "Could not parse line: " << line << ", skipping..." << std::endl;
+                std::cerr << "Could not parse line: " << line << ", skipping alignment." << std::endl;
                 std::cerr << "key:" << acc << std::endl;
                 std::cerr << "error parsing taxonomic ID: " << *field_it << std::endl;
                 throw e;

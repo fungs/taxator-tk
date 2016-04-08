@@ -114,7 +114,7 @@ int main( int argc, char** argv ) {
           set< const string* > ranks;
           for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
               const string& rank = tax->getRankInternal( *it );
-              if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping..." << endl;
+              if( rank.empty() ) cerr << "Rank '" << *it << "' not found in taxonomy, not using for mapping." << endl;
               else ranks.insert( &rank );
           }
 
@@ -154,16 +154,18 @@ int main( int argc, char** argv ) {
                 if( (++field_it)->empty() ) cout << endl;
                 else cout << default_field_separator << *field_it << endl;
               } catch ( TaxonNotFound& ) {
-                    cerr << "Could not find node with taxid " << *field_it << " in the taxonomy" << endl;
-                    if ( keep_not_rank || replace_invalid ) {
+                    cerr << "Could not find node with taxid " << *field_it << " in the taxonomy";
+                    if ( ! keep_not_taxid ) cerr << ", skipping record." << endl;
+                    else {
+                      cerr << '.' << endl;
                       cout << buffer.str();
-                      if( keep_not_taxid ) cout << *field_it;
-                      else cout << invalid_replace_value_traverse; //TODO: only works in combination with keep-invalid
+                      if( replace_invalid ) cout << invalid_replace_value_traverse; //TODO: only works in combination with keep-invalid
+                      else cout << *field_it;
                       if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
                       cout << endl;
-                    } else cerr << ", skipping record..." << endl;
+                    }
               } catch( boost::bad_lexical_cast& ) {
-                cerr << "Could not parse taxid " << *field_it << " in line \"" << line << "\", skipping record..." << endl;
+                cerr << "Could not parse taxid " << *field_it << " in line \"" << line << "\", skipping record." << endl;
               }
               break;
             }
@@ -313,11 +315,23 @@ int main( int argc, char** argv ) {
                   };
                   
                 } catch ( TaxonNotFound& ) {
-                  cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
-                  if ( replace_invalid ) cout << buffer.str() << invalid_replace_value_annotate;
+                  cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy";
+                  if ( replace_invalid ) {
+                    cerr << '.' << endl;
+                    cout << buffer.str() << invalid_replace_value_annotate;
+                  } else {
+                    cerr << ", skipping record." << endl;
+                    break;
+                  }
                 } catch( boost::bad_lexical_cast& ) {
-                  cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
-                  if ( replace_invalid ) cout << buffer.str() << invalid_replace_value_annotate;
+                  cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"';
+                  if ( replace_invalid ) {
+                    cerr << '.' << endl;
+                    cout << buffer.str() << invalid_replace_value_annotate;
+                  } else {
+                    cerr << ", skipping record." << endl;
+                    break;
+                  }
                 }
                 if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
                 cout << endl;
@@ -361,11 +375,23 @@ int main( int argc, char** argv ) {
                     };
                     
                   } catch ( TaxonNotFound& ) {
-                    cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
-                    if ( replace_invalid ) cout << buffer.str() << invalid_replace_value_annotate;
+                    cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy";
+                    if ( replace_invalid ) {
+                      cerr << '.' << endl;
+                      cout << buffer.str() << invalid_replace_value_annotate;
+                    } else {
+                      cerr << ", skipping record." << endl;
+                      break;
+                    }
                   } catch( boost::bad_lexical_cast& ) {
                     cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
-                    if ( replace_invalid ) cout << buffer.str() << invalid_replace_value_annotate;
+                    if ( replace_invalid ) {
+                      cerr << '.' << endl;
+                      cout << buffer.str() << invalid_replace_value_annotate;
+                    } else {
+                      cerr << ", skipping record." << endl;
+                      break;
+                    }
                   }
                   if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
                   cout << endl;
