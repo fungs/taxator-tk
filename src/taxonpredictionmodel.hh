@@ -287,7 +287,8 @@ class PredictionsParser {
       std::list< std::string >::iterator field_it;
 
       while( std::getline( source, line ) ) {
-        if( ignoreLine( line ) ) {
+        if( emptyLine(line)) continue;
+        if( ignoreLine(line) ) {
           std::cerr << "PredictionsParser: Ignoring comment line" << std::endl;
           continue;
         }

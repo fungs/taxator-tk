@@ -205,7 +205,7 @@ public:
             std::vector< std::string > key_value_fields;
             std::vector< std::string > key_value;
             tokenizeSingleCharDelim( fields[8], key_value_fields, ";", 0, true );
-            for ( std::vector< std::string >::const_iterator it = key_value_fields.begin(); ! it->empty(); ++it ) {
+            for ( std::vector< std::string >::const_iterator it = key_value_fields.begin(); it != key_value_fields.end(); ++it ) {
                 tokenizeSingleCharDelim( *it, key_value, "=", 2, false );
                 parseKeyValue(key_value[0], key_value[1]); //set values
                 key_value.clear();
@@ -457,7 +457,7 @@ public:
         PredictionRecordType* rec = new PredictionRecordType( tax_ );
         std::string line;
         while( std::getline( handle, line ) ) {
-            if(ignoreLine( line )) continue;
+            if(emptyLine(line) || ignoreLine(line)) continue;
             rec->parse( line );
             return rec;
         }

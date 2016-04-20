@@ -151,8 +151,8 @@ int main( int argc, char** argv ) {
                   if( replace_invalid ) cout << invalid_replace_value_traverse;
                   else cout << taxid;
                 } else cout << buffer.str() << node->data->taxid;
-                if( (++field_it)->empty() ) cout << endl;
-                else cout << default_field_separator << *field_it << endl;
+                while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
+                cout << endl;
               } catch ( TaxonNotFound& ) {
                     cerr << "Could not find node with taxid " << *field_it << " in the taxonomy";
                     if ( ! keep_not_taxid ) cerr << ", skipping record." << endl;
@@ -161,7 +161,7 @@ int main( int argc, char** argv ) {
                       cout << buffer.str();
                       if( replace_invalid ) cout << invalid_replace_value_traverse; //TODO: only works in combination with keep-invalid
                       else cout << *field_it;
-                      if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                      while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                       cout << endl;
                     }
               } catch( boost::bad_lexical_cast& ) {
@@ -211,21 +211,21 @@ int main( int argc, char** argv ) {
                   node = interface.getNode( taxid );
                   if( node->data->annotation ) {
                     cout << buffer.str() << node->data->annotation->name;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   } else cout << "node_without_annotate";
                 } catch ( TaxonNotFound& ) {
                   cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
                   if ( replace_invalid ) {
                     cout << buffer.str() << invalid_replace_value_annotate;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   }
                 } catch( boost::bad_lexical_cast& ) {
                   cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                   if ( replace_invalid ) {
                     cout << buffer.str() << invalid_replace_value_annotate;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   }
                 }
@@ -253,21 +253,21 @@ int main( int argc, char** argv ) {
                   node = interface.getNode( taxid );
                   if( node->data->annotation ) {
                     cout << buffer.str() << node->data->annotation->rank;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   } else cout << "node_without_annotate";
                 } catch ( TaxonNotFound& ) {
                   cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy" << endl;
                   if ( replace_invalid ) {
                     cout << buffer.str() << invalid_replace_value_annotate;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   }
                 } catch( boost::bad_lexical_cast& ) {
                   cerr << "Could not parse taxonomic id from field \"" << *field_it << '\"' << endl;
                   if ( replace_invalid ) {
                     cout << buffer.str() << invalid_replace_value_annotate;
-                    if( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                    while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                     cout << endl;
                   }
                 }
@@ -333,7 +333,7 @@ int main( int argc, char** argv ) {
                     break;
                   }
                 }
-                if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                 cout << endl;
                 break;
               }
@@ -393,7 +393,7 @@ int main( int argc, char** argv ) {
                       break;
                     }
                   }
-                  if ( ! (++field_it)->empty() ) cout << default_field_separator << *field_it;
+                  while((++field_it) != fields.end()) cout << default_field_separator << *field_it;
                   cout << endl;
                   break;
                 }
@@ -435,8 +435,8 @@ int main( int argc, char** argv ) {
             } else {
                 filter_field(*field_it);
                 buffer << *field_it;
-                if( ! (++field_it)->empty() ) buffer << default_field_separator << *field_it;
-                else buffer << endl;
+                while((++field_it) != fields.end()) buffer << default_field_separator << *field_it;
+                buffer << endl;
                 break;
             }
           }
