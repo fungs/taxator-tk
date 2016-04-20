@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,131 +29,257 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Hannes Hauswedell <hauswedell@mi.fu-berlin.de>
+// Author: David Weese <david.weese@fu-berlin.de>
+// Author: Enrico Siragusa <enrico.siragusa@fu-berlin.de>
 // ==========================================================================
-// casts for reading different types from strings
-// ==========================================================================+
+// String => Numerical conversions
+// ==========================================================================
 
 #ifndef SEQAN_STREAM_LEXICAL_CAST_H
 #define SEQAN_STREAM_LEXICAL_CAST_H
 
 namespace seqan {
 
-/**
-.Function.lexicalCast
-..cat:Input/Output
-..summary:Cast from a String-type to a numerical type
-..signature:lexicalCast<TTarget>(TSource const & source)
-..signature:lexicalCast<TTarget>(String<TValue, TSpec> const & source)
-..param.source:The string to be read from
-...type:Shortcut.CharString
-...type:nolink:char[]
-...type:nolink:std::string
-...type:nolink:or similar
-..param.TTarget:Type to be casted to
-...type:nolink:$int$
-...type:nolink:$unsigned int$
-...type:nolink:$double$
-...type:nolink:or similar
-..returns:Value of Type TTarget with casted contents of source
-...type:nolink:TTarget
-..remarks:Return value undefined if casting fails, see @Function.lexicalCast2@ for a more robust variant.
-..remarks:This function uses $std::istringstream$ internally, so right now "123foobar" will be
-succesfully cast to an int of 123.
-..include:seqan/stream.h
-..see:Function.lexicalCast2
-..example.text:Using $lexicalCast<>()$ is easy but not as robust as @Function.lexicalCast2@: We cannot detect parsing or conversion errors.
-..example.code:
-unsigned u = 0;
-int i = 0;
-double = 0;
-bool success = false;
+// ============================================================================
+// Exceptions
+// ============================================================================
 
-u = lexicalCast<unsigned>( "3");   // => u is 3.
-u = lexicalCast<unsigned>("-3");   // => u is undefined.
-i = lexicalCast<int>("-3");        // => i is -3.
-d = lexicalCast<double>("-3.99");  // => d is -3.99.
+// ----------------------------------------------------------------------------
+// Exception BadLexicalCast
+// ----------------------------------------------------------------------------
+
+/*!
+ * @class BadLexicalCast
+ * @extends ParseError
+ * @headerfile <seqan/stream.h>
+ * @brief Throw on bad lexical casts.
+ *
+ * @signature struct BadLexicalCast : ParseError;
+ */
+
+struct BadLexicalCast : ParseError
+{
+    /*!
+     * @fn BadLexicalCast::BadLexicalCast
+     * @brief Constructor.
+     *
+     * @signature BadLexicalCast::BadLexicalCast(target, source);
+     *
+     * @param[in] target Target value, used as a tag only.
+     * @param[in] source Source value, a @link StringConcept sequence @endlink of <tt>char</tt>.
+     */
+    template <typename TTarget, typename TSource>
+    BadLexicalCast(TTarget const & target, TSource const & source) :
+        ParseError(std::string("Unable to convert '") +
+                   std::string(begin(source, Standard()), end(source, Standard())) +
+                   "' into " + toCString(Demangler<TTarget>(target)) + ".")
+    {}
+};
+
+// ============================================================================
+// Metafunctions
+// ============================================================================
+
+// ============================================================================
+// Functions
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Function lexicalCast()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn lexicalCast
+ * @headerfile <seqan/stream.h>
+ * @brief Interpret the character sequence in <tt>source</tt> as the numeric value and write to <tt>target</tt>.
+ *
+ * @signature bool lexicalCast(target, source);
+ * @signature TTarget lexicalCast<TTarge>(source)  // throws BadLexicalCast
+ *
+ * @param[out] target  A numeric value to write to.
+ * @param[in]  source  The source sequence of <tt>char</tt> to convert.
+ * @tparam     TTarget The type to use for lexical cast of <tt>source</tt>.
+ *
+ * @throw BadLexicalCast The second variant throws @link BadLexicalCast @endlink in the case that casting failed.
+ *
+ * @return bool <tt>true</tt> if successful and <tt>false</tt> if there was a problem with the cast.
+ *
+ * @section Examples
+ *
+ * The following example shows some lexical cast from various sequence types to numbers.
+ *
+ * @include demos/stream/lexical_cast.cpp
+ *
+ * @include demos/stream/lexical_cast.cpp.stdout
+ */
+
+// single char
+template <typename TSource>
+inline bool
+lexicalCast(char & target, TSource const & source)
+{
+    if (SEQAN_UNLIKELY(length(source) != 1))
+        return false;
+    target = getValue(begin(source, Standard()));
+    return true;
+}
+
+// (weese:) we have to implement our own cast functions as not all sources support toCString()
+
+// Generic version for unsigned integers.
+template <typename TInteger, typename TSource>
+inline SEQAN_FUNC_ENABLE_IF(Is<UnsignedIntegerConcept<TInteger> >, bool)
+lexicalCast(TInteger & target, TSource const & source)
+{
+    typedef typename Iterator<TSource const, Standard>::Type TIter;
+
+    TIter it = begin(source, Standard());
+    TIter itEnd = end(source, Standard());
+
+    if (SEQAN_UNLIKELY(it == itEnd))
+        return false;
+
+    TInteger val = 0;
+    do
+    {
+        unsigned char digit = *it++ - '0';
+
+        // invalid digit detection
+        if (SEQAN_UNLIKELY(digit > 9))
+            return false;
+
+        // overflow detection
+        if (SEQAN_UNLIKELY(val > MaxValue<TInteger>::VALUE / 10))
+            return false;
+        val *= 10;
+
+        // overflow detection
+        val += digit;
+        if (SEQAN_UNLIKELY(val < digit))
+            return false;
+    }
+    while (it != itEnd);
+    target = val;
+    return true;
+}
+
+// Generic version for signed integers.
+template <typename TInteger, typename TSource>
+inline SEQAN_FUNC_ENABLE_IF(Is<SignedIntegerConcept<TInteger> >, bool)
+lexicalCast(TInteger & target, TSource const & source)
+{
+    typedef typename Iterator<TSource const, Standard>::Type TIter;
+
+    TIter it = begin(source, Standard());
+    TIter itEnd = end(source, Standard());
+
+    if (SEQAN_UNLIKELY(it == itEnd))
+        return false;
+
+    TInteger val = 0;
+
+    if (*it != '-')
+    {
+        do
+        {
+            unsigned char digit = *it++ - '0';
+
+            // invalid digit detection
+            if (SEQAN_UNLIKELY(digit > 9))
+                return false;
+
+            // overflow detection
+            if (SEQAN_UNLIKELY(val > MaxValue<TInteger>::VALUE / 10))
+                return false;
+            val *= 10;
+
+            // overflow detection
+            val += digit;
+            if (SEQAN_UNLIKELY(val < digit))
+                return false;
+        }
+        while (it != itEnd);
+    }
+    else
+    {
+        if (SEQAN_UNLIKELY(++it == itEnd))
+            return false;
+        do
+        {
+            unsigned char digit = *it++ - '0';
+
+            // invalid digit detection
+            if (SEQAN_UNLIKELY(digit > 9))
+                return false;
+
+            // overflow detection
+            if (SEQAN_UNLIKELY(val < MinValue<TInteger>::VALUE / 10))
+                return false;
+            val *= 10;
+
+            // overflow detection
+            if (SEQAN_UNLIKELY(MinValue<TInteger>::VALUE - val > -(TInteger)digit))
+                return false;
+            val -= digit;
+        }
+        while (it != itEnd);
+    }
+    target = val;
+    return true;
+}
+
+// Specialization for float.
+
+template <typename TSource>
+inline bool lexicalCast(float & target, TSource const & source)
+{
+    int offset;
+    return (sscanf(toCString(source), "%g%n", &target, &offset) == 1) &&
+           (static_cast<typename Size<TSource>::Type>(offset) == length(source));
+}
+
+// Specialization for double
+template <typename TSource>
+inline bool lexicalCast(double & target, TSource const & source)
+{
+    int offset;
+    return (sscanf(toCString(source), "%lg%n", &target, &offset) == 1) &&
+           (static_cast<typename Size<TSource>::Type>(offset) == length(source));
+}
+
+template <typename TTarget, typename TSource>
+inline TTarget lexicalCast(TSource const & source)
+{
+    TTarget target;
+    if (!lexicalCast(target, source))
+        throw BadLexicalCast(target, source);
+    return target;
+}
+
+// ----------------------------------------------------------------------------
+// Function lexicalCastWithException()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn lexicalCastWithException
+ * @headerfile <seqan/stream.h>
+ * @brief Interpret the character sequence in <tt>source</tt> as the numeric value and write to <tt>target</tt>.
+ *
+ * @signature void lexicalCastWithException(target, source);
+ *
+ * @param[out] target  A numeric value to write to.
+ * @param[in]  source  The source sequence of <tt>char</tt> to convert.
+ *
+ * @throw BadLexicalCast in the case that casting failed
+ *
+ * See @link lexicalCast @endlink for examples.
  */
 
 template <typename TTarget, typename TSource>
-inline TTarget
-lexicalCast(TSource const & source)
+inline void lexicalCastWithException(TTarget & target, TSource const & source)
 {
-    std::istringstream str(source);
-    TTarget ret = 0;
-
-    str >> ret;
-    return ret;
-}
-
-template < typename TTarget, typename TValue, typename TSpec>
-inline TTarget
-lexicalCast(String<TValue, TSpec> const & source)
-{
-    std::istringstream str(toCString(source));
-    TTarget ret = 0;
-    str >> ret;
-    return ret;
-}
-
-template < typename TTarget, typename TValue, typename TSpec>
-inline TTarget
-lexicalCast(String<TValue, TSpec> & source)
-{
-    return lexicalCast<TTarget>(const_cast<String<TValue, TSpec> const &>(source));
-}
-
-/**
-.Function.lexicalCast2
-..cat:Input/Output
-..summary:Cast from a String-type to a numerical type
-..signature:lexicalCast2(TTarget & target, TSource const & source)
-..signature:lexicalCast2(TTarget & target, String<TValue, TSpec> const & source)
-..param.target:Object to hold result of cast
-...type:nolink:$int$
-...type:nolink:$unsigned int$
-...type:nolink:$double$
-...type:nolink:or similar
-..param.source:The string to be read from
-...type:Shortcut.CharString
-...type:nolink:char[]
-...type:nolink:std::string
-...type:nolink:or similar
-..returns:$true$ if cast was successful, $false$ otherwise
-...type:nolink:$bool$
-..remarks:uses istringstream internally, so right now "123foobar" will be
-succesfully cast to an int of 123
-..include:seqan/stream.h
-..see:Function.lexicalCast
-..example.text:Using lexicalCast2 is straightforward and we can detect errors.
-..example.code:
-unsigned u = 0;
-int i = 0;
-double = 0;
-bool success = false;
-
-success = lexicalCast2(u, "3");      // => success is true, u is 3.
-success = lexicalCast2(u, "-3");     // => success is false, u is undefined.
-success = lexicalCast2(i, "-3");     // => success is true, i is -3.
-success = lexicalCast2(d, "-3.99");  // => success is true, d is -3.99.
- */
-
-// TODO(holtgrew): Why is the result of lexicalCast2(unsigned, "3.99") true?
-
-template < typename TTarget, typename TSource >
-inline bool
-lexicalCast2(TTarget & target, TSource const & source)
-{
-    std::istringstream str(source);
-    return bool(str >> target);
-}
-
-template < typename TTarget, typename TValue, typename TSpec>
-inline bool
-lexicalCast2(TTarget & target, String<TValue, TSpec> const & source)
-{
-    std::istringstream str(toCString(source));
-    return bool(str >> target);
+    if (!lexicalCast(target, source))
+        throw BadLexicalCast(target, source);
 }
 
 }

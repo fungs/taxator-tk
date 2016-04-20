@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,8 @@
 
 // TODO(holtgrew): Documentation in this header necessary or internal only?
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
 
 namespace seqan {
 
@@ -82,6 +82,8 @@ typedef Tag<AlignmentSplitBreakpoint_> SplitBreakpointAlignment;
 template <typename TSpec = FreeEndGaps_<> >
 struct GlobalAlignment_;
 
+typedef GlobalAlignment_<> DPGlobal;
+
 // ----------------------------------------------------------------------------
 // Class SuboptimalAlignment
 // ----------------------------------------------------------------------------
@@ -103,6 +105,8 @@ typedef Tag<AlignmentSuboptimal_> SuboptimalAlignment;
 template <typename TSpec = Default>
 struct LocalAlignment_;
 
+typedef LocalAlignment_<> DPLocal;
+typedef LocalAlignment_<SuboptimalAlignment> DPLocalEnumerate;
 
 // ----------------------------------------------------------------------------
 // Class TraceBitMap_
@@ -190,6 +194,22 @@ struct AffineGaps_;
 typedef Tag<AffineGaps_> AffineGaps;
 
 // ----------------------------------------------------------------------------
+// Tag DynamicGaps
+// ----------------------------------------------------------------------------
+
+/*!
+ * @tag AlignmentAlgorithmTags#DynamicGaps
+ * @headerfile <seqan/align.h>
+ * @brief Tag for selecting dynamic gap cost model. This tag can be used for all standard DP algorithms.
+ *
+ * @signature struct DynamicGaps_;
+ * @signature typedef Tag<DynamicGaps_> DynamicGaps;
+ */
+
+struct DynamicGaps_;
+typedef Tag<DynamicGaps_> DynamicGaps;
+
+// ----------------------------------------------------------------------------
 // Class DPProfile
 // ----------------------------------------------------------------------------
 
@@ -232,6 +252,21 @@ typedef Tag<DPLastRow_> DPLastRow;
 struct DPLastColumn_;
 typedef Tag<DPLastColumn_> DPLastColumn;
 
+template <typename TDPType, typename TBand, typename TFreeEndGaps = FreeEndGaps_<False, False, False, False>,
+          typename TTraceConfig = TracebackOn<TracebackConfig_<SingleTrace, GapsLeft> > >
+class AlignConfig2
+{
+public:
+    TBand _band;
+
+    AlignConfig2() : _band()
+    {}
+
+    template <typename TPosition>
+    AlignConfig2(TPosition const & lDiag, TPosition const & uDiag) : _band(lDiag, uDiag)
+    {}
+};
+
 // ============================================================================
 // Metafunctions
 // ============================================================================
@@ -260,6 +295,35 @@ struct IsGlobalAlignment_<DPProfile_<TAlgoSpec, TGapCosts, TTraceFlag> >:
 template <typename TAlgoSpec, typename TGapCosts, typename TTraceFlag>
 struct IsGlobalAlignment_<DPProfile_<TAlgoSpec, TGapCosts, TTraceFlag> const>:
     IsGlobalAlignment_<TAlgoSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction TraceTail_
+// ----------------------------------------------------------------------------
+
+// define whether to include the 'tail' of an alignment in the trace
+template <typename TSpec>
+struct TraceTail_ :
+    IsGlobalAlignment_<TSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction TraceHead_
+// ----------------------------------------------------------------------------
+
+// define whether to include the 'head' of an alignment in the trace
+template <typename TSpec>
+struct TraceHead_ :
+    IsGlobalAlignment_<TSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction HasTerminationCriterium_
+// ----------------------------------------------------------------------------
+
+// check whether an algorithm has an early termination criterium
+// if an algorithm has this, it will get a DPscout that can be terminated
+// see dp_scout.h for more info
+template <typename TSpec>
+struct HasTerminationCriterium_ :
+    False {};
 
 // ----------------------------------------------------------------------------
 // Metafunction IsLocalAlignment_
@@ -424,4 +488,4 @@ struct IsFreeEndGap_<FreeEndGaps_<TFirstRow, TFirstColumn, TLastRow, True> const
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -51,18 +51,20 @@ typedef Tag<Normal_> Normal;
 struct LogNormal_;
 typedef Tag<LogNormal_> LogNormal;
 
-/**
-.Tag.Lognormal Construction:
-..summary:Specify parameters for lognormal distribution construction.
-..cat:Random
-..include:seqan/random.h
-..tag.MuSigma:
-...summary:Tag to specify that the given parameters are mu and sigma of the underlying normal distribution for lognormal distributions.
-..tag.MeanStdDev:
-...summary:Tag to specify that the given parameters are mean an standard deviation of the lognormal distribution.
-..wiki:Tutorial/Randomness|Tutorial: Randomness
-..see:Spec.Log-Normal Pdf
-*/
+/*!
+ * @defgroup LognormalConstructionTags
+ * @brief Specify parameters for lognormal distribution construction.
+ *
+ * @tag LognormalConstructionTags#MuSigma
+ * @headerfile <seqan/random.h>
+ * @brief Tag to specify that the given parameters are mu and sigma of the underlying normal distribution for lognormal
+ *        distributions.
+ *
+ * @tag LognormalConstructionTags#MeanStdDev
+ * @headerfile <seqan/random.h>
+ * @brief Tag to specify that the given parameters are mean and standard deviation of the underlying normal distribution
+ *        for lognormal distributions.
+ */
 
 struct MuSigma_;
 typedef Tag<MuSigma_> MuSigma;
@@ -73,15 +75,32 @@ typedef Tag<MeanStdDev_> MeanStdDev;
 // Classes
 // ===========================================================================
 
-/**
-.Spec.Log-Normal Pdf
-..general:Class.Pdf
-..summary:Log-normal probability density function.
-..remark:Note that you can construct this either with mu/sigma of the underlying normal distribution (default) or with the mean and standard deviation of the log-normal distribution.
-..cat:Random
-..include:seqan/random.h
-..wiki:Tutorial/Randomness|Tutorial: Randomness
-*/
+/*!
+ * @class LogNormalPdf Log-Normal Pdf
+ * @headerfile <seqan/random.h>
+ * @extends Pdf
+ * @brief Log-normal probability density function.
+ *
+ * @signature template <>
+ *            class Pdf<LogNormal>;
+ *
+ * @section Remarks
+ *
+ * Note that you can construct this either with mu/sigma of the underlying normal distribution (default) or with the
+ * mean and standard deviation of the log-normal distribution.
+ *
+ *
+ * @fn LogNormalPdf::Pdf
+ * @brief Constructor for log-normal Pdf.
+ *
+ * @signature Pdf::Pdf(mu,   sigma[, MuSigma()]);
+ * @signature Pdf::Pdf(mean, stdDev, MeanStdDev());
+ *
+ * @param[in] mu     Mean of the underlying normal distribution, double.
+ * @param[in] sigma  Standard deviation of the underlying normal distribution, double.
+ * @param[in] mean   Mean of the log-normal distribution, double.
+ * @param[in] stdDev Standard deviation of the log-normal distribution, double.
+ */
 
 template <>
 class Pdf<LogNormal>
@@ -89,24 +108,6 @@ class Pdf<LogNormal>
 public:
     Pdf<Normal> _normalDist;
 
-/**
-.Memfunc.Log-Normal Pdf#Pdf
-..class:Spec.Log-Normal Pdf
-..summary:Constructor for log-normal Pdf.
-Log-normal PDFs can either be initialized by the mean and standard deviation of the underlying normal distribution or directly of the log-normal distribution.
-..signature:Pdf<LogNormal>(mu, sigma[, MuSigma()])
-..signature:Pdf<LogNormal>(mean, stdDev, MeanStdDev())
-..param.mu:Mean of the underlying normal distribution.
-...type:nolink:double
-..param.sigma:Standard deviation of the underlying normal distribution.
-...type:nolink:double
-..param.mean:Mean of the log-normal distribution.
-...type:nolink:double
-..param.stdDev:Standard deviation of the log-normal distribution.
-...type:nolink:double
-..see:Tag.Lognormal Construction.tag.MuSigma
-..see:Tag.Lognormal Construction.tag.MeanStdDev
-*/
     Pdf(double mu, double sigma, MuSigma const &)
             : _normalDist(mu, sigma)
     {
@@ -114,8 +115,8 @@ Log-normal PDFs can either be initialized by the mean and standard deviation of 
     }
 
     Pdf(double mean, double stddev, MeanStdDev const &)
-            : _normalDist(::std::log(mean) - 0.5 * ::std::log(1.0 + stddev * stddev / mean / mean),
-                          ::std::sqrt(::std::log(1.0 + stddev * stddev / mean / mean)))
+            : _normalDist(std::log(mean) - 0.5 * std::log(1.0 + stddev * stddev / mean / mean),
+                          std::sqrt(std::log(1.0 + stddev * stddev / mean / mean)))
     {
         SEQAN_CHECKPOINT;
     }

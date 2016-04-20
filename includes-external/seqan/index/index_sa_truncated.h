@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // This file contains the Truncated VSTree iterator spec for IndexSa.
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INDEX_SA_STREE_TRUNCATED_H_
-#define SEQAN_EXTRAS_INDEX_SA_STREE_TRUNCATED_H_
+#ifndef SEQAN_INDEX_SA_STREE_TRUNCATED_H_
+#define SEQAN_INDEX_SA_STREE_TRUNCATED_H_
 
 namespace seqan {
 
@@ -80,7 +80,7 @@ public:
         TBase(_index, MinimalCtor()),
         depth(MaxValue<TDepth>::VALUE)
     {}
-    
+
     Iter(TIndex &_index, TVertexDesc const &_vDesc) :
         TBase(_index, _vDesc),
         depth(MaxValue<TDepth>::VALUE)
@@ -151,7 +151,7 @@ getEmptyEdges(Iter< TIndex, VSTree<TSpec> > const &it)
     TSize repLen = repLength(it);
     Pair<TSize> saRange = range(it);
 
-    register TSize i2 = saRange.i1;
+    TSize i2 = saRange.i1;
     while (i2 < saRange.i2 && suffixLength(saAt(i2, index), index) <= repLen)
         ++i2;
 
@@ -160,4 +160,4 @@ getEmptyEdges(Iter< TIndex, VSTree<TSpec> > const &it)
 
 }
 
-#endif  // #ifndef SEQAN_EXTRAS_INDEX_SA_STREE_TRUNCATED_H_
+#endif  // #ifndef SEQAN_INDEX_SA_STREE_TRUNCATED_H_

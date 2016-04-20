@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -70,20 +70,6 @@ namespace seqan {
 
 // TODO(holtgrew): Change name of specialization to Owner StringSet.
 
-/**
-.Spec.Owner:
-..summary:A string set storing the strings as members.
-..cat:Sequences
-..general:Class.StringSet
-..signature:StringSet<TString, Owner<> >
-..signature:StringSet<TString, Owner<Default> >
-..param.TString:The string type.
-...type:Class.String
-..remarks:The strings are internally stored in a $String<TString>$ object and the character position type is a
-@Class.Pair@ $(seqNo,seqOfs)$ where seqNo identifies the string within the stringset and seqOfs identifies the position within this string.
-..remarks:The position type can be returned or modified by the meta-function @Metafunction.SAValue@ called with the @Class.StringSet@ type.
-..include:seqan/sequence.h
- */
 template <typename TString>
 class StringSet<TString, Owner<Default> >
 {
@@ -98,10 +84,26 @@ public:
     bool            limitsValid;        // is true if limits contains the cumulative sum of the sequence lengths
     TConcatenator   concat;
 
-    StringSet()
-        : limitsValid(true)
+    StringSet() :
+        limitsValid(true)
     {
-        appendValue(limits, 0);
+        _initStringSetLimits(*this);
+    }
+
+    template <typename TOtherString, typename TOtherSpec>
+    StringSet(StringSet<TOtherString, TOtherSpec> const &other) :
+        limitsValid(true)
+    {
+        _initStringSetLimits(*this);
+        assign(*this, other);
+    }
+
+    template <typename TOtherSpec>
+    StringSet(String<TString, TOtherSpec> const &other) :
+        limitsValid(true)
+    {
+        _initStringSetLimits(*this);
+        assign(*this, other);
     }
 
     // ----------------------------------------------------------------------
@@ -120,6 +122,13 @@ public:
     operator[] (TPos pos) const
     {
         return value(*this, pos);
+    }
+
+    template <typename TStringSet>
+    StringSet & operator= (TStringSet const &other)
+    {
+        assign(*this, other);
+        return *this;
     }
 };
 
@@ -141,8 +150,12 @@ inline void appendValue(
     TString2 const & obj,
     Tag<TExpand> tag)
 {
-    if (_validStringSetLimits(me))
-        appendValue(me.limits, lengthSum(me) + length(obj), tag);
+    // we rather invalidate limits here to allow to do modify appended strings:
+    // appendValue(back(stringSet), 'A');
+
+//    if (_validStringSetLimits(me))
+//        appendValue(me.limits, lengthSum(me) + length(obj), tag);
+    me.limitsValid = false;
     appendValue(me.strings, obj, tag);
 }
 
@@ -208,8 +221,6 @@ value(StringSet<TString, Owner<Default> > const & me, TPos pos)
 // Function erase()
 // --------------------------------------------------------------------------
 
-///.Function.erase.param.object.type:Spec.Owner
-
 template <typename TString, typename TPos>
 inline typename Size<StringSet<TString, Owner<Default> > >::Type
 erase(StringSet<TString, Owner<Default> > & me, TPos pos)
@@ -239,7 +250,17 @@ getValueById(StringSet<TString, Owner<TSpec> >& me,
 {
     SEQAN_CHECKPOINT;
     if (id < (TId) length(me)) return value(me, id);
-    static TString tmp = "";
+    static TString tmp = TString();
+    return tmp;
+}
+
+template <typename TString, typename TSpec, typename TId>
+inline typename Reference<StringSet<TString, Owner<TSpec> > const>::Type
+getValueById(StringSet<TString, Owner<TSpec> > const & me,
+            TId const id)
+{
+    if (id < (TId) length(me)) return value(me, id);
+    static TString tmp = TString();
     return tmp;
 }
 
@@ -315,6 +336,22 @@ idToPosition(StringSet<TString, Owner<TSpec> > const&,
 {
     SEQAN_CHECKPOINT;
     return id;
+}
+
+// --------------------------------------------------------------------------
+// Function swap()
+// --------------------------------------------------------------------------
+
+template <typename TString, typename TSpec>
+void swap(StringSet<TString, Owner<TSpec> > & lhs,
+          StringSet<TString, Owner<TSpec> > & rhs)
+{
+    using std::swap;
+
+    swap(lhs.strings, rhs.strings);
+    swap(lhs.limits, rhs.limits);
+    swap(lhs.limitsValid, rhs.limitsValid);
+    swap(lhs.concat, rhs.concat);
 }
 
 }  // namespace seqan

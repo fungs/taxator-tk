@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -61,14 +61,29 @@ typedef Tag<MeanStdDev_> MeanStdDev;
 // Classes
 // ===========================================================================
 
-/**
-.Spec.Beta Pdf
-..signature:Pdf<Beta>
-..general:Class.Pdf
-..summary:Beta probability density function.
-..cat:Random
-..include:seqan/random.h
-*/
+/*!
+ * @class BetaPdf Beta Pdf
+ * @extends Pdf
+ * @headerfile <seqan/random.h>
+ * @brief Probability density function for the Beta function.
+ *
+ * @signature template <>
+ *            class Pdf<Beta>;
+ *
+ *
+ * @fn BetaPdf::Pdf
+ * @brief Constructor for the beta Pdf.
+ *
+ * Use the tags <tt>AlphaBeta</tt> and <tt>MeanStdDev</tt> to select the meaning of the two parameters.
+ *
+ * @signature Pdf::Pdf(alpha, beta[,  AlphaBeta()]);
+ * @signature Pdf::Pdf(mu,    sigma, MeanStdDev());
+ *
+ * @param[in] alpha Alpha value for the beta distribution, <tt>double</tt>.
+ * @param[in] beta  Beta value for the beta distribution, <tt>double</tt>.
+ * @param[in] mu    Mean value for the beta distribution, <tt>double</tt>.
+ * @param[in] sigma Standard deviation value for the beta distribution, <tt>double</tt>.
+ */
 
 template <>
 class Pdf<Beta>
@@ -77,18 +92,6 @@ public:
     double _alpha;
     double _beta;
 
-/**
-.Memfunc.Beta Pdf#Pdf
-..class:Spec.Beta Pdf
-..summary:Constructor for beta Pdf.
-..description:Use the tags $AlphaBeta$ and $MeanStdDev$ to select the meaning of the two parameters.
-..signature:Pdf::Pdf(mu, sigma[, AlphaBeta()])
-..signature:Pdf::Pdf(mu, sigma, MeanStdDev())
-..param.mu:Mean of the beta distribution.
-...type:nolink:double
-..param.sigma:Standard deviation of the beta distribution.
-...type:nolink:double
-*/
     Pdf(double mu, double sigma, MeanStdDev const & /*tag*/)
             : _alpha(((1 - mu) / sigma / sigma - 1 / mu) * mu * mu),
               _beta(_alpha * (1 / mu - 1))

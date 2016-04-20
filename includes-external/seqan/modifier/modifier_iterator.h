@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -53,19 +53,20 @@ template <typename THost, typename TSpec> class ModifiedString;
 // Class ModifiedIterator
 // --------------------------------------------------------------------------
 
-/**
-.Class.ModifiedIterator:
-..summary:Allows to modify arbitrary iterators by specializing what differs from an origin.
-..cat:Modifier
-..signature:ModifiedIterator<THost[, TSpec]>
-..param.THost:Original iterator.
-...type:Concept.RandomAccessIteratorConcept
-..param.TSpec:The modifier type.
-...metafunction:Metafunction.Spec
-..implements:Concept.RandomAccessIteratorConcept
-..remarks:$THost$ can also be a modified iterator, so you can create custom iterators by combining predefined ones.
-..include:seqan/modifier.h
-*/
+/*!
+ * @class ModifiedIterator
+ * @implements RandomAccessIteratorConcept
+ * @headerfile <seqan/modifier.h>
+ * @brief Allows you to modify arbitrary iterators by specializing what differs from an origin.
+ *
+ * @signature template <typename THost[, typename TSpec]>
+ *            class ModifiedIterator;
+ *
+ * @tparam THost The host iterator type.
+ * @tparam TSpec Tag used for the specialization, defaults to <tt>void</tt>.
+ *
+ * <tt>THost</tt> can also be a modified iterator, so you can create custom iterators by combining predefined ones.
+ */
 
 template <typename THost, typename TSpec = void>
 class ModifiedIterator
@@ -73,22 +74,19 @@ class ModifiedIterator
 public:
     typedef typename Cargo<ModifiedIterator>::Type TCargo_;
 
-    Holder<THost, Simple> _host;
+    THost _host;
     TCargo_ _cargo;
 
-    // Constructors
-    
-    ModifiedIterator() : _host(), _cargo()
-    {}
-    
-    template <typename T>
-    explicit
-    ModifiedIterator(T & host) : _host(host)
+    ModifiedIterator()
     {}
 
-    template <typename T>
+    template <typename TOtherHost>
+    ModifiedIterator(ModifiedIterator<TOtherHost, TSpec> const & origin):
+            _host(origin._host), _cargo(origin._cargo)
+    {}
+
     explicit
-    ModifiedIterator(T const & host) : _host(host)
+    ModifiedIterator(THost const & host): _host(host)
     {}
 };
 
@@ -189,7 +187,7 @@ struct Host<ModifiedIterator<THost, TSpec> >
 template <typename THost, typename TSpec>
 struct Host<ModifiedIterator<THost, TSpec> const>
 {
-    typedef THost Type;
+    typedef THost const Type;
 };
 
 // --------------------------------------------------------------------------
@@ -215,19 +213,19 @@ struct Container<ModifiedIterator<THost, TSpec> const>
 // ==========================================================================
 
 // --------------------------------------------------------------------------
-// Function _dataHost()
+// Function host()                                         [ModifiedIterator]
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TSpec>
-inline Holder<THost, Simple> &
-_dataHost(ModifiedIterator<THost, TSpec> & me) 
+inline typename Host<ModifiedIterator<THost, TSpec> >::Type &
+host(ModifiedIterator<THost, TSpec> & me)
 {
     return me._host;
 }
-	
+
 template <typename THost, typename TSpec>
-inline Holder<THost, Simple> const &
-_dataHost(ModifiedIterator<THost, TSpec> const & me) 
+inline typename Host<ModifiedIterator<THost, TSpec> const>::Type &
+host(ModifiedIterator<THost, TSpec> const & me)
 {
     return me._host;
 }
@@ -238,14 +236,14 @@ _dataHost(ModifiedIterator<THost, TSpec> const & me)
 
 // template <typename THost, typename TSpec>
 // inline THost &
-// host(ModifiedIterator<THost, TSpec> & me) 
+// host(ModifiedIterator<THost, TSpec> & me)
 // {
 //     return value(me.data_host);
 // }
 
 // template <typename THost, typename TSpec>
 // inline THost const &
-// host(ModifiedIterator<THost, TSpec> const & me) 
+// host(ModifiedIterator<THost, TSpec> const & me)
 // {
 //     return value(me._host);
 // }
@@ -256,14 +254,14 @@ _dataHost(ModifiedIterator<THost, TSpec> const & me)
 
 template <typename THost, typename TSpec>
 inline typename Reference<typename Cargo<ModifiedIterator<THost, TSpec> >::Type>::Type
-cargo(ModifiedIterator<THost, TSpec> & me) 
+cargo(ModifiedIterator<THost, TSpec> & me)
 {
     return me._cargo;
 }
 
 template <typename THost, typename TSpec>
 inline typename Reference<typename Cargo<ModifiedIterator<THost, TSpec> const>::Type>::Type
-cargo(ModifiedIterator<THost, TSpec> const & me) 
+cargo(ModifiedIterator<THost, TSpec> const & me)
 {
     return me._cargo;
 }
@@ -274,17 +272,22 @@ cargo(ModifiedIterator<THost, TSpec> const & me)
 
 template <typename THost, typename TSpec>
 inline typename Container<ModifiedIterator<THost, TSpec> >::Type //no reference
-container(ModifiedIterator<THost, TSpec> & me) 
+container(ModifiedIterator<THost, TSpec> & me)
 {
     typedef typename Container<ModifiedIterator<THost, TSpec> >::Type TContainer;
-    return TContainer(container(host(me)));
+    TContainer cont(container(host(me)));
+    _copyCargo(cont, me);
+    return cont;
 }
 
 template <typename THost, typename TSpec>
-inline typename Container<ModifiedIterator<THost, TSpec> >::Type //no reference
-container(ModifiedIterator<THost, TSpec> const & me) 
+inline typename Container<ModifiedIterator<THost, TSpec> const>::Type //no reference
+container(ModifiedIterator<THost, TSpec> const & me)
 {
-    return TContainer(container(host(me)));
+    typedef typename Container<ModifiedIterator<THost, TSpec> const>::Type TContainer;
+    TContainer cont(container(host(me)));
+    _copyCargo(cont, me);
+    return cont;
 }
 
 // --------------------------------------------------------------------------
@@ -294,8 +297,8 @@ container(ModifiedIterator<THost, TSpec> const & me)
 template <typename TIteratorHost, typename TSpec, typename TStringHost>
 inline void
 setContainer(
-		ModifiedIterator<TIteratorHost, TSpec> & me, 
-		ModifiedString<TStringHost, TSpec> & cont) 
+        ModifiedIterator<TIteratorHost, TSpec> & me,
+        ModifiedString<TStringHost, TSpec> & cont)
 {
     setContainer(host(me), host(cont));
     _copyCargo(me, cont);
@@ -304,8 +307,8 @@ setContainer(
 template <typename TIteratorHost, typename TSpec, typename TStringHost>
 inline void
 setContainer(
-		ModifiedIterator<TIteratorHost, TSpec> & me, 
-		ModifiedString<TStringHost, TSpec> const & cont) 
+        ModifiedIterator<TIteratorHost, TSpec> & me,
+        ModifiedString<TStringHost, TSpec> const & cont)
 {
     setContainer(host(me), host(const_cast<ModifiedString<TStringHost, TSpec> &>(cont)));
     _copyCargo(me, cont);
@@ -322,14 +325,14 @@ setContainer(
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TSpec>
-inline typename Reference<ModifiedIterator<THost, TSpec> >::Type 
+inline typename Reference<ModifiedIterator<THost, TSpec> >::Type
 value(ModifiedIterator<THost, TSpec> & me)
 {
     return value(host(me));
 }
 
 template <typename THost, typename TSpec>
-inline typename Reference<ModifiedIterator<THost, TSpec> const>::Type 
+inline typename Reference<ModifiedIterator<THost, TSpec> const>::Type
 value(ModifiedIterator<THost, TSpec> const & me)
 {
     return value(host(me));
@@ -340,14 +343,14 @@ value(ModifiedIterator<THost, TSpec> const & me)
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TSpec>
-inline typename Reference<ModifiedIterator<THost, TSpec> >::Type 
+inline typename Reference<ModifiedIterator<THost, TSpec> >::Type
 operator*(ModifiedIterator<THost, TSpec> & me)
 {
     return value(me);
 }
 
 template <typename THost, typename TSpec>
-inline typename Reference<ModifiedIterator<THost, TSpec> const>::Type 
+inline typename Reference<ModifiedIterator<THost, TSpec> const>::Type
 operator*(ModifiedIterator<THost, TSpec> const & me)
 {
     return value(me);
@@ -480,53 +483,55 @@ operator-(ModifiedIterator<THost, TSpec> const & a, ModifiedIterator<THost, TSpe
 // Function goBegin()
 // --------------------------------------------------------------------------
 
-template <typename THost, typename TSpec, typename TContainer>
-inline void
-goBegin(ModifiedIterator<THost, TSpec> & me,
-        TContainer const & container)
-{
-    host(me) = begin(container);
-}
+// (weese:) the default implementations should do the same
 
-template <typename THost, typename TSpec>
-inline void
-goBegin(ModifiedIterator<THost, TSpec> & me)
-{
-    goBegin(me, container(me));
-}
+//template <typename THost, typename TSpec, typename TContainer>
+//inline void
+//goBegin(ModifiedIterator<THost, TSpec> & me,
+//        TContainer & container)
+//{
+//    host(me) = begin(host(container));
+//}
+//
+//template <typename THost, typename TSpec>
+//inline void
+//goBegin(ModifiedIterator<THost, TSpec> & me)
+//{
+//    goBegin(me, container(me));
+//}
 
 // --------------------------------------------------------------------------
 // Function goEnd()
 // --------------------------------------------------------------------------
 
-template <typename THost, typename TSpec, typename TContainer>
-inline void
-goEnd(ModifiedIterator<THost, TSpec> & me,
-      TContainer const & container)
-{
-    host(me) = end(container);
-}
-
-template <typename THost, typename TSpec>
-inline void
-goEnd(ModifiedIterator<THost, TSpec> & me)
-{
-    goEnd(me, container(me));
-}
+//template <typename THost, typename TSpec, typename TContainer>
+//inline void
+//goEnd(ModifiedIterator<THost, TSpec> & me,
+//      TContainer & container)
+//{
+//    host(me) = end(host(container));
+//}
+//
+//template <typename THost, typename TSpec>
+//inline void
+//goEnd(ModifiedIterator<THost, TSpec> & me)
+//{
+//    goEnd(me, container(me));
+//}
 
 // --------------------------------------------------------------------------
 // Function position()
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TSpec>
-inline typename Position<ModifiedIterator<THost, TSpec> const>::Type 
+inline typename Position<ModifiedIterator<THost, TSpec> const>::Type
 position(ModifiedIterator<THost, TSpec> const & me)
 {
     return position(host(me));
 }
 
 template <typename THost, typename TSpec, typename TContainer>
-inline typename Position<ModifiedIterator<THost, TSpec> const>::Type 
+inline typename Position<ModifiedIterator<THost, TSpec> const>::Type
 position(ModifiedIterator<THost, TSpec> const & me, TContainer const &cont)
 {
     return position(host(me), cont);
@@ -649,17 +654,17 @@ atEnd(ModifiedIterator<THost, TSpec> const & me)
 // Adapt SeqAn modified to std.
 namespace std
 {
-	template<typename THost, typename TSpec>
-	struct iterator_traits<seqan::ModifiedIterator<THost, TSpec> >
-	{
-		typedef ::seqan::ModifiedIterator<THost, TSpec> TIter;
+    template<typename THost, typename TSpec>
+    struct iterator_traits<seqan::ModifiedIterator<THost, TSpec> >
+    {
+        typedef seqan::ModifiedIterator<THost, TSpec> TIter;
 
-		typedef random_access_iterator_tag iterator_category;
-		typedef typename ::seqan::Value<TIter>::Type value_type;
-		typedef typename ::seqan::Difference<TIter>::Type difference_type;
-		typedef typename ::seqan::Value<TIter>::Type * pointer;
-		typedef typename ::seqan::Reference<TIter>::Type reference;
-	};
+        typedef random_access_iterator_tag iterator_category;
+        typedef typename seqan::Value<TIter>::Type value_type;
+        typedef typename seqan::Difference<TIter>::Type difference_type;
+        typedef typename seqan::Value<TIter>::Type * pointer;
+        typedef typename seqan::Reference<TIter>::Type reference;
+    };
 }
 
 #endif

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,14 +34,10 @@
 
 // TODO(holtgrew): Parse more than just the key/value pair.
 
-#ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_
-#define SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_
+#ifndef SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_
+#define SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_
 
 namespace seqan {
-
-// ============================================================================
-// Forwards
-// ============================================================================
 
 // ============================================================================
 // Tags, Classes, Enums
@@ -51,32 +47,39 @@ namespace seqan {
 // Class VcfHeaderRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Class.VcfHeaderRecord
-..cat:VCF I/O
-..signature:class VcfHeaderRecord
-..summary:Store key/value pair for VCF header records.
-..include:seqan/vcf_io.h
+/*!
+ * @class VcfHeaderRecord
+ * @headerfile <seqan/vcf_io.h>
+ * @brief Store key/value pair for VCF header records.
+ *
+ * @signature class VcfHeaderRecord;
+ *
+ * @var CharString VcfHeaderRecord::key;
+ * @brief Key of the header record.
+ *
+ * @var CharString VcfHeaderRecord::value;
+ * @brief Value of the header record.
+ */
 
-.Memfunc.VcfHeaderRecord#VcfHeaderRecord
-..class:Class.VcfHeaderRecord
-..summary:Constructor
-..description:The default constructor and construction from key/value pair are provided.
-..signature:VcfHeaderRecord::VcfHeaderRecord()
-..signature:VcfHeaderRecord::VcfHeaderRecord(key, value)
-..param.key:Key of the header record.
-...type:Shortcut.CharString
-..param.key:Key of the header record.
-...type:Shortcut.CharString
+/*!
+ * @fn VcfHeaderRecord::VcfHeaderRecord
+ * @brief Constructor
+ *
+ * @signature VcfHeaderRecord::VcfHeaderRecord();
+ * @signature VcfHeaderRecord::VcfHeaderRecord(key, value);
+ *
+ * @param[in] key   Key of the header record, @link CharString @endlink.
+ * @param[in] value Key of the header record, @link CharString @endlink.
+ */
 
-.Memvar.VcfHeaderRecord#key
-..class:Class.VcfHeaderRecord
-..summary:Key of the header record (@Shortcut.CharString@).
-
-.Memvar.VcfHeaderRecord#value
-..class:Class.VcfHeaderRecord
-..summary:Value of the header record (@Shortcut.CharString@).
-*/
+/*!
+ * @fn VcfHeaderRecord#clear
+ *
+ * @brief Clear a VcfHeaderRecord.
+ * @signature void clear(record);
+ *
+ * @param[in,out] record The VcfHeaderRecord to clear.
+ */
 
 class VcfHeaderRecord
 {
@@ -97,22 +100,8 @@ public:
 };
 
 // ============================================================================
-// Metafunctions
-// ============================================================================
-
-// ============================================================================
 // Functions
 // ============================================================================
-
-/**
-.Function.VcfHeaderRecord#clear
-..class:Class.VcfHeaderRecord
-..summary:Clear a @Class.VcfHeaderRecord@.
-..signature:void clear(record)
-..param.record:@Class.VcfHeaderRecord@ to clear.
-...type:Class.VcfHeaderRecord
-..include:seqan/vcf_io.h
-*/
 
 inline void clear(VcfHeaderRecord & record)
 {
@@ -122,4 +111,4 @@ inline void clear(VcfHeaderRecord & record)
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_HEADER_RECORD_H_

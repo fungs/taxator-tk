@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 
 // TODO(aiche): check if parts of the functionality could be merged with lexicalCast in stream module
 
-#ifndef SEQAN_CORE_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_
-#define SEQAN_CORE_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_
+#ifndef SEQAN_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_
+#define SEQAN_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_
 
 #include <sstream>
 #include <string>
@@ -43,16 +43,6 @@
 #include <seqan/sequence.h>
 
 namespace seqan {
-
-// ----------------------------------------------------------------------------
-// Function toCString()
-// ----------------------------------------------------------------------------
-
-// TODO(aiche): move to stl_adapter
-inline char const * toCString(std::string const & me)
-{
-    return me.c_str();
-}
 
 // ----------------------------------------------------------------------------
 // Function _tryCast()
@@ -197,4 +187,4 @@ inline bool _convertArgumentValue(TObject & dst, ArgParseArgument const & opt, s
 
 } // namespace seqan
 
-#endif // SEQAN_CORE_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_
+#endif // SEQAN_INCLUDE_ARG_PARSE_ARG_PARSE_TYPE_SUPPRT_H_

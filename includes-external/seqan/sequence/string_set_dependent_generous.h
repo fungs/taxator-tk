@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@
 // ==========================================================================
 
 #ifndef SEQAN_SEQUENCE_STRING_SET_DEPENDENT_GENEROUS_H_
-#define SEQAN_SEQUENCE_STRING_SET_DEPENDENT_GENEROUSH_
+#define SEQAN_SEQUENCE_STRING_SET_DEPENDENT_GENEROUS_H_
 
 namespace seqan {
 
@@ -81,19 +81,17 @@ public:
     bool            limitsValid;        // is true if limits contains the cumulative sum of the sequence lengths
     TConcatenator   concat;
 
-    StringSet()
-        : limitsValid(true)
+    StringSet() :
+        limitsValid(true)
     {
-        SEQAN_CHECKPOINT;
-        appendValue(limits, 0);
+        _initStringSetLimits(*this);
     }
 
     template <typename TDefault>
-    StringSet(StringSet<TString, Owner<TDefault> > const& _other)
-        : limitsValid(true)
+    StringSet(StringSet<TString, Owner<TDefault> > const& _other) :
+        limitsValid(true)
     {
-        SEQAN_CHECKPOINT;
-        appendValue(limits, 0);
+        _initStringSetLimits(*this);
         for (unsigned int i = 0; i < length(_other); ++i)
             appendValue(*this, _other[i]);
     }
@@ -285,4 +283,4 @@ idToPosition(StringSet<TString, Dependent<Generous> > const& me,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_SEQUENCE_STRING_SET_DEPENDENT_GENEROUSH_
+#endif  // #ifndef SEQAN_SEQUENCE_STRING_SET_DEPENDENT_GENEROUS_H_

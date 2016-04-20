@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Global alignment interface for journaled strings.
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_
 
 namespace seqan {
 
@@ -70,18 +70,22 @@ TScoreValue globalAlignment(String<TValue, Journaled<THostSpec, TJournalSpec, TB
                             TReference const & reference,
                             TSource const & source,
                             Score<TScoreValue, TScoreSpec> const & scoringScheme,
-                            AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> const & alignConfig,
-                            TAlgoTag const & algoTag)
+                            AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> const & /*alignConfig*/,
+                            TAlgoTag const & /*tag*/)
 {
     typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
     typedef typename Position<TJournalString>::Type TPosition;
     typedef typename Size<TJournalString>::Type TSize;
     typedef TraceSegment_<TPosition, TSize> TTraceSegment;
+    typedef AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> TAlignConfig;
+    typedef typename SubstituteAlignConfig_<TAlignConfig>::Type TFreeEndGaps;
+    typedef AlignConfig2<DPGlobal, DPBandConfig<BandOff>, TFreeEndGaps, TracebackOn<TracebackConfig_<SingleTrace, GapsLeft> > > TDPConfig;
 
     String<TTraceSegment> traceSegments;
-
+    DPScoutState_<Default> dpScoutState;
     // We need to do that in order to build journal strings from two simple sequences.
-    TScoreValue res = _setUpAndRunAlignment(traceSegments, reference, source, scoringScheme, alignConfig, algoTag);
+    TScoreValue res = _setUpAndRunAlignment(traceSegments, dpScoutState, reference, source, scoringScheme, TDPConfig(),
+                                            IsSameType<TAlgoTag, NeedlemanWunsch>());
     _adaptTraceSegmentsTo(journaledString, reference, source, traceSegments);
     return res;
 }
@@ -157,21 +161,25 @@ TScoreValue globalAlignment(String<TValue, Journaled<THostSpec, TJournalSpec, TB
                             TReference const & reference,
                             TSource const & source,
                             Score<TScoreValue, TScoreSpec> const & scoringScheme,
-                            AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> const & alignConfig,
+                            AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> const & /*alignConfig*/,
                             int lowerDiag,
                             int upperDiag,
-                            TAlgoTag const & algoTag)
+                            TAlgoTag const & /*algoTag*/)
 {
     typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
     typedef typename Position<TJournalString>::Type TPosition;
     typedef typename Size<TJournalString>::Type TSize;
     typedef TraceSegment_<TPosition, TSize> TTraceSegment;
+    typedef AlignConfig<TOP, LEFT, RIGHT, BOTTOM, TACSpec> TAlignConfig;
+    typedef typename SubstituteAlignConfig_<TAlignConfig>::Type TFreeEndGaps;
+    typedef AlignConfig2<DPGlobal, DPBandConfig<BandOn>, TFreeEndGaps, TracebackOn<TracebackConfig_<SingleTrace, GapsLeft> > > TDPConfig;
 
     String<TTraceSegment> traceSegments;
-
+    DPScoutState_<Default> dpScoutState;
     // We need to do that in order to build journal strings from two simple sequences.
-    TScoreValue res = _setUpAndRunAlignment(traceSegments, reference, source, scoringScheme, alignConfig, lowerDiag,
-                                            upperDiag, algoTag);
+    TScoreValue res = _setUpAndRunAlignment(traceSegments, dpScoutState, reference, source, scoringScheme,
+                                            TDPConfig(lowerDiag, upperDiag),
+                                            IsSameType<TAlgoTag, NeedlemanWunsch>());
     _adaptTraceSegmentsTo(journaledString, reference, source, traceSegments);
     return res;
 }
@@ -243,4 +251,4 @@ TScoreValue globalAlignment(String<TValue, Journaled<THostSpec, TJournalSpec, TB
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_INTERFACE_H_

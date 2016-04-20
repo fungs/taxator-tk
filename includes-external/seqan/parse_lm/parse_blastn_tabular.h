@@ -1,7 +1,7 @@
 // ==========================================================================
 //                                  parse_lm
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 
 // SEQAN_NO_GENERATED_FORWARDS
 
-#ifndef EXTRAS_INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_
-#define EXTRAS_INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_
+#ifndef INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_
+#define INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_
 
 namespace seqan {
 
@@ -62,42 +62,34 @@ typedef Tag<BlastnTabular_> BlastnTabular;
 // Function readRecord()
 // ----------------------------------------------------------------------------
 
-/**
-.Function.LocalMatchStore#readRecord
-..class:Class.LocalMatchStore
-..cat:Local Match Store
-..signature:readRecord(store, stream, BlastnTabular())
-..param.store:@Class.LocalMatchStore@ object to read into.
-...type:Class.LocalMatchStore
-..returns:$int$, 0 on success, non-0 on errors and EOF
-..include:seqan/parse_lm.h
- */
-
-template <typename TLocalMatchStore, typename TStream, typename TPassSpec>
-int
+template <typename TLocalMatchStore, typename TForwardIter>
+inline void
 readRecord(TLocalMatchStore & store,
-           RecordReader<TStream, SinglePass<TPassSpec> > & recordReader,
+           TForwardIter & iter,
            BlastnTabular const & /*tag*/)
 {
     typedef typename TLocalMatchStore::TPosition TPosition;
-    //typedef typename TLocalMatchStore::TPosition TId;
-    
-    if (atEnd(recordReader))
-        return 1;
-    // Skip any comments.
-    while (value(recordReader) == '#') {
-        int res = skipLine(recordReader);
-        if (res)
-            return res;
-        if (atEnd(recordReader))
-            return 1;
+
+    if (atEnd(iter))
+    {
+        throw ParseError("Unexpected end of file!");
+        return;
     }
 
-    SEQAN_ASSERT_NEQ(value(recordReader), '#');
+    // Skip any comments.
+    while (value(iter) == '#') {
+        skipLine(iter);
+        if (atEnd(iter))
+        {
+            throw ParseError("Unexpected end of file!");
+            return;
+        }
+    }
+
+    SEQAN_ASSERT_NEQ(value(iter), '#');
 
     // Read line.
     CharString buffer;
-    int res = 0;
 
     CharString subjectName;
     CharString queryName;
@@ -107,89 +99,86 @@ readRecord(TLocalMatchStore & store,
     TPosition queryEndPos = 0;
 
     // Field: query id
-    res = readUntilChar(queryName, recordReader, '\t');
-    if (res) return res;
+    readUntil(queryName, iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: subject id
-    res = readUntilChar(subjectName, recordReader, '\t');
-    if (res) return res;
+    readUntil(subjectName, iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: % identity
-    res = skipUntilChar(recordReader, '\t');
-    if (res) return res;
+    skipUntil(iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: alignment length
-    res = skipUntilChar(recordReader, '\t');
-    if (res) return res;
+    skipUntil(iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: mismatches
-    res = skipUntilChar(recordReader, '\t');
-    if (res) return res;
+    skipUntil(iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: gap opens
-    res = skipUntilChar(recordReader, '\t');
-    if (res) return res;
+    skipUntil(iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: q. start
     clear(buffer);
-    res = readDigits(buffer, recordReader);
-    if (res) return res;
+    readUntil(buffer, iter, NotFunctor<IsDigit>());
     queryBeginPos = lexicalCast<TPosition>(buffer) - 1;
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: q. end
     clear(buffer);
-    res = readDigits(buffer, recordReader);
-    if (res) return res;
+    readUntil(buffer, iter, NotFunctor<IsDigit>());
     queryEndPos = lexicalCast<TPosition>(buffer);
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: s. start
     clear(buffer);
-    res = readDigits(buffer, recordReader);
-    if (res) return res;
+    readUntil(buffer, iter, NotFunctor<IsDigit>());
     subjectBeginPos = lexicalCast<TPosition>(buffer) - 1;
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: s. end
     clear(buffer);
-    res = readDigits(buffer, recordReader);
-    if (res) return res;
+    readUntil(buffer, iter, NotFunctor<IsDigit>());
     subjectEndPos = lexicalCast<TPosition>(buffer);
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: evalue
-    res = skipUntilChar(recordReader, '\t');
-    if (res) return res;
+    skipUntil(iter, IsTab());
+
     // Skip TAB.
-    res = skipChar(recordReader, '\t');
-    if (res) return res;
+    skipOne(iter, IsTab());
+
     // Field: bit score
-    res = skipUntilWhitespace(recordReader);
-    if (res) return res;
+    skipUntil(iter, IsWhitespace());
 
     // Finally, append the local match.
     appendLocalMatch(store, subjectName, subjectBeginPos, subjectEndPos, queryName, queryBeginPos, queryEndPos);
-
-    return 0;
 }
 
 }  // namespace seqan
 
-#endif  // EXTRAS_INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_
+#endif  // INCLUDE_SEQAN_PARSE_LM_PARSE_BLASTN_TABULAR_H_

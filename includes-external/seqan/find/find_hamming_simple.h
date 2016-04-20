@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -42,20 +42,19 @@
 
 namespace SEQAN_NAMESPACE_MAIN {
 
-/**
-.Spec.HammingSimpleFinder:
-..summary:A brute force online searching algorithm for approximate string matching with hamming distance.
-..general:Class.Pattern
-..cat:Searching
-..signature:Pattern<TNeedle, HammingSimple>
-..param.TNeedle:The needle type.
-...type:Class.String
-..remarks:This specialization should only be used if no other is applicable or for verification purposes.
-..include:seqan/find.h
-*/
-
-///.Class.Pattern.param.TSpec.type:Spec.HammingSimpleFinder
-///.Class.Pattern.class:Spec.HammingSimpleFinder
+/*!
+ * @class HammingSimplePattern
+ * @extends Pattern
+ * @headerfile <seqan/find.h>
+ * @brief A brute force online searching algorithm for approximate string matching with hamming distance.
+ *
+ * @signature template <typename TNeedle>
+ *            class Pattern<TNeedle, HammingSimple>;
+ *
+ * @tparam TNeedle The needle type. Types: String
+ *
+ * This specialization should only be used if no other is applicable or for verification purposes.
+ */
 
 struct HammingSimple_;
 typedef Tag<HammingSimple_> HammingSimple;
@@ -110,7 +109,7 @@ inline void _patternMatchNOfFinder(Pattern<TNeedle, HammingSimple> & pattern, bo
 
 
 template <typename TNeedle, typename TNeedle2>
-void setHost (Pattern<TNeedle, HammingSimple> & me, 
+void setHost (Pattern<TNeedle, HammingSimple> & me,
               const TNeedle2 & needle, int k) {
     SEQAN_CHECKPOINT;
 
@@ -196,7 +195,7 @@ inline bool _findHammingSimpleCharsEqual(Dna5Q const & a, Dna5Q const & b, Patte
 
 
 template <typename TFinder, typename TNeedle>
-inline bool find(TFinder &finder, 
+inline bool find(TFinder &finder,
                  Pattern<TNeedle, HammingSimple> &me,
                  int minScore) {
     SEQAN_CHECKPOINT;
@@ -266,11 +265,11 @@ inline bool find(TFinder &finder,
 
     _setFinderEnd(finder, i + length(ndl));
     setPosition(finder, beginPosition(finder));
-    return true; 
+    return true;
 }
 
 template <typename TFinder, typename TNeedle>
-inline bool find(TFinder &finder, 
+inline bool find(TFinder &finder,
                  Pattern<TNeedle, HammingSimple> &me)
 {
     return find(finder, me, -me.maxDistance);

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -39,8 +39,8 @@
 // These functions can be called with alignmentFreeComparison().
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_
-#define SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_
 
 namespace seqan {
 
@@ -638,4 +638,4 @@ void _standardiseCounts(TString & standardisedCounts,
 
 }  // namespace seqan
 
-#endif  // SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_
+#endif  // SEQAN_INCLUDE_SEQAN_ALIGNMENT_FREE_AF_N2_H_

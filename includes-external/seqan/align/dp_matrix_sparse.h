@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_
 
 namespace seqan {
 
@@ -101,7 +101,7 @@ resize(DPMatrix_<TValue, SparseDPMatrix> & dpMatrix)
 
     TSize _dimVertical = length(dpMatrix, DPMatrixDimension_::VERTICAL);
 
-    if (_dimVertical > 0)
+    if (_dimVertical >= length(dpMatrix))
         resize(host(dpMatrix), _dimVertical, Exact());
 }
 
@@ -115,7 +115,7 @@ resize(DPMatrix_<TValue, SparseDPMatrix> & dpMatrix,
 
     TSize _dimVertical = length(dpMatrix, DPMatrixDimension_::VERTICAL);
 
-    if (_dimVertical > 0)
+    if (_dimVertical > length(dpMatrix))
         resize(host(dpMatrix), _dimVertical, fillValue, Exact());
 }
 
@@ -162,4 +162,4 @@ coordinate(DPMatrix_<TValue, SparseDPMatrix> const & /*dpMatrix*/,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_SPARSE_H_

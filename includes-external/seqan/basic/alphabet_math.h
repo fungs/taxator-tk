@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -61,20 +61,26 @@ namespace seqan {
 // Metafunction MaxValue
 // ----------------------------------------------------------------------------
 
+#ifdef PLATFORM_CUDA
+template <typename T>
+struct MaximumValueUnsigned_ { static const T VALUE = ~(T)0; };
+#else
 template <typename T>
 struct MaximumValueUnsigned_ { static const T VALUE; };
+
+template <typename T>
+const T MaximumValueUnsigned_<T>::VALUE = ~(T)0;
+#endif
+
 template <typename T>
 struct MaximumValueSigned_ { static const T VALUE; };
-
 template <typename T = void>
 struct MaximumValueFloat_ { static const float VALUE; };
 template <typename T = void>
 struct MaximumValueDouble_ { static const double VALUE; };
 
 template <typename T>
-const T MaximumValueUnsigned_<T>::VALUE = ~(T)0;
-template <typename T>
-const T MaximumValueSigned_<T>::VALUE = ( (((T)1 <<(BitsPerValue<T>::VALUE - 2)) - 1) <<1) + 1;
+const T MaximumValueSigned_<T>::VALUE = ((((T)1 << (BitsPerValue<T>::VALUE - 2)) - 1) << 1) + 1;
 template <typename T>
 const float MaximumValueFloat_<T>::VALUE = FLT_MAX;
 template <typename T>
@@ -177,6 +183,35 @@ struct MinValue : MinValue_<T> {};
 // Functions
 // ============================================================================
 
+// --------------------------------------------------------------------------
+// Function toUpperValue()
+// --------------------------------------------------------------------------
+
+template <typename TValue>
+inline SEQAN_HOST_DEVICE
+TValue toUpperValue(TValue c)
+{
+    return c;
+}
+
+inline SEQAN_HOST_DEVICE
+char toUpperValue(char c)
+{
+    return c >= 'a' && c <= 'z' ? c + 'A' - 'a' : c;
+}
+
+inline SEQAN_HOST_DEVICE
+signed char toUpperValue(signed char c)
+{
+    return toUpperValue(static_cast<char>(c));
+}
+
+inline SEQAN_HOST_DEVICE
+unsigned char toUpperValue(unsigned char c)
+{
+    return toUpperValue(static_cast<char>(c));
+}
+
 // ----------------------------------------------------------------------------
 // Function supremumValueImpl
 // ----------------------------------------------------------------------------
@@ -235,6 +270,32 @@ minValue(T /*tag*/)
     SEQAN_CHECKPOINT;
     T * _tag = 0;
     return infimumValueImpl(_tag);
+}
+
+// ----------------------------------------------------------------------------
+// Function isNegative()
+// ----------------------------------------------------------------------------
+
+// to remove '... < 0 is always false' warning
+template <typename T>
+inline bool
+isNegative(T, False)
+{
+    return false;
+}
+
+template <typename T>
+inline bool
+isNegative(T t, True)
+{
+    return t < 0;
+}
+
+template <typename T>
+inline bool
+isNegative(T t)
+{
+    return isNegative(t, typename IsSameType<T, typename MakeSigned_<T>::Type>::Type());
 }
 
 }  // namespace seqan

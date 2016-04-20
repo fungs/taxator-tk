@@ -58,24 +58,21 @@ public:
         if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
         
         std::cerr << "Loading '" << filename;
-        seqan::MultiSeqFile db_sequences;
-        if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
-            seqan::split( db_sequences, format_ );
-            large_unsigned_int num_records = seqan::length( db_sequences );
-            std::cerr  << "' (total=" << num_records << ")" << std::endl;
-            {
-                boost::progress_display eta( num_records - 1, std::cerr ); //progress bar
-                for( large_unsigned_int i = 0; i < num_records; ++i ) {
-                    StorageStringType seq;
-                    seqan::assignSeq( seq, db_sequences[i], format_ );
-                    std::string id;
-                    seqan::assignSeqId( id, db_sequences[i], format_ );
-                    id2pos_[ id ] = seqan::assignValueById( data_, seq );
-                    ++eta;
-                }
-            }
-            std::cerr << std::endl;
-        } else BOOST_THROW_EXCEPTION(FileError{} << file_info{filename});
+        seqan::SeqFileIn db_sequences(filename.c_str());
+
+        seqan::readRecords(ids_, seqs_, db_sequences);
+        large_unsigned_int num_records = seqan::length( ids_ );
+        
+        std::cerr  << "' (total=" << num_records << ")" << std::endl;
+        
+        auto id = seqan::begin(ids_);
+        
+        for(large_unsigned_int i = 0; i < num_records; ++i){
+            id2pos_[ *id ] = i;
+            seqan::goNext(id);
+        }
+        
+        std::cerr << "fasta-file loaded" << std::endl;
     }
 
     RandomInmemorySeqStoreRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
@@ -83,35 +80,31 @@ public:
         if( ! boost::filesystem::exists( filename ) ) BOOST_THROW_EXCEPTION(FileNotFound{} << file_info{filename});
         
         std::cerr << "Loading '" << filename;
-        seqan::MultiSeqFile db_sequences;
-        if ( seqan::open( db_sequences.concat, filename.c_str(), seqan::OPEN_RDONLY ) ) {
-            seqan::split( db_sequences, format_ );
-            large_unsigned_int num_records = seqan::length( db_sequences );
-            large_unsigned_int effective_num_records = std::min< large_unsigned_int >( num_records, whitelist.size() );
-            std::cerr << "' (total=" << effective_num_records << ")" << std::endl;
-            {
-                boost::progress_display eta( effective_num_records - 1, std::cerr ); //progress bar
-                for( large_unsigned_int i = 0; i < num_records; ++i ) {
-                    StorageStringType seq;
-                    seqan::assignSeq( seq, db_sequences[i], format_ );
-                    std::string id;
-                    seqan::assignSeqId( id, db_sequences[i], format_ );
-
-                    if ( whitelist.count( id ) ) {
-                        id2pos_[ id ] = seqan::assignValueById( data_, seq );
-                        ++eta;
-                    }
-                }
-                assert( seqan::length( data_ ) <= effective_num_records );
+        seqan::SeqFileIn db_sequences(filename.c_str());
+        
+        seqan::readRecords(ids_, seqs_, db_sequences);
+        large_unsigned_int num_records = seqan::length( ids_ );
+        
+        auto id = seqan::begin(ids_);
+        auto seq = seqan::begin(seqs_);
+        
+        //only seqs, make index of ids
+        
+        for(large_unsigned_int i = 0; i < num_records; ++i){
+            if ( whitelist.count( std::string::c_str(*id) ) ) {
+                id2pos_[ *id ] = seqan::assignValueById( data_, *seq );
             }
-            std::cerr << std::endl;
-        } else BOOST_THROW_EXCEPTION(FileError{} << file_info{filename});
+            id++;
+            seq++;
+        }
     }
 
     const StorageStringType& getSequence ( const std::string& id ) const {
-        std::map< std::string, large_unsigned_int >::const_iterator find_it = id2pos_.find( id );
+        seqan::CharString id_ss = id;
+        std::map< seqan::CharString, large_unsigned_int >::const_iterator find_it = id2pos_.find( id_ss );
         if( find_it == id2pos_.end() ) BOOST_THROW_EXCEPTION(SequenceNotFound {} << seqid_info{id});
-        return seqan::value( data_, find_it->second );
+        return(seqan::value( seqs_, find_it->second ));
+        
     };
 
     const WorkingStringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
@@ -135,9 +128,11 @@ public:
 
 protected:
     seqan::StringSet< StorageStringType > data_;
-    std::map< std::string, large_unsigned_int > id2pos_; //hash_map aka unordered_map would be more apt
+    std::map< seqan::CharString, large_unsigned_int > id2pos_;
     const StorageStringType empty_string_;
     Format format_;
+    seqan::StringSet<seqan::CharString> ids_;
+    seqan::StringSet<WorkingStringType> seqs_;
 };
 
 
@@ -190,20 +185,18 @@ class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
 public:
     RandomIndexedSeqstoreRO( const std::string& fasta_filename, const std::string& index_filename ) : index_filename_( index_filename ), write_on_exit_( false ) {
         if ( ! boost::filesystem::exists( index_filename ) )  {
-//             std::cerr << "Index \"" << index_filename << "\" for \"" << fasta_filename << "\" not found, building..." << std::endl;
             if ( seqan::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
                 BOOST_THROW_EXCEPTION(GeneralError{} << general_info{"could not build fasta index"} << file_info{index_filename});
                 return;
             } else write_on_exit_ = true;
-        } else if ( seqan::read( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
+        } else if ( ! seqan::open( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
             BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename});
             return;
         }
 
         //make a thread-safe lookup for identifiers, broken in SEQAN as of version 1.4.1
         unsigned int idx = 0;
-        typedef seqan::Iterator<seqan::StringSet<seqan::CharString>, seqan::Rooted>::Type TStringSetIterator;
-        for (TStringSetIterator it = seqan::begin(index_.refNameStore); !seqan::atEnd(it); seqan::goNext(it)) {
+        for (auto it = seqan::begin(index_.seqNameStore); !seqan::atEnd(it); seqan::goNext(it)) {
             refid2position_[*it] = idx++;
         }
     }
@@ -212,7 +205,7 @@ public:
         assert( start <= stop );
         unsigned int seq_num;
         StringType seq;
-
+        
         /*if ( ! seqan::getIdByName( index_, id.c_str(), seq_num ) ) {
         	std::cerr << "Sequence " << id << " not found in sequence file." << std::endl; //TODO. propagate error
         	return seq;
@@ -222,7 +215,7 @@ public:
         else {
             BOOST_THROW_EXCEPTION(SequenceNotFound {} << seqid_info{id});
         }
-
+        
         stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
         seqan::readRegion( seq, index_, seq_num, start - 1, stop );
         assert( seqan::length( seq ) == (stop - start + 1) );
@@ -238,7 +231,7 @@ public:
 
     ~RandomIndexedSeqstoreRO() {
         if ( write_on_exit_ && ! boost::filesystem::exists( index_filename_ ) )
-            if( seqan::write( index_, index_filename_.c_str() ) ) BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename_});
+            if( seqan::save( index_, index_filename_.c_str() ) ) BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename_});
     }
 
 protected:

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -47,28 +47,32 @@ namespace seqan {
 // Class Simple Seed
 // ---------------------------------------------------------------------------
 
-/**
-.Spec.Simple Seed
-..summary:Describes a seed with start and end position and diagonal upper and lower bounds.
-..cat:Seed Handling
-..general:Class.Seed
-..signature:Seed<Simple, TConfig>
-..param.TConfig:The configuration object used for the seed.
-...default:DefaultSeedConfig.
+/*!
+ * @class SimpleSeed
+ * @headerfile <seqan/seeds.h>
+ * @extends Seed
+ * @brief Describes a seed with start and end position and diagonal upper and lower bounds.
+ *
+ * @signature template <[typename TConfig]>
+ *            class Seed<Simple, TConfig>;
+ *
+ * @tparam TConfig The configuration to use.  Defaults to @link DefaultSeedConfig @endlink.
+ */
 
-.Memfunc.Simple Seed#Seed
-..class:Spec.Simple Seed
-..summary:Constructor
-..signature: Seed<Simple, TConfig> ()
-..signature: Seed<Simple, TConfig> (beginPosH, beginPosV, length)
-..signature: Seed<Simple, TConfig> (beginPosH, beginPosV, endPosH, endPosV)
-..param.beginPosH: Begin position in database (horizontal).
-..param.beginPosV: Begin position in query (vertical).
-..param.endPosH: End position in database (horizontal).
-..param.endPosV: End position in query (vertical).
-..param.length: Length of the seed.
-..include:seqan/seeds.h
-*/
+/*!
+ * @fn SimpleSeed::Seed
+ * @brief Constructor
+ *
+ * @signature Seed::Seed();
+ * @signature Seed::Seed(beginPosH, beginPosV, length);
+ * @signature Seed::Seed(beginPosH, beginPosV, endPosH, endPosV);
+ *
+ * @param[in] beginPosH The begin position in the horizontal position.
+ * @param[in] beginPosV The begin position in the vertical position.
+ * @param[in] length    The length of the seed (in both directions).
+ * @param[in] endPosH   The end position in the horizontal position.
+ * @param[in] endPosV   The end position in the vertical position.
+ */
 
 template <typename TConfiguration>
 class Seed<Simple, TConfiguration>
@@ -120,7 +124,8 @@ public:
               _endPositionH(endPositionH(other)),
               _endPositionV(endPositionV(other)),
               _lowerDiagonal(lowerDiagonal(other)),
-              _upperDiagonal(upperDiagonal(other))
+              _upperDiagonal(upperDiagonal(other)),
+              _score(0)
     {
         SEQAN_ASSERT_GEQ(_upperDiagonal, _lowerDiagonal);
     }
@@ -174,7 +179,7 @@ template <typename TConfig>
 inline typename Position<Seed<Simple, TConfig> >::Type
 beginPositionH(Seed<Simple, TConfig> const & seed)
 {
-	return seed._beginPositionH;
+    return seed._beginPositionH;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,10 +187,10 @@ beginPositionH(Seed<Simple, TConfig> const & seed)
 // ---------------------------------------------------------------------------
 
 template <typename TConfig, typename TPosition>
-inline void 
+inline void
 setBeginPositionH(Seed<Simple, TConfig> & seed, TPosition pos)
 {
-	seed._beginPositionH = pos;
+    seed._beginPositionH = pos;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +201,7 @@ template <typename TConfig>
 inline typename Position<Seed<Simple, TConfig> >::Type
 endPositionH(Seed<Simple, TConfig> const & seed)
 {
-	return seed._endPositionH;
+    return seed._endPositionH;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,10 +209,10 @@ endPositionH(Seed<Simple, TConfig> const & seed)
 // ---------------------------------------------------------------------------
 
 template <typename TConfig, typename TPosition>
-inline void 
+inline void
 setEndPositionH(Seed<Simple, TConfig> & seed, TPosition pos)
 {
-	seed._endPositionH = pos;
+    seed._endPositionH = pos;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +223,7 @@ template <typename TConfig>
 inline typename Position<Seed<Simple, TConfig> >::Type
 beginPositionV(Seed<Simple, TConfig> const & seed)
 {
-	return seed._beginPositionV;
+    return seed._beginPositionV;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,10 +231,10 @@ beginPositionV(Seed<Simple, TConfig> const & seed)
 // ---------------------------------------------------------------------------
 
 template <typename TConfig, typename TPosition>
-inline void 
+inline void
 setBeginPositionV(Seed<Simple, TConfig> & seed, TPosition pos)
 {
-	seed._beginPositionV = pos;
+    seed._beginPositionV = pos;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +245,7 @@ template <typename TConfig>
 inline typename Position<Seed<Simple, TConfig> >::Type
 endPositionV(Seed<Simple, TConfig> const & seed)
 {
-	return seed._endPositionV;
+    return seed._endPositionV;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,10 +253,10 @@ endPositionV(Seed<Simple, TConfig> const & seed)
 // ---------------------------------------------------------------------------
 
 template <typename TConfig, typename TPosition>
-inline void 
+inline void
 setEndPositionV(Seed<Simple, TConfig> & seed, TPosition pos)
 {
-	seed._endPositionV = pos;
+    seed._endPositionV = pos;
 }
 
 // ---------------------------------------------------------------------------

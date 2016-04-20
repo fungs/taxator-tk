@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,31 +35,41 @@
 // in headers.
 // ==========================================================================
 
-#ifndef CORE_INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_
-#define CORE_INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_
+#ifndef INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_
+#define INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_
 
 namespace seqan {
-
-// ============================================================================
-// Forwards
-// ============================================================================
 
 // ============================================================================
 // Tags, Classes, Enums
 // ============================================================================
 
-/**
-.Enum.BamHeaderRecordType
-..cat:BAM I/O
-..summary:Enumeration for the header record type.
-..signature:BamHeaderRecordType
-..value.BAM_HEADER_FIRST:@Class.BamHeaderRecord@ is of type $@HD$
-..value.BAM_HEADER_REFERENCE:@Class.BamHeaderRecord@ is of type $@SQ$
-..value.BAM_HEADER_READ_GROUP:@Class.BamHeaderRecord@ is of type $@RG$
-..value.BAM_HEADER_PROGRAM:@Class.BamHeaderRecord@ is of type $@PG$
-..value.BAM_HEADER_COMMENT:@Class.BamHeaderRecord@ is of type $@CO$
-..include:seqan/bam_io.h
-*/
+// ----------------------------------------------------------------------------
+// Enum BamHeaderRecordType
+// ----------------------------------------------------------------------------
+
+/*!
+ * @enum BamHeaderRecordType
+ * @headerfile <seqan/bam_io.h>
+ * @brief Enumeration for the header record type.
+ *
+ * @signature enum BamHeaderRecordType;
+ *
+ * @val BamHeaderRecordType BAM_HEADER_FIRST = 0;
+ * @brief Is the first header (HD).
+ *
+ * @val BamHeaderRecordType BAM_HEADER_REFERENCE = 1;
+ * @brief Is a reference (SQ) header.
+ *
+ * @val BamHeaderRecordType BAM_HEADER_READ_GROUP = 2;
+ * @brief Is a read group (RG) header.
+ *
+ * @val BamHeaderRecordType BAM_HEADER_PROGRAM = 3;
+ * @brief Is a program (PG) header.
+ *
+ * @val BamHeaderRecordType BAM_HEADER_COMMENT = 4;
+ * @brief Is a comment (CO) header.
+ */
 
 enum BamHeaderRecordType
 {
@@ -70,17 +80,29 @@ enum BamHeaderRecordType
     BAM_HEADER_COMMENT     = 4
 };
 
-/**
-.Enum.BamSortOrder
-..cat:BAM I/O
-..summary:Enumeration for the header record type.
-..signature:BamSortOrder
-..value.BAM_SORT_UNKNOWN:BAM file sort order is unknown.
-..value.BAM_SORT_UNSORTED:BAM file is unsorted.
-..value.BAM_SORT_QUERYNAME:BAM file is sorted by query name.
-..value.BAM_SORT_COORDINATE:BAM file is sorted by coordinates.
-..include:seqan/bam_io.h
-*/
+// ----------------------------------------------------------------------------
+// Enum BamSortOrder
+// ----------------------------------------------------------------------------
+
+/*!
+ * @enum BamSortOrder
+ * @headerfile <seqan/bam_io.h>
+ * @brief Enumeration for the header record type.
+ *
+ * @signature enum BamSortOrder;
+ *
+ * @val BamSortOrder BAM_SORT_UNKNOWN = 0;
+ * @brief BAM file sort order is unknown.
+ *
+ * @val BamSortOrder BAM_SORT_UNSORTED = 1;
+ * @brief BAM file is unsorted.
+ *
+ * @val BamSortOrder BAM_SORT_QUERYNAME = 2;
+ * @brief BAM file is sorted by query name;
+ *
+ * @val BamSortOrder BAM_SORT_COORDINATE = 3;
+ * @brief BAM file is sorted by coordinate.
+ */
 
 enum BamSortOrder
 {
@@ -90,108 +112,112 @@ enum BamSortOrder
     BAM_SORT_COORDINATE = 3
 };
 
-/**
-.Class.BamHeaderRecord
-..cat:BAM I/O
-..summary:Represents a header entry in a SAM file or the header section of the BAM header.
-..signature:BamHeaderRecord
-..remarks:Comment records are stored with one tag where the key is empty and the value is the comment.
-..include:seqan/bam_io.h
+// ----------------------------------------------------------------------------
+// Class BamHeaderRecord
+// ----------------------------------------------------------------------------
 
-.Memfunc.BamHeaderRecord#BamHeaderRecord
-..class:Class.BamHeaderRecord
-..signature:BamHeaderRecord()
-..summary:Constructor.
-..remarks:Only the default constructor is provided.
+/*!
+ * @class BamHeaderRecord
+ * @headerfile <seqan/bam_io.h>
+ * @brief Represents a header entry in a SAM file or the header section of the BAM header.
+ *
+ * @signature class BamHeaderRecord;
+ *
+ * @section Remarks
+ *
+ * Comment records are stored with one tag where the key is empty and the value is the comment.
+ */
 
-.Typedef.BamHeaderRecord#TTagName
-..class:Class.BamHeaderRecord
-..summary:Type of the tag keys.
+/*!
+ * @fn BamHeaderRecord::BamHeaderRecord
+ * @brief Constructor.
+ * @signature BamHeaderRecord::BamRecord();
+ *
+ * Only the default constructor is provided.
+ */
 
-.Typedef.BamHeaderRecord#TTagValue
-..class:Class.BamHeaderRecord
-..summary:Type of the tag values.
-
-.Typedef.BamHeaderRecord#TTag
-..class:Class.BamHeaderRecord
-..summary:@Class.Pair@ to use for storing tags.
-
-.Typedef.BamHeaderRecord#TTags
-..class:Class.BamHeaderRecord
-..summary:Type of the string of tag @Class.Pair|Pairs@.
-
-.Memvar.BamHeaderRecord#type
-..summary:Type of the record.
-..class:Class.BamHeaderRecord
-..type:Enum.BamHeaderRecordType
-
-.Memvar.BamHeaderRecord#tags
-..summary:The header record's tags.
-..class:Class.BamHeaderRecord
-..type:Typedef.BamHeaderRecord#TTags
-*/
+/*!
+ * @typedef BamHeaderRecord::TTagName
+ * @brief Type of the tag keys (@link CharString @endlink).
+ * @signature BamHeaderRecord::TTagName;
+ *
+ * @typedef BamHeaderRecord::TTagValue
+ * @brief Type of the tag values (@link CharString @endlink).
+ * @signature BamHeaderRecord::TTagValue;
+ *
+ * @typedef BamHeaderRecord::TTag
+ * @brief Type of the tag keys (@link Pair @endlink of <tt>TTagName</tt> and <tt>TTagValue</tt>).
+ * @signature BamHeaderRecord::TTag;
+ *
+ * @typedef BamHeaderRecord::TTags
+ * @brief Type of the tags string (@link AllocString @endlink of <tt>TTag</tt>).
+ * @signature BamHeaderRecord::TTags;
+ *
+ * @var BamHeaderRecordType BamHeaderRecord::type;
+ * @brief Type of the record.
+ *
+ * @var TRecordString BamHeaderRecord::tags;
+ * @brief The header record's tags, of type @link BamHeaderRecord::TTags @endlink.
+ */
 
 class BamHeaderRecord
 {
 public:
-    typedef CharString TTagName;
-    typedef CharString TTagValue;
-    typedef Pair<TTagName, TTagValue> TTag;
-    typedef String<TTag> TTags;
+    typedef CharString                  TTagName;
+    typedef CharString                  TTagValue;
+    typedef Pair<TTagName, TTagValue>   TTag;
+    typedef String<TTag>                TTags;
 
     BamHeaderRecordType type;
-    String<Pair<TTagName, TTagValue> > tags;
+    TTags tags;
 
-    BamHeaderRecord() {}
+    BamHeaderRecord() : type(BAM_HEADER_FIRST) {}
 };
 
-/**
-.Class.BamHeader
-..cat:BAM I/O
-..summary:Stores the information of the BAM header.
-..signature:BamHeader
-..see:Class.BamHeaderRecord
-..include:seqan/bam_io.h
+// ----------------------------------------------------------------------------
+// Class BamHeader
+// ----------------------------------------------------------------------------
 
-.Memfunc.BamHeader#BamHeader
-..class:Class.BamHeader
-..signature:BamHeader()
-..summary:Constructor.
-..remarks:Only the default constructor is provided.
+/*!
+ * @class BamHeader
+ * @headerfile <seqan/bam_io.h>
+ * @implements FormattedFileHeaderConcept
+ * @signature typedef String<BamHeaderRecord> BamHeader;
+ * @brief Represent the information of the BAM header.
+ *
+ * @see BamFileIn
+ * @see BamFileOut
+ */
 
-.Memvar.BamHeader#sequenceInfos
-..class:Class.BamHeader
-..summary:String of $(seqid, length)$ with reference name / length information.
-..type:nolink:$String<Pair<CharString, __int32> >$
-
-.Memvar.BamHeader#records
-..class:Class.BamHeader
-..summary:String of @Class.BamHeaderRecord|BamHeaderRecords@.
-..type:nolink:$String<BamHeaderRecord>$
-*/
-
-class BamHeader
-{
-public:
-    typedef Pair<CharString, __int32> TSequenceInfo;
-    
-    String<Pair<CharString, __int32> > sequenceInfos;
-    String<BamHeaderRecord> records;
-};
-
-// ============================================================================
-// Metafunctions
-// ============================================================================
+typedef String<BamHeaderRecord> BamHeader;
 
 // ============================================================================
 // Functions
 // ============================================================================
 
 // ----------------------------------------------------------------------------
+// Function std::swap()
+// ----------------------------------------------------------------------------
+
+inline void
+swap(BamHeaderRecord &a, BamHeaderRecord &b)
+{
+    std::swap(a.type, b.type);
+    swap(a.tags, b.tags);
+}
+
+// ----------------------------------------------------------------------------
 // Function clear()
 // ----------------------------------------------------------------------------
 
-///.Function.clear.param.object.type:Class.BamHeaderRecord
+/*!
+ * @fn BamHeaderRecord::clear
+ * @brief Clear BamHeaderRecord object.
+ *
+ * @signature void clear(record);
+ *
+ * @param[in,out] record The record to clear.
+ */
 
 inline void
 clear(BamHeaderRecord & record)
@@ -202,24 +228,6 @@ clear(BamHeaderRecord & record)
 // ----------------------------------------------------------------------------
 // Function findTagKey()
 // ----------------------------------------------------------------------------
-
-/**
-.Function.BamHeaderRecord#findTagKey
-..cat:BAM I/O
-..summary:Find a tag's key of a @Class.BamHeaderRecord@.
-..signature:findTagKey(idx, key, record)
-..param.idx:The index of the found key is stored here.
-...type:nolink:$unsigned$
-..param.key:The name of the tag key whose position is to be stored in $idx$.
-...type:Shortcut.CharString
-..param.record:The record to query.
-...type:Class.BamHeaderRecord
-..returns:$bool$, indicating whether the key could be found.
-..include:seqan/bam_io.h
-..example.code:
-unsigned myIdx = 0;
-bool keyFound = findTagKey(myIdx, "SN", record);
-*/
 
 template <typename TKeyName>
 inline bool
@@ -241,27 +249,26 @@ findTagKey(unsigned & idx, TKeyName const & key, BamHeaderRecord const & record)
 // Function getTagValue()
 // ----------------------------------------------------------------------------
 
-/**
-.Function.BamHeaderRecord#getTagValue
-..cat:BAM I/O
-..summary:Return tag value from a @Class.BamHeaderRecord@ or @Class.BamTagsDict@.
-..signature:getTagValue(tagValue, idx, record)
-..signature:getTagValue(tagValue, key, record)
-..param.tagValue:The tag's value is stored here.
-...type:Shortcut.CharString
-..param.idx:The index of the tag whose value is to be retrieved.
-...type:nolink:$unsigned$
-..param.key:The name of tag whose value is to be retrieved.
-...type:Shortcut.CharString
-..param.record:The record to query.
-...type:Class.BamHeaderRecord
-..returns:$bool$, indicating whether the value could be retrieved, always $true$ if $idx$ is given.
-..include:seqan/bam_io.h
-..example.code:
-CharString tagValue;
-bool keyFound = getTagValue(tagValue, "SN", record);
-..see:Function.BamHeaderRecord#findTagKey
-*/
+/*!
+ * @fn BamHeaderRecord::getTagValue
+ * @brief Return tag value from a @link BamHeaderRecord @endlink.
+ *
+ * @signature bool getTagValue(tagValue, idx, record);
+ * @signature bool getTagValue(tagValue, key, record);
+ *
+ * @param[out] tagValue The @link CharString @endlink to write the tag value to.
+ * @param[in]  idx      An integer with the index of the tag in the header record.
+ * @param[in]  key      A two-letter sequence with the key of the tag in the header record.
+ *
+ * @return bool true in case the value could be retrieved, false otherwise.
+ *
+ * @section Example
+ *
+ * @code{.cpp}
+ * CharString tagValue;
+ * bool keyFound = getTagValue(tagValue, "SN", record);
+ * @endcode
+ */
 
 template <typename TId>
 SEQAN_FUNC_ENABLE_IF(
@@ -287,27 +294,19 @@ inline getTagValue(CharString & value, TKeyName const & key, BamHeaderRecord con
     return getTagValue(value, idx, record);
 }
 
-// TODO(holtgrew): Parameter order!
+/*!
+ * @fn BamHeaderRecord::setTagValue
+ * @brief Sets the value of a tag in a BamHeaderRecord.
+ *
+ * @signature void setTagValue(idx, value, record);
+ * @signature void setTagValue(key, value, record);
+ *
+ * @param[in,out] idx    The index of the tag in the header record to set the value for.
+ * @param[in]     key    The name of the tag (two-letter sequence) to set.
+ * @param[in]     record The header record to set the value for.
+ */
 
-/**
-.Function.BamHeaderRecord#setTagValue
-..cat:BAM I/O
-..summary:Set tag value of a @Class.BamHeaderRecord@.
-..signature:setTagValue(idx, tagValue, record)
-..signature:setTagValue(key, tagValue, record)
-..param.idx:The index of the tag whose value should be set.
-...type:nolink:$unsigned$
-..param.key:The name of tag whose value should be set.
-...type:Shortcut.CharString
-..param.tagValue:The new tag value.
-...type:Shortcut.CharString
-..param.record:The record to query.
-...type:Class.BamHeaderRecord
-..include:seqan/bam_io.h
-..example.code:
-setTagValue("SN", "chr1", record);
-..see:Function.BamHeaderRecord#findTagKey
-*/
+// TODO(holtgrew): Parameter order!
 
 template <typename TId>
 SEQAN_FUNC_ENABLE_IF(
@@ -349,11 +348,9 @@ searchRecord(unsigned & recordIdx,
              BamHeaderRecordType recordType,
              unsigned startIdx)
 {
-    for (recordIdx = startIdx; recordIdx < length(header.records); ++recordIdx)
-    {
-        if (header.records[recordIdx].type == recordType)
+    for (recordIdx = startIdx; recordIdx < length(header); ++recordIdx)
+        if (header[recordIdx].type == recordType)
             return true;
-    }
     return false;
 }
 
@@ -365,13 +362,57 @@ searchRecord(unsigned & recordIdx,
     return searchRecord(recordIdx, header, recordType, 0);
 }
 
+
+struct BamHeaderRecordTypeLess
+{
+    bool operator() (BamHeaderRecord const &a, BamHeaderRecord const &b) const
+    {
+        return a.type < b.type;
+    }
+};
+
+struct BamHeaderRecordEqual
+{
+    bool operator() (BamHeaderRecord const &a, BamHeaderRecord const &b) const
+    {
+        return a.type == b.type && a.tags == b.tags;
+    }
+};
+
+
+inline void
+removeDuplicates(BamHeader & header)
+{
+    BamHeaderRecordTypeLess less;
+    BamHeaderRecordEqual pred;
+
+    std::stable_sort(begin(header, Standard()), end(header, Standard()), less);
+
+    for (size_t uniqueBegin = 0, uniqueEnd = 1; uniqueEnd < length(header);)
+    {
+        if (less(header[uniqueBegin], header[uniqueEnd]))
+            uniqueBegin = uniqueEnd;
+
+        size_t j;
+        for (j = uniqueBegin; j < uniqueEnd; ++j)
+            if (pred(header[j], header[uniqueEnd]))
+            {
+                erase(header, uniqueEnd);
+                break;
+            }
+
+        if (j == uniqueEnd)
+            ++uniqueEnd;
+    }
+}
+
 inline BamSortOrder
 getSortOrder(BamHeader const & header)
 {
-    CharString soString;    
+    CharString soString;
     for (unsigned recIdx = 0; searchRecord(recIdx, header, BAM_HEADER_FIRST, recIdx); ++recIdx)
     {
-        if (getTagValue(soString, "SO", header.records[recIdx]))
+        if (getTagValue(soString, "SO", header[recIdx]))
         {
             if (soString == "unsorted")
                 return BAM_SORT_UNSORTED;
@@ -381,7 +422,7 @@ getSortOrder(BamHeader const & header)
                 return BAM_SORT_COORDINATE;
             else
                 return BAM_SORT_UNKNOWN;
-        }        
+        }
     }
     return BAM_SORT_UNKNOWN;
 }
@@ -389,48 +430,54 @@ getSortOrder(BamHeader const & header)
 inline void
 setSortOrder(BamHeader & header, BamSortOrder sortOrder)
 {
+    char const * soString;
+    switch (sortOrder)
+    {
+        case BAM_SORT_UNSORTED:
+            soString = "unsorted";
+            break;
+
+        case BAM_SORT_QUERYNAME:
+            soString = "queryname";
+            break;
+
+        case BAM_SORT_COORDINATE:
+            soString = "coordinate";
+            break;
+
+        default:
+            soString = "unknown";
+    }
+
+    bool notFound = true;
     for (unsigned recIdx = 0; searchRecord(recIdx, header, BAM_HEADER_FIRST, recIdx); ++recIdx)
     {
         unsigned idx = 0;
-        if (findTagKey(idx, "SO", header.records[recIdx]))
+        if (findTagKey(idx, "SO", header[recIdx]))
         {
-            CharString soString;
-            switch (sortOrder)
-            {
-                case BAM_SORT_UNSORTED:
-                    soString = "unsorted";
-                    break;
+            notFound = false;
+            setTagValue(idx, soString, header[recIdx]);
+        }
+    }
 
-                case BAM_SORT_QUERYNAME:
-                    soString = "queryname";
-                    break;
-
-                case BAM_SORT_COORDINATE:
-                    soString = "coordinate";
-                    break;
-                    
-                default:
-                    soString = "unknown";
-            }
-            setTagValue(idx, soString, header.records[recIdx]);
+    if (notFound)
+    {
+        unsigned recIdx = 0;
+        if (searchRecord(recIdx, header, BAM_HEADER_FIRST))
+        {
+            setTagValue("SO", soString, header[recIdx]);
+        }
+        else
+        {
+            BamHeaderRecord rec;
+            rec.type = BAM_HEADER_FIRST;
+            setTagValue("VN", "1.4", rec);
+            setTagValue("SO", soString, rec);
+            insert(header, 0, rec);
         }
     }
 }
 
-// ----------------------------------------------------------------------------
-// Function clear()
-// ----------------------------------------------------------------------------
-
-///.Function.clear.param.object.type:Class.BamHeader
-
-inline void
-clear(BamHeader & header)
-{
-    clear(header.sequenceInfos);
-    clear(header.records);
-}
-
-
 }  // namespace seqan
 
-#endif  // #ifndef CORE_INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_
+#endif  // #ifndef INCLUDE_SEQAN_BAM_IO_BAM_HEADER_RECORD_H_

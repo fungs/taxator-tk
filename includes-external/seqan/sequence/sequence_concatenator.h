@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -56,30 +56,39 @@ struct StringSetLimits;
 // Tags, Classes, Enums
 // ============================================================================
 
-/**
-.Class.ConcatenatorManyToOne:
-..summary:A sequence class that virtually concatenates all sequences in a @Class.StringSet@.
-..cat:Sequences
-..signature:ConcatenatorManyToOne<TStringSet>
-..param.TStringSet:The @Class.StringSet@ type.
-...type:Class.StringSet
-..remarks:This container can be iterated like the concatenation string of all sequences in a @Class.StringSet@.
-..remarks:This container only is a lightweight hull around a @Class.StringSet@. The iteration is handled by @Spec.ConcatVirtual Iterator@.
-..remarks:Note that accessing an element by index through $operator[]$ conducts a binary search and should be avoided. Use the @Spec.ConcatDirect@ specialization of @Class.StringSet@ for random access or only use sequential access through iterators.
-..include:seqan/sequence.h
-.Memfunc.ConcatenatorManyToOne#ConcatenatorManyToOne
-..summary:Constructor
-..signature:ConcatenatorManyToOne<TStringSet> (stringSet)
-..param.stringSet:The @Class.StringSet@ object to be concatenated.
-..class:Class.ConcatenatorManyToOne
+/*!
+ * @class ConcatenatorManyToOne
+ * @headerfile <seqan/sequence.h>
+ * @brief A sequence class that virtually concatenates all sequences in a @link StringSet @endlink.
+ *
+ * @signature template <typename TStringSet>
+ *            class ConcatenatorManyToOne;
+ *
+ * @tparam TStringSet The @link StringSet @endlink type.
+ *
+ * This container can be iterated like the concatenation string of all sequences in a @link StringSet @endlink.
+ *
+ * This container only is a lightweight hull around a @link StringSet @endlink.  The iteration is handled by @link
+ * ConcatVirtualIterator @endlink.
+ *
+ * Note that accessing an element by index through <tt>operator[]</tt> conducts a binary search and should be avoided.
+ * Use the @link ConcatDirectStringSet @endlink specialization of @link StringSet @endlink for random access or only use
+ * sequential access through iterators.
+ *
+ * @fn ConcatenatorManyToOne::ConcatenatorManyToOne
+ * @brief Constructor
+ *
+ * @signature ConcatenatorManyToOne::ConcatenatorManyToOne(stringSet);
+ *
+ * @param[in] stringSet The @link StringSet @endlink object to be concatenated.
  */
+
 template <typename TStringSet>
 class ConcatenatorManyToOne
 {
 public:
-    // TODO(holtgrew): Why is this no holder? const-holder problem?
     TStringSet * set;
-    ConcatenatorManyToOne() {}
+    ConcatenatorManyToOne() : set(NULL) {}
     ConcatenatorManyToOne(TStringSet & _set) : set(&_set) {}
 
     template <typename TPos>
@@ -148,24 +157,44 @@ struct Iterator<ConcatenatorManyToOne<TStringSet> const, Rooted>
 // --------------------------------------------------------------------------
 
 template <typename TStringSet>
-struct Value<ConcatenatorManyToOne<TStringSet> >
-{
-    typedef typename Value<typename Value<TStringSet>::Type >::Type Type;
-};
+struct Value<ConcatenatorManyToOne<TStringSet> >:
+    Value<typename Value<TStringSet>::Type> {};
 
 template <typename TStringSet>
-struct Value<ConcatenatorManyToOne<TStringSet> const >
-    : Value<ConcatenatorManyToOne<TStringSet> > {};
+struct Value<ConcatenatorManyToOne<TStringSet> const >:
+    Value<ConcatenatorManyToOne<TStringSet> > {};
+
+// --------------------------------------------------------------------------
+// Metafunction GetValue
+// --------------------------------------------------------------------------
+
+template <typename TStringSet>
+struct GetValue<ConcatenatorManyToOne<TStringSet> >:
+    GetValue<typename Value<TStringSet>::Type> {};
+
+template <typename TStringSet>
+struct GetValue<ConcatenatorManyToOne<TStringSet> const>:
+    GetValue<typename Value<TStringSet const>::Type > {};
+
+// --------------------------------------------------------------------------
+// Metafunction Reference
+// --------------------------------------------------------------------------
+
+template <typename TStringSet>
+struct Reference<ConcatenatorManyToOne<TStringSet> >:
+    Reference<typename Value<TStringSet>::Type> {};
+
+template <typename TStringSet>
+struct Reference<ConcatenatorManyToOne<TStringSet> const>:
+    Reference<typename Value<TStringSet const>::Type> {};
 
 // --------------------------------------------------------------------------
 // Metafunction Size
 // --------------------------------------------------------------------------
 
 template <typename TStringSet>
-struct Size<ConcatenatorManyToOne<TStringSet> >
-{
-    typedef typename Value<typename StringSetLimits<TStringSet>::Type >::Type Type;
-};
+struct Size<ConcatenatorManyToOne<TStringSet> >:
+    Value<typename StringSetLimits<TStringSet>::Type > {};
 
 // --------------------------------------------------------------------------
 // Metafunction AllowsFastRandomAccess

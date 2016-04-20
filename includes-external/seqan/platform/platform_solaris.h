@@ -1,7 +1,8 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,11 +31,8 @@
 //
 // ==========================================================================
 
-//SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
-
 #ifndef PLATFORM_SUN
-  #define PLATFORM_SUN
-#endif
+#define PLATFORM_SUN
 
 // should be set before including anything
 #define _FILE_OFFSET_BITS 64
@@ -47,9 +45,4 @@
 typedef int64_t __int64;
 typedef uint64_t __uint64;
 
-#ifdef __CUDACC__
-#define SEQAN_FUNC inline __device__ __host__
-#else
-#define SEQAN_FUNC inline
-#endif
-
+#endif  // #ifndef PLATFORM_SUN

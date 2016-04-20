@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Packed pair specialization.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_
 
 namespace seqan {
 
@@ -51,22 +51,25 @@ namespace seqan {
 // Specialization Packed Pair
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Packed Pair:
-..cat:Aggregates
-..general:Class.Pair
-..summary:Stores two arbitrary objects. Saves memory by disabling memory alignment.
-..signature:Pair<T1, T2, Pack>
-..param.T1:The type of the first object.
-..param.T2:The type of the second object.
-..notes:Useful for external storage.
-..remarks:Memory access could be slower. Direct access to members by pointers is not allowed on all platforms.
-..remarks:Functions $value()$ is not implemented yet since there it would require using a proxy. Use $getValue()$, $assignValue()$, $moveValue()$, $setValue()$ instead.
-..include:seqan/basic.h
-.Memfunc.Pair#Pair.class:Spec.Packed Pair
-.Memvar.Pair#i1.class:Spec.Packed Pair
-.Memvar.Pair#i2.class:Spec.Packed Pair
-*/
+/*!
+ * @class PackedPair
+ * @extends Pair
+ * @headerfile <seqan/basic.h>
+ * @brief Stores two arbitrary objects. Saves memory by disabling memory alignment.
+ *
+ * @signature template <typename T1, typename T2>
+ *            class Pair<T1, T2, Pack>;
+ *
+ * @tparam T1 The type of the first object.
+ * @tparam T2 The type of the second object.
+ *
+ * Useful for external storage.
+ *
+ * Memory access could be slower.  Direct access to members by pointers is not allowed on all platforms.
+ *
+ * Functions <tt>value()</tt> is not implemented yet since there it would require using a proxy.  Use
+ * <tt>getValue()</tt>, <tt>assignValue()</tt>, <tt>moveValue()</tt>, <tt>setValue()</tt> instead.
+ */
 
 #ifdef PLATFORM_WINDOWS
     #pragma pack(push,1)
@@ -85,15 +88,15 @@ struct Pair<T1, T2, Pack>
     // Constructors
     // ------------------------------------------------------------------------
 
-    inline Pair() : i1(T1()), i2(T2()) {}
+    SEQAN_HOST_DEVICE Pair() : i1(T1()), i2(T2()) {}
 
-    inline Pair(Pair const &_p) : i1(_p.i1), i2(_p.i2) {}
+    SEQAN_HOST_DEVICE Pair(Pair const &_p) : i1(_p.i1), i2(_p.i2) {}
 
-    inline Pair(T1 const & _i1, T2 const & _i2) : i1(_i1), i2(_i2) {}
+    SEQAN_HOST_DEVICE Pair(T1 const & _i1, T2 const & _i2) : i1(_i1), i2(_i2) {}
 
     template <typename T1_, typename T2_, typename TSpec__>
     // TODO(holtgrew): explicit?
-    inline Pair(Pair<T1_, T2_, TSpec__> const &_p)
+    SEQAN_HOST_DEVICE Pair(Pair<T1_, T2_, TSpec__> const &_p)
             : i1(getValueI1(_p)), i2(getValueI2(_p)) {}
 }
 #ifndef PLATFORM_WINDOWS
@@ -182,4 +185,4 @@ inline void moveValueI2(Pair<T1, T2, Pack> & pair, T & _i)
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_PAIR_PACKED_H_

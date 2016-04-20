@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -42,43 +42,43 @@ namespace SEQAN_NAMESPACE_MAIN
 // Read Store
 //////////////////////////////////////////////////////////////////////////////
 
-/**
-.Class.ReadStoreElement
-..summary:Represents a single read (without sequence).
-..cat:Fragment Store
-..signature:ReadStoreElement<>
-..signature:ReadStoreElement<TSpec>
-..param.TSpec:The specialization type.
-...default:$void$
-..remarks:Value type of the @Memvar.FragmentStore#readStore@ string.
+/*!
+ * @class ReadStoreElement
+ * @headerfile <seqan/store.h>
+ * @brief Represents a single read (without sequence).
+ *
+ * @signature template <[typename TSpec]>
+ *            struct ReadStoreElement;
+ *
+ * @tparam TSpec The specializing type.  Default: <tt>void</tt>.
+ *
+ *
+ * @fn ReadStoreElement::ReadStoreElement
+ * @signature ReadStoreElement::ReadStoreElement();
+ * @brief Constructor.
+ *
+ * Sets ReadStoreElement::matePairId to ReadStoreElement::INVALID_ID.
+ */
 
-.Memfunc.ReadStoreElement#ReadStoreElement
-..summary:Constructor
-..signature:ReadStoreElement<>()
-..signature:ReadStoreElement<TSpec> ()
-..remarks:Sets $matePairId$ to $INVALID_ID$.
-..class:Class.ReadStoreElement
-.Memvar.ReadStoreElement#matePairId
-..summary:Refers to a mate-pair in the @Memvar.FragmentStore#matePairStore@ or is $INVALID_ID$ if the read is not paired.
-..type:Metafunction.Id
-..class:Class.ReadStoreElement
-.Memvar.ReadStoreElement#INVALID_ID
-..summary:Constant to represent an invalid id.
-..type:Metafunction.Id
-..class:Class.ReadStoreElement
-..include:seqan/store.h
-*/
+/*!
+ * @var TId ReadStoreElement::matePairId;
+ * @brief Refers to a mate pair in the @link FragmentStore::matePairStore @endlink or is INVALID_ID if the read is
+ *        not paired.
+ *
+ * @var TId ReadStoreElement::INVALID_ID;
+ * @brief Constant to represetn an invalid id.
+ */
 
 template <typename TSpec = void>
 struct ReadStoreElement
 {
-	typedef typename Id<ReadStoreElement>::Type TId;
-	
-	static const TId INVALID_ID;
+    typedef typename Id<ReadStoreElement>::Type TId;
 
-	TId matePairId;				// refers to the mate-pair, INVALID_ID if not part of a mate-pair
+    static const TId INVALID_ID;
 
-	ReadStoreElement() : matePairId(INVALID_ID) {}
+    TId matePairId;                // refers to the mate-pair, INVALID_ID if not part of a mate-pair
+
+    ReadStoreElement() : matePairId(INVALID_ID) {}
 
     inline
     bool

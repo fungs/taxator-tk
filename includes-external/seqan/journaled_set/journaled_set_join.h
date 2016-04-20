@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_
 
 namespace seqan {
 
@@ -53,20 +53,18 @@ namespace seqan {
 // Functions
 // ============================================================================
 
-/**
-.Function.join:
-..summary:Joins a @Spec.Journaled String@ to a @Spec.Journaled Set@ by computing and journaling differences to the global
-reference sequence.
-..class:Spec.Journaled Set
-..cat:Sequences
-..signature:join(stringSet, pos[, joinConfig])
-..param.stringSet: The String Set that stores the sequences.
-...type:Spec.Journaled Set
-..param.pos: The position of the @Spec.Journaled String@ within the string set.
-..param.joinConfig: A @Class.JoinConfig@ object that specifies the method and the method's strategy to compute the differences.
-...type:Class.JoinConfig
-..include:seqan/journal_set.h
-*/
+/*!
+ * @fn JournaledSet#join
+ * @brief Joins a @link JournaledString @endlink to a @link JournaledSet @endlink by computing and journaling
+ *        differences to the global reference sequence.
+ *
+ * @signature void join(stringSet, pos, joinConfig);
+ *
+ * @param[in,out] stringSet  The JournaledSet to join to.
+ * @param[in]     pos        The position of the JournaledString within the string set.
+ * @param[in]     joinConfig A @link JoinConfig @endlink object that specifies the method and the method's strategy
+ *                           to compute the differences.
+ */
 
 // ----------------------------------------------------------------------------
 // Function join()                                                [GlobalAlign]
@@ -79,11 +77,11 @@ join(StringSet<TString, Owner<JournaledSet> > & journalSet,
      JoinConfig<GlobalAlign<TSpec> > const & joinConfig)
 {
    SEQAN_ASSERT_LT(journalIdx, static_cast<TPosition>(length(journalSet)));
-   if (empty(globalReference(journalSet)))
+   if (empty(host(journalSet)))
    {
-       ::std::cerr << "No reference set! Join aborted!" << ::std::endl;
+       std::cerr << "No reference set! Join aborted!" << std::endl;
    }
-   _joinInternal(globalReference(journalSet), value(journalSet, journalIdx), joinConfig);
+   _joinInternal(value(journalSet, journalIdx), journalSet, joinConfig);
 }
 
 // ----------------------------------------------------------------------------
@@ -98,11 +96,11 @@ join(StringSet<TString, Owner<JournaledSet> > & journalSet,
 {
    SEQAN_ASSERT_LT(journalIdx, static_cast<TPosition>(length(journalSet)));
 
-   if (empty(globalReference(journalSet)))
+   if (empty(host(journalSet)))
    {
-       ::std::cerr << "No reference set! Join aborted!" << ::std::endl;
+       std::cerr << "No reference set! Join aborted!" << std::endl;
    }
-   _joinInternal(globalReference(journalSet), value(journalSet, journalIdx), joinConfig);
+   _joinInternal(value(journalSet, journalIdx), journalSet, joinConfig);
 }
 
 
@@ -129,4 +127,4 @@ join(StringSet<TString, Owner<JournaledSet> > & journalSet,
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_H_

@@ -1,7 +1,8 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,7 +31,9 @@
 //
 // ==========================================================================
 
+#ifndef PLATFORM_WINDOWS
 #define PLATFORM_WINDOWS
+
 #define PLATFORM_WINDOWS_VS
 
 // ==========================================================================
@@ -121,7 +124,7 @@ typedef unsigned __int8 __uint8;
 template <typename T>
 inline T round(T const & x)
 {
-	return static_cast<T>(floor(x + 0.5));
+    return static_cast<T>(floor(x + 0.5));
 }
 
 // Rename some underscore-functions in Windows.
@@ -134,9 +137,7 @@ inline T round(T const & x)
 #define ftello(fp) ftell(fp)
 #endif  // #ifndef ftello
 
-#ifdef __CUDACC__
-#define SEQAN_FUNC inline __device__ __host__
-#else
-#define SEQAN_FUNC inline
-#endif
+//#define SEQAN_RESTRICT  __restrict
+//#define SEQAN_RESTRICT  __declspec(restrict)
 
+#endif  // #ifndef PLATFORM_WINDOWS

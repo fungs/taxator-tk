@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,14 +34,10 @@
 
 // TODO(holtgrew): Get out more than just strings...
 
-#ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_
-#define SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_
+#ifndef SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_
+#define SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_
 
 namespace seqan {
-
-// ============================================================================
-// Forwards
-// ============================================================================
 
 // ============================================================================
 // Tags, Classes, Enums
@@ -50,82 +46,83 @@ namespace seqan {
 // ----------------------------------------------------------------------------
 // Class VcfRecord
 // ----------------------------------------------------------------------------
+//
+/*!
+ * @class VcfRecord
+ * @implements FormattedFileRecordConcept
+ * @headerfile <seqan/vcf_io.h>
+ * @brief Information for one VCF record.
+ *
+ * @signature class VcfRecord;
+ *
+ * We store most information as strings and without structure since the VCF format's definition is quite loose.  We plan
+ * to provide classes for structured access to these strings later.
+ *
+ * @section Remarks
+ *
+ * Although all positions in the VCF text format are 1-based, they are stored 0-based in the @link VcfRecord @endlink.
+ * Positions in string members are stored verbatim in the @link VcfRecord @endlink's members, e.g. 1-based.
+ *
+ * Invalid qualities are stored as a float <tt>NaN</tt> (not a number).  To test a float quality <tt>q</tt> for being
+ * <tt>NaN</tt>, test for <tt>q != q</tt>.  Only <tt>NaN</tt> has the property that <tt>NaN != NaN</tt>.
+ */
 
-/**
-.Class.VcfRecord
-..cat:VCF I/O
-..summary:Information for one VCF record.
-..signature:class VcfRecord
-..description:
-We store most information as strings and without structure since the VCF format's definition is quite loose.
-We plan to provide classes for structured access to these strings later.
-..remarks:
-Although all positions in the VCF text format are 1-based, they are stored 0-based in the @Class.VcfRecord@.
-Positions in string members are stored verbatim in the @Class.VcfRecord@'s members, e.g. 1-based.
-..remarks:
-Invalid qualities are stored as a float $NaN$ (not a number).
-To test a float quality $q$ for being $NaN$, test for $q != q$.
-Only $NaN$ has the property that $NaN != NaN$.
-..include:seqan/vcf_io.h
+/*!
+ * @fn VcfRecord::MISSING_QUAL
+ * @brief Return IEEE <tt>NaN</tt> float value.
+ *
+ * @signature float VcfRecord::MISSING_QUAL();
+ *
+ * @section Remarks
+ *
+ * This cannot be implemented portably as a constant in a header-only library.  In C++11, there is a function
+ * <tt>std::nanf()</tt> that could be used instead.  For C++98, this is the best we can do.
+ */
 
-.Memfunc.VcfRecord#VcfRecord
-..class:Class.VcfRecord
-..signature:VcfRecord::VcfRecord()
-..summary:Default constructor.
+/*!
+ * @fn VcfRecord::VcfRecord
+ * @brief Default constructor.
+ *
+ * @signature VcfRecord::VcfRecord();
+ */
 
-.Memfunc.VcfRecord#MISSING_QUAL
-..class:Class.VcfRecord
-..signature:float VcfRecord::MISSING_QUAL()
-..summary:Return IEEE $NaN$ float value.
-
-.Memvar.VcfRecord#INVALID_REFID
-..class:Class.VcfRecord
-..summary:Static member as marker for invalid reference ($__int32$)
-
-.Memvar.VcfRecord#INVALID_POS
-..class:Class.VcfRecord
-..summary:Static member as marker for invalid position ($__int32$)
-
-.Memvar.VcfRecord#rID
-..class:Class.VcfRecord
-..summary:Static member as marker for invalid reference ($__int32$)
-
-.Memvar.VcfRecord#beginPos
-..class:Class.VcfRecord
-..summary:Position of the VCF record ($__int32$).
-
-.Memvar.VcfRecord#id
-..class:Class.VcfRecord
-..summary:Textual identifier of the variant (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#ref
-..class:Class.VcfRecord
-..summary:Bases in the reference (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#alt
-..class:Class.VcfRecord
-..summary:Alternative bases in the variants, comma-separated if multiple (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#qual
-..class:Class.VcfRecord
-..summary:Quality, $NaN$ if invalid ($float$).
-
-.Memvar.VcfRecord#filter
-..class:Class.VcfRecord
-..summary:Value of FILTER field, empty if "." in VCF file (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#info
-..class:Class.VcfRecord
-..summary:Value of the INFO field, empty if "." in VCF file (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#format
-..class:Class.VcfRecord
-..summary:Value of the VCF FORMAT field, empty if "." in VCF file (@Shortcut.CharString@).
-
-.Memvar.VcfRecord#genotypeInfos
-..class:Class.VcfRecord
-..summary:Genotype information, as in VCF file (@Class.StringSet@<@Shortcut.CharString@>).
-*/
+/*!
+ * @var VariableType VcfRecord::ref
+ * @brief Bases in the reference (@link CharString @endlink).
+ *
+ * @var VariableType VcfRecord::genotypeInfos
+ * @brief Genotype information, as in VCF file (@link StringSet @endlink<@link CharString @endlink>).
+ *
+ * @var VariableType VcfRecord::info
+ * @brief Value of the INFO field, empty if "." in VCF file (@link CharString @endlink).
+ *
+ * @var VariableType VcfRecord::INVALID_REFID
+ * @brief Static member as marker for invalid reference (<tt>__int32</tt>)
+ *
+ * @var VariableType VcfRecord::format
+ * @brief Value of the VCF FORMAT field, empty if "." in VCF file (@link CharString @endlink).
+ *
+ * @var VariableType VcfRecord::alt
+ * @brief Alternative bases in the variants, comma-separated if multiple (@link CharString @endlink).
+ *
+ * @var VariableType VcfRecord::qual
+ * @brief Quality, <tt>NaN</tt> if invalid (<tt>float</tt>).
+ *
+ * @var VariableType VcfRecord::filter
+ * @brief Value of FILTER field, empty if "." in VCF file (@link CharString @endlink).
+ *
+ * @var VariableType VcfRecord::rID
+ * @brief Static member as marker for invalid reference (<tt>__int32</tt>)
+ *
+ * @var VariableType VcfRecord::beginPos
+ * @brief Position of the VCF record (<tt>__int32</tt>).
+ *
+ * @var VariableType VcfRecord::INVALID_POS
+ * @brief Static member as marker for invalid position (<tt>__int32</tt>)
+ *
+ * @var VariableType VcfRecord::id
+ * @brief Textual identifier of the variant (@link CharString @endlink).
+ */
 
 class VcfRecord
 {
@@ -173,10 +170,6 @@ public:
 };
 
 // ============================================================================
-// Metafunctions
-// ============================================================================
-
-// ============================================================================
 // Functions
 // ============================================================================
 
@@ -184,16 +177,14 @@ public:
 // Function clear()
 // ----------------------------------------------------------------------------
 
-/**
-.Function.VcfRecord#clear
-..cat:VCF I/O
-..class:Class.VcfRecord
-..summary:Clear a @Class.VcfRecord@.
-..signature:void clear(record)
-..param.record:The @Class.VcfRecord@ to clear.
-...type:Class.VcfRecord
-..include:seqan/vcf_io.h
-*/
+/*!
+ * @fn VcfRecord#clear
+ * @brief Clear a VcfRecord.
+ *
+ * @signature void clear(record);
+ *
+ * @param[in,out] record The VcfRecord to clear.
+ */
 
 inline void clear(VcfRecord & record)
 {
@@ -208,4 +199,4 @@ inline void clear(VcfRecord & record)
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_VCF_IO_VCF_RECORD_H_

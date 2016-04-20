@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Bit-packed pair specialization.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_
 
 namespace seqan {
 
@@ -47,24 +47,29 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
-/**
-.Spec.Bit Packed Pair:
-..cat:Aggregates
-..general:Class.Pair
-..summary:Stores two arbitrary objects. Saves memory by packing bits with bit fields.
-..signature:Pair<T1, T2, BitPacked<BITSIZE1, BITSIZE2> >
-..param.T1:The type of the first object.
-..param.T2:The type of the second object.
-..param.BITSIZE1:Number of bits to store $T1$.
-..param.BITSIZE2:Number of bits to store $T2$.
-..notes:Useful for external storage.
-..remarks:Memory access could be slower. Direct access to members by pointers is not allowed.
-..remarks:Functions $value()$ is not implemented yet since there it would require using a proxy. Use $getValue()$, $assignValue()$, $moveValue()$, $setValue()$ instead.
-..include:seqan/basic.h
-.Memfunc.Pair#Pair.class:Spec.Bit Packed Pair
-.Memvar.Pair#i1.class:Spec.Bit Packed Pair
-.Memvar.Pair#i2.class:Spec.Bit Packed Pair
-*/
+/*!
+ * @class BitPackedPair
+ * @extends Pair
+ * @headerfile <seqan/basic.h>
+ * @brief Stores two arbitrary objects. Saves memory by packing bits with bit fields.
+ *
+ * @signature template <typename T1, typename T2, unsigned BITSIZE1, unsigned BITSIZE2>
+ *            class Pass;
+ *
+ * @tparam T1       Type of first entry.
+ * @tparam T2       Type of second entry.
+ * @tparam BITSIZE1 Number of bits to store for <tt>T1</tt>.
+ * @tparam BITSIZE2 Number of bits to store for <tt>T2</tt>.
+ *
+ * Useful for external storage.
+ *
+ * @section Remarks
+ *
+ * Memory access could be slower. Direct access to members by pointers is not allowed.
+ *
+ * Functions <tt>value()</tt> is not implemented yet since there it would require using a proxy. Use
+ * <tt>getValue()</tt>, <tt>assignValue()</tt>, <tt>moveValue()</tt>, <tt>setValue()</tt> instead.
+ */
 
 #ifdef PLATFORM_WINDOWS
     #pragma pack(push,1)
@@ -174,4 +179,4 @@ inline void moveValueI2(Pair<T1, T2, BitPacked<BITSIZE1, BITSIZE2> > & pair, T &
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_PAIR_BIT_PACKED_H_

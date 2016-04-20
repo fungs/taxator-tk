@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,16 +36,17 @@
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
 #include <seqan/align.h>
-#include <seqan/file.h>
+#include <seqan/stream.h>
 #include <seqan/parallel.h>
+#include <seqan/seq_io.h>
 #include <seqan/bam_io.h>
-#include <seqan/misc/misc_name_store_cache.h>
+#include <seqan/gff_io.h>
+#include <seqan/ucsc_io.h>
+#include <seqan/misc/name_store_cache.h>
 
 #include <sstream>
 #include <algorithm>
 #include <set>
-
-#include <seqan/gff_io.h>
 
 //////////////////////////////////////////////////////////////////////////////
 // FRAGMENT STORE SUB-CONTAINERS

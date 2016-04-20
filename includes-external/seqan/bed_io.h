@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,15 +34,15 @@
 // Facade header for module bed_io.
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_BED_IO_H_
-#define EXTRAS_INCLUDE_SEQAN_BED_IO_H_
+#ifndef INCLUDE_SEQAN_BED_IO_H_
+#define INCLUDE_SEQAN_BED_IO_H_
 
 // ===========================================================================
 // Prerequisites.
 // ===========================================================================
 
 #include <seqan/basic.h>
-#include <seqan/file.h>
+#include <seqan/stream.h>
 #include <seqan/sequence.h>
 
 // ===========================================================================
@@ -51,10 +51,9 @@
 
 #include <seqan/bed_io/bed_record.h>
 
-#include <seqan/bed_io/bed_io_context.h>
 #include <seqan/bed_io/read_bed.h>
 #include <seqan/bed_io/write_bed.h>
 
-#include <seqan/bed_io/bed_stream.h>
+#include <seqan/bed_io/bed_file.h>
 
-#endif  // EXTRAS_INCLUDE_SEQAN_BED_IO_H_
+#endif  // INCLUDE_SEQAN_BED_IO_H_

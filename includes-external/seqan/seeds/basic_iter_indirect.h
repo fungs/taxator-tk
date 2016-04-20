@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -55,17 +55,15 @@ class Iter<TContainer, Indirect<TWrappedIter> >
 {
 public:
     TWrappedIter _wrappedIter;
-    
+
     Iter() : _wrappedIter(0)
-    { SEQAN_CHECKPOINT; }
+    {}
 
-    Iter(Iter const & other)
-            : _wrappedIter(other._wrappedIter)
-    { SEQAN_CHECKPOINT; }
+    Iter(Iter const & other) : _wrappedIter(other._wrappedIter)
+    {}
 
-    Iter(TWrappedIter const & wrappedIter)
-            : _wrappedIter(wrappedIter)
-    { SEQAN_CHECKPOINT; }
+    Iter(TWrappedIter const & wrappedIter) : _wrappedIter(wrappedIter)
+    {}
 };
 
 // ===========================================================================

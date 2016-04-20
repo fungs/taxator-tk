@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -54,21 +54,33 @@ namespace seqan
 // Class ModView
 // --------------------------------------------------------------------------
 
-/**
-.Spec.ModView:
-..summary:Transforms the characters of the $THost$ string/iterator using a custom function.
-..cat:Modifier
-..general:Class.ModifiedIterator
-..general:Class.ModifiedString
-..signature:ModifiedIterator<THost, ModView<TFunctor> >
-..signature:ModifiedString<THost, ModView<TFunctor> >
-..param.THost:Original string/iterator.
-...type:Concept.RandomAccessIteratorConcept
-..param.TFunctor:A unary function (see STL's $unary_function$).
-...remarks:The argument type of $TFunctor$ must be $VALUE<THost>::Type$.
-..remarks:The @Metafunction.Value@ type of this modifier is the result type of $TFunctor$.
-..include:seqan/modifier.h
-*/
+/*!
+ * @class ModViewModifiedIterator
+ * @extends ModifiedIterator
+ * @headerfile <seqan/modifier.h>
+ *
+ * @brief Transforms the character of a host using a custom functor.
+ *
+ * @signature template <typename THost, typename TFunctor>
+ *            class ModifiedIterator<THost, ModView<TFunctor> >;
+ *
+ * @tparam THost    The host iterator.
+ * @tparam TFunctor A unary functor type.
+ */
+
+/*!
+ * @class ModViewModifiedString
+ * @extends ModifiedString
+ * @headerfile <seqan/modifier.h>
+ *
+ * @brief Transforms the character of a host using a custom functor.
+ *
+ * @signature template <typename THost, typename TFunctor>
+ *            class ModifiedString<THost, ModView<TFunctor> >;
+ *
+ * @tparam THost    The host iterator.
+ * @tparam TFunctor A unary functor type.
+ */
 
 template <typename TFunctor>
 struct ModView {};
@@ -76,7 +88,10 @@ struct ModView {};
 template <typename TFunctor>
 struct ModViewCargo
 {
-    TFunctor	func;
+    TFunctor    func;
+
+    ModViewCargo() : func()
+    {}
 };
 
 template <typename THost, typename TFunctor>
@@ -85,25 +100,26 @@ class ModifiedIterator<THost, ModView<TFunctor> >
 public:
     typedef typename Cargo<ModifiedIterator>::Type TCargo_;
 
-    Holder<THost, Simple>   _host;
+    THost _host;
     TCargo_ _cargo;
 
-    mutable typename Value<ModifiedIterator>::Type	tmp_value;
+    mutable typename Value<ModifiedIterator>::Type tmp_value;
 
-    ModifiedIterator() : _host(), _cargo()
+    ModifiedIterator() : _host(), tmp_value()
+    {}
+
+    template <typename TOtherHost>
+    ModifiedIterator(ModifiedIterator<TOtherHost, ModView<TFunctor> > & origin) :
+        _host(origin._host), _cargo(origin._cargo), tmp_value()
     {}
 
     explicit
-    ModifiedIterator(THost const & host) : _host(host), _cargo()
+    ModifiedIterator(THost const & host) :
+        _host(host), tmp_value()
     {}
 
-    ModifiedIterator(THost const & host, TFunctor const & functor) : _host(host), _cargo()
-    {
-        cargo(*this).func = functor;
-    }
-
-    explicit
-    ModifiedIterator(TFunctor const & functor) : _host(), _cargo()
+    ModifiedIterator(THost const & host, TFunctor const & functor):
+        _host(host), tmp_value()
     {
         cargo(*this).func = functor;
     }
@@ -119,76 +135,105 @@ class ModifiedString<THost, ModView<TFunctor> >
 public:
     typedef typename Pointer_<THost>::Type       THostPointer_;
     typedef typename Cargo<ModifiedString>::Type TCargo_;
-    
-    typedef typename InnermostHost_<ModifiedString>::Type TInnermostHost_;
 
-    THostPointer_ _host;
+    mutable THostPointer_ _host;
     TCargo_ _cargo;
 
-    mutable typename Value<ModifiedString>::Type	tmp_value;
+    mutable typename Value<ModifiedString>::Type tmp_value;
 
     // Default constructor.
-    ModifiedString() : _host(), _cargo()
+    ModifiedString() : _host(), tmp_value()
     {}
 
     // Construct with the actual host.
     explicit
-    ModifiedString(THost & host) : _host(_toPointer(host)), _cargo(), tmp_value()
+    ModifiedString(typename Parameter_<THost>::Type host):
+        _host(_toPointer(host)), tmp_value()
     {}
 
     // Construct with the functor.
     explicit
-    ModifiedString(TFunctor const & functor) : _host(), _cargo(), tmp_value()
+    ModifiedString(TFunctor const & functor):
+        _host(), tmp_value()
     {
         cargo(*this).func = functor;
     }
 
-    // Constructor for creating a ModifiedString with const host with a non-const host.
+    // Constructor for creating a ModifiedString with const host from a non-const host.
     template <typename THost_>
     explicit
-    ModifiedString(THost_ const & host,
-                   SEQAN_CTOR_ENABLE_IF(IsSameType<THost, THost_>)) :
-            _host(_toPointer(host)), _cargo(), tmp_value()
+    ModifiedString(THost_ & host,
+                   SEQAN_CTOR_ENABLE_IF(IsConstructible<THost, THost_>)) :
+            _host(_toPointer(host)), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
     }
 
     // Construct with the actual host; variant with functor.
-    ModifiedString(THost & host, TFunctor const & functor) :
-            _host(_toPointer(host)), _cargo(), tmp_value()
+    ModifiedString(typename Parameter_<THost>::Type host, TFunctor const & functor) :
+            _host(_toPointer(host)), tmp_value()
     {
         cargo(*this).func = functor;
     }
 
     // Constructor for creating a ModifiedString with const host with a non-const host; variant with functor.
     template <typename THost_>
-    explicit ModifiedString(THost_ const & host,
-                            TFunctor const & functor,
-                            SEQAN_CTOR_ENABLE_IF(IsSameType<THost, THost_>)) :
-            _host(_toPointer(host)), _cargo(), tmp_value()
+    explicit
+    ModifiedString(THost_ & host,
+                   TFunctor const & functor,
+                   SEQAN_CTOR_ENABLE_IF(IsConstructible<THost, THost_>)) :
+            _host(_toPointer(host)), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
         cargo(*this).func = functor;
     }
 
-    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Non-const variant.
+#ifdef SEQAN_CXX11_STANDARD
+
+    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.
     template <typename THost_>
     explicit
-    ModifiedString(THost_ & host,
-                   SEQAN_CTOR_ENABLE_IF(And<Not<IsSameType<TInnermostHost_, THost> >,
-                                            IsSameType<TInnermostHost_, THost_> >)) :
-            _host(host), _cargo(), tmp_value()
+    ModifiedString(THost_ && host,
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<
+                                            typename RemoveReference<THost>::Type,
+                                            typename RemoveReference<THost_>::Type >)) :
+            _host(std::forward<THost_>(host)), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
     }
 
-    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Const variant.
+    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Variant with functor.
+    template <typename THost_>
+    explicit
+    ModifiedString(THost_ && host,
+                   TFunctor const & functor,
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<
+                                            typename RemoveReference<THost>::Type,
+                                            typename RemoveReference<THost_>::Type >)) :
+            _host(std::forward<THost_>(host)), tmp_value()
+    {
+        ignoreUnusedVariableWarning(dummy);
+        cargo(*this).func = functor;
+    }
+
+#else
+
+    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Non-const variant.
+    template <typename THost_>
+    explicit
+    ModifiedString(THost_ & host,
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<THost, THost_>)) :
+            _host(host), tmp_value()
+    {
+        ignoreUnusedVariableWarning(dummy);
+    }
+
+    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Non-const variant.
     template <typename THost_>
     explicit
     ModifiedString(THost_ const & host,
-                   SEQAN_CTOR_ENABLE_IF(And<Not<IsSameType<TInnermostHost_, THost> >,
-                                            IsSameType<TInnermostHost_, THost_> >)) :
-            _host(host), _cargo(), tmp_value()
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<THost, THost_ const>)) :
+            _host(host), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
     }
@@ -199,36 +244,37 @@ public:
     explicit
     ModifiedString(THost_ & host,
                    TFunctor const & functor,
-                   SEQAN_CTOR_ENABLE_IF(And<Not<IsSameType<TInnermostHost_, THost> >,
-                                            IsSameType<TInnermostHost_, THost_> >)) :
-            _host(host), _cargo(), tmp_value()
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<THost, THost_>)) :
+            _host(host), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
         cargo(*this).func = functor;
     }
 
-    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Const variant with functor.
+    // Constructor for innermost type; hand down to _host which is a ModifiedString itself.  Non-const variant with
+    // functor.
     template <typename THost_>
     explicit
     ModifiedString(THost_ const & host,
                    TFunctor const & functor,
-                   SEQAN_CTOR_ENABLE_IF(And<Not<IsSameType<TInnermostHost_, THost> >,
-                                            IsSameType<TInnermostHost_, THost_> >)) :
-            _host(host), _cargo(), tmp_value()
+                   SEQAN_CTOR_ENABLE_IF(IsAnInnerHost<THost, THost_ const>)) :
+            _host(host), tmp_value()
     {
         ignoreUnusedVariableWarning(dummy);
         cargo(*this).func = functor;
     }
 
+#endif
+
     template <typename TPos>
-    inline typename Reference<ModifiedString>::Type 
+    inline typename Reference<ModifiedString>::Type
     operator[](TPos pos)
     {
         return value(*this, pos);
     }
 
     template <typename TPos>
-    inline typename Reference<ModifiedString const>::Type 
+    inline typename Reference<ModifiedString const>::Type
     operator[](TPos pos) const
     {
         return value(*this, pos);
@@ -246,7 +292,7 @@ public:
 template <typename THost, typename TFunctor>
 struct Cargo<ModifiedIterator<THost, ModView<TFunctor> > >
 {
-    typedef ModViewCargo<TFunctor>	Type;
+    typedef ModViewCargo<TFunctor>    Type;
 };
 
 // --------------------------------------------------------------------------
@@ -256,7 +302,7 @@ struct Cargo<ModifiedIterator<THost, ModView<TFunctor> > >
 template <typename THost, typename TFunctor>
 struct Value<ModifiedIterator<THost, ModView<TFunctor> > >
 {
-    typedef typename TFunctor::result_type			TResult_;
+    typedef typename TFunctor::result_type            TResult_;
     typedef typename RemoveConst_<TResult_>::Type   Type;
 };
 
@@ -285,7 +331,7 @@ struct Reference<ModifiedIterator<THost, ModView<TFunctor> > >
 template <typename THost, typename TFunctor>
 struct Cargo< ModifiedString<THost, ModView<TFunctor> > >
 {
-    typedef ModViewCargo<TFunctor>	Type;
+    typedef ModViewCargo<TFunctor>    Type;
 };
 
 // ==========================================================================
@@ -297,7 +343,7 @@ struct Cargo< ModifiedString<THost, ModView<TFunctor> > >
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TFunctor>
-inline typename Reference<ModifiedIterator<THost, ModView<TFunctor> > >::Type 
+inline typename Reference<ModifiedIterator<THost, ModView<TFunctor> > >::Type
 value(ModifiedIterator<THost, ModView<TFunctor> > & me)
 {
     me.tmp_value = cargo(me).func(getValue(host(me)));
@@ -305,7 +351,7 @@ value(ModifiedIterator<THost, ModView<TFunctor> > & me)
 }
 
 template <typename THost, typename TFunctor>
-inline typename Reference<ModifiedIterator<THost, ModView<TFunctor> > const>::Type 
+inline typename Reference<ModifiedIterator<THost, ModView<TFunctor> > const>::Type
 value(ModifiedIterator<THost, ModView<TFunctor> > const & me)
 {
     me.tmp_value = cargo(me).func(getValue(host(me)));
@@ -317,14 +363,14 @@ value(ModifiedIterator<THost, ModView<TFunctor> > const & me)
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TFunctor>
-inline typename GetValue<ModifiedIterator<THost, ModView<TFunctor> > >::Type 
+inline typename GetValue<ModifiedIterator<THost, ModView<TFunctor> > >::Type
 getValue(ModifiedIterator<THost, ModView<TFunctor> > & me)
 {
     return cargo(me).func(getValue(host(me)));
 }
 
 template <typename THost, typename TFunctor>
-inline typename GetValue<ModifiedIterator<THost, ModView<TFunctor> > const>::Type 
+inline typename GetValue<ModifiedIterator<THost, ModView<TFunctor> > const>::Type
 getValue(ModifiedIterator<THost, ModView<TFunctor> > const & me)
 {
     return cargo(me).func(getValue(host(me)));
@@ -335,7 +381,7 @@ getValue(ModifiedIterator<THost, ModView<TFunctor> > const & me)
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TFunctor, typename TPos>
-inline typename Reference<ModifiedString<THost, ModView<TFunctor> > >::Type 
+inline typename Reference<ModifiedString<THost, ModView<TFunctor> > >::Type
 value(ModifiedString<THost, ModView<TFunctor> > & me, TPos pos)
 {
     me.tmp_value = cargo(me).func(getValue(host(me), pos));
@@ -343,7 +389,7 @@ value(ModifiedString<THost, ModView<TFunctor> > & me, TPos pos)
 }
 
 template <typename THost, typename TFunctor, typename TPos>
-inline typename Reference<ModifiedString<THost, ModView<TFunctor> > const>::Type 
+inline typename Reference<ModifiedString<THost, ModView<TFunctor> > const>::Type
 value(ModifiedString<THost, ModView<TFunctor> > const & me, TPos pos)
 {
     me.tmp_value = cargo(me).func(getValue(host(me), pos));
@@ -355,17 +401,28 @@ value(ModifiedString<THost, ModView<TFunctor> > const & me, TPos pos)
 // --------------------------------------------------------------------------
 
 template <typename THost, typename TFunctor, typename TPos>
-inline typename GetValue<ModifiedString<THost, ModView<TFunctor> > >::Type 
+inline typename GetValue<ModifiedString<THost, ModView<TFunctor> > >::Type
 getValue(ModifiedString<THost, ModView<TFunctor> > & me, TPos pos)
 {
     return cargo(me).func(getValue(host(me), pos));
 }
 
 template <typename THost, typename TFunctor, typename TPos>
-inline typename GetValue<ModifiedString<THost, ModView<TFunctor> > const>::Type 
+inline typename GetValue<ModifiedString<THost, ModView<TFunctor> > const>::Type
 getValue(ModifiedString<THost, ModView<TFunctor> > const & me, TPos pos)
 {
     return cargo(me).func(getValue(host(me), pos));
+}
+
+// --------------------------------------------------------------------------
+// Function assignModViewFunctor()
+// --------------------------------------------------------------------------
+
+template <typename THost, typename TFunctor>
+inline void
+assignModViewFunctor(ModifiedString<THost, ModView<TFunctor> > & me, TFunctor const & functor)
+{
+    cargo(me).func = functor;
 }
 
 // --------------------------------------------------------------------------
@@ -377,21 +434,21 @@ inline void
 convert(TSequence & sequence, TFunctor const &F)
 {
 #if defined (_OPENMP) && defined (SEQAN_PARALLEL)
-	// OpenMP does not support for loop with iterators. Therefore use index variables.
-	typedef typename Position<TSequence>::Type	TPos;
-	typedef typename MakeSigned_<TPos>::Type	TSignedPos;
+    // OpenMP does not support for loop with iterators. Therefore use index variables.
+    typedef typename Position<TSequence>::Type    TPos;
+    typedef typename MakeSigned_<TPos>::Type    TSignedPos;
 
-	#pragma omp parallel for if(length(sequence) > 1000000)
-	for(TSignedPos p = 0; p < (TSignedPos)length(sequence); ++p)
-		sequence[p] = F(sequence[p]);
-	
+    #pragma omp parallel for if(length(sequence) > 1000000)
+    for(TSignedPos p = 0; p < (TSignedPos)length(sequence); ++p)
+        sequence[p] = F(sequence[p]);
+
 #else
-	typedef typename Iterator<TSequence, Standard>::Type	TIter;
+    typedef typename Iterator<TSequence, Standard>::Type    TIter;
 
-	TIter it = begin(sequence, Standard());
-	TIter itEnd = end(sequence, Standard());
-	for(; it != itEnd; ++it)
-		*it = F(*it);
+    TIter it = begin(sequence, Standard());
+    TIter itEnd = end(sequence, Standard());
+    for(; it != itEnd; ++it)
+        *it = F(*it);
 #endif
 }
 
@@ -400,21 +457,21 @@ inline void
 convert(TSequence const & sequence, TFunctor const &F)
 {
 #if defined (_OPENMP) && defined (SEQAN_PARALLEL)
-	// OpenMP does not support for loop with iterators. Therefore use index variables.
-	typedef typename Position<TSequence>::Type	TPos;
-	typedef typename MakeSigned_<TPos>::Type	TSignedPos;
+    // OpenMP does not support for loop with iterators. Therefore use index variables.
+    typedef typename Position<TSequence>::Type    TPos;
+    typedef typename MakeSigned_<TPos>::Type    TSignedPos;
 
-	#pragma omp parallel for if(length(sequence) > 1000000)
-	for(TSignedPos p = 0; p < (TSignedPos)length(sequence); ++p)
-		sequence[p] = F(sequence[p]);
-	
+    #pragma omp parallel for if(length(sequence) > 1000000)
+    for(TSignedPos p = 0; p < (TSignedPos)length(sequence); ++p)
+        sequence[p] = F(sequence[p]);
+
 #else
-	typedef typename Iterator<TSequence const, Standard>::Type	TIter;
+    typedef typename Iterator<TSequence const, Standard>::Type    TIter;
 
-	TIter it = begin(sequence, Standard());
-	TIter itEnd = end(sequence, Standard());
-	for(; it != itEnd; ++it)
-		*it = F(*it);
+    TIter it = begin(sequence, Standard());
+    TIter itEnd = end(sequence, Standard());
+    for(; it != itEnd; ++it)
+        *it = F(*it);
 #endif
 }
 

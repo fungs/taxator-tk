@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_
 
 namespace seqan {
 
@@ -58,31 +58,28 @@ namespace seqan {
 // ----------------------------------------------------------------------------
 
 // TODO(rmaerker): Change the orientation of reference and journal.
-// The journal needs to be adapted. The simple thing would be to just
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec>
+template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TJournalString2>
 inline void
-_joinInternal(String <TValue, THostSpec> const & reference,
-              String <TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > & journal,
+_joinInternal(String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > & journal,
+              StringSet<TJournalString2, Owner<JournaledSet> > const & journalSet,
               JoinConfig<GlobalAlign<JournaledCompact> > const & joinConfig)
 {
-
     typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
-//    typedef typename Size<TJournalString>::Type TSize;
 
     // TODO(rmaerker): Check the correct behavior here.
     TJournalString tmpJournal;
-    setHost(tmpJournal, host(journal));
+    setHost(tmpJournal, value(journalSet._globalRefHolder));
 
     if (isBandSet(joinConfig))
-        globalAlignment(tmpJournal, reference, journal, scoringScheme(joinConfig), joinConfig._alignConfig,
+        globalAlignment(tmpJournal, host(journalSet), journal, scoringScheme(joinConfig), joinConfig._alignConfig,
                         lowerDiagonal(joinConfig), upperDiagonal(joinConfig));
     else
-        globalAlignment(tmpJournal, reference, journal, scoringScheme(joinConfig), joinConfig._alignConfig);
+        globalAlignment(tmpJournal, host(journalSet), journal, scoringScheme(joinConfig), joinConfig._alignConfig);
 
     // Apply the alignment to the journal.
-    journal = tmpJournal;
+    set(journal, tmpJournal);
 }
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_COMPACT_H_

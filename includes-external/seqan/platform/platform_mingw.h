@@ -1,7 +1,8 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,9 +31,23 @@
 //
 // ==========================================================================
 
-//SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
+/*!
+ * @macro PLATFORM_WINDOWS
+ * @headerfile <seqan/platform.h>
+ * @brief Defined if the compiler targets Windows (MSVC or MinGW).
+ *
+ * @signature #define PLATFORM_WINDOWS
+ *
+ * @macro PLATFORM_WINDOWS_MINGW
+ * @headerfile <seqan/platform.h>
+ * @brief Defined if the compiler is MinGW.
+ *
+ * @signature #define PLATFORM_WINDOWS_MINGW
+ */
 
+#ifndef PLATFORM_WINDOWS
 #define PLATFORM_WINDOWS
+
 #define PLATFORM_WINDOWS_MINGW
 
 #define finline __inline__
@@ -65,9 +80,4 @@ typedef unsigned __int8 __uint8;
 #  define SEQAN_CXX11_STANDARD
 #endif
 
-#ifdef __CUDACC__
-#define SEQAN_FUNC inline __device__ __host__
-#else
-#define SEQAN_FUNC inline
-#endif
-
+#endif  // #ifndef PLATFORM_WINDOWS

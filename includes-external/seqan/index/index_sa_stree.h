@@ -1,7 +1,9 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +34,8 @@
 // Author: Enrico Siragusa <enrico.siragusa@fu-berlin.de>
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INDEX_SA_STREE_H_
-#define SEQAN_EXTRAS_INDEX_SA_STREE_H_
+#ifndef SEQAN_INDEX_SA_STREE_H_
+#define SEQAN_INDEX_SA_STREE_H_
 
 //#define SEQAN_DEBUG
 
@@ -43,38 +45,37 @@ namespace seqan {
 // Forwards
 // ============================================================================
 
+template <typename TString, typename TSpec>
+class SearchTreeIterator;
+
+struct SortedList;
+
 // ============================================================================
 // Tags, Classes, Enums
 // ============================================================================
 
-// TODO(esiragusa): Add IndexSa fibres.
-//typedef FibreText         SaText;
-//typedef FibreRawText      SaRawText;
-//typedef FibreSA           SaSA;
-//typedef FibreRawSA        SaRawSA;
-
 template <typename TSpec = void>
 struct IndexSa {};
 
-/**
-.Spec.IndexSa:
-..summary:An index based on a suffix array.
-..cat:Index
-..general:Class.Index
-..signature:Index<TText, IndexSa<> >
-..param.TText:The text type.
-...type:Class.String
-...type:Class.StringSet
-..include:seqan/index_extras.h
-*/
+/*!
+ * @class IndexSa
+ * @extends Index
+ * @headerfile <seqan/index.h>
+ * @brief An index based on a suffix array.
+ * @signature template <typename TText, typename TSpec>
+ *            class Index<TText, IndexSa<TSpec> >;
+ *
+ * @tparam TText The type of the underlying @link TextConcept text @endlink.
+ * @tparam TSpec A tag for specialization purposes.
+ */
 
 template <typename TText, typename TSpec>
 class Index<TText, IndexSa<TSpec> >
 {
 public:
-    Holder<typename Fibre<Index, EsaText>::Type>    text;
-    typename Fibre<Index, EsaSA>::Type              sa;
-    typename Cargo<Index>::Type                     cargo;  // user-defined cargo
+    typename Member<Index, FibreText>::Type         text;
+    typename Fibre<Index, FibreSA>::Type            sa;
+    typename Cargo<Index>::Type                     cargo;
 
     Index() {}
 
@@ -107,18 +108,21 @@ struct VertexSA : public VertexEsa<TSize>
     TSize       repLen;
     TAlphabet   lastChar;
 
+    SEQAN_HOST_DEVICE
     VertexSA() :
         TBase(),
         repLen(0),
         lastChar(0)
     {}
 
+    SEQAN_HOST_DEVICE
     VertexSA(MinimalCtor) :
         TBase(MinimalCtor()),
         repLen(0),
         lastChar(0)
     {}
 
+    SEQAN_HOST_DEVICE
     VertexSA(VertexSA const & other) :
         TBase(other),
         repLen(other.repLen),
@@ -130,9 +134,8 @@ template <typename TSize, typename TAlphabet>
 struct HistoryStackSA_
 {
     Pair<TSize> range;
+    TSize       repLen;
     TAlphabet   lastChar;
-
-    HistoryStackSA_() {}
 };
 
 // ============================================================================
@@ -167,14 +170,21 @@ struct EdgeLabel<Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > >
     typedef typename Value<Index<TText, IndexSa<TIndexSpec> > >::Type Type;
 };
 
+template < typename TText, typename TIndexSpec >
+struct DefaultFinder< Index<TText, IndexSa<TIndexSpec> > >
+{
+    typedef FinderMlr Type;    // standard suffix array finder is mlr-heuristic
+};
+
+
 // ============================================================================
 // Functions
 // ============================================================================
 
 template <typename TText, typename TIndexSpec>
-void _indexRequireTopDownIteration(Index<TText, IndexSa<TIndexSpec> > & index)
+SEQAN_HOST_DEVICE inline void _indexRequireTopDownIteration(Index<TText, IndexSa<TIndexSpec> > & index)
 {
-    indexRequire(index, EsaSA());
+    indexRequire(index, FibreSA());
 }
 
 template <typename TText>
@@ -184,7 +194,7 @@ void _indexRequireTopDownIteration(Index<TText, IndexSa<InfixSegment> > &)
 }
 
 template <typename TText, typename TIndexSpec, typename TSpec>
-inline typename SAValue<Index<TText, IndexSa<TIndexSpec> > >::Type
+SEQAN_HOST_DEVICE inline typename SAValue<Index<TText, IndexSa<TIndexSpec> > >::Type
 _lastOccurrence(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > const &it)
 {
     if (_isSizeInval(value(it).range.i2))
@@ -247,8 +257,9 @@ goDownSkipSingletons(Iter<TIndex, VSTree< TopDown<TSpec> > > &it)
 
 // is this a leaf? (hide empty $-edges)
 template <typename TText, typename TIndexSpec, typename TSpec, typename TDfsOrder>
-inline bool _isLeaf(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > const & it,
-                    VSTreeIteratorTraits<TDfsOrder, True> const)
+SEQAN_HOST_DEVICE inline bool
+_isLeaf(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > const & it,
+        VSTreeIteratorTraits<TDfsOrder, True> const)
 {
     typedef Index<TText, IndexSa<TIndexSpec> >                      TIndex;
     typedef typename SAValue<TIndex>::Type                          TOcc;
@@ -266,7 +277,7 @@ inline bool _isLeaf(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > con
 }
 
 template <typename TIndex, typename TSize, typename TAlphabet>
-inline typename Size<TIndex>::Type
+SEQAN_HOST_DEVICE inline typename Size<TIndex>::Type
 repLength(TIndex const &, VertexSA<TSize, TAlphabet> const & vDesc)
 {
     return vDesc.repLen;
@@ -287,7 +298,7 @@ parentEdgeFirstChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
 }
 
 template <typename TText, typename TIndexSpec, typename TSpec>
-inline void goRoot(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > & it)
+SEQAN_HOST_DEVICE inline void goRoot(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > & it)
 {
     _historyClear(it);
     clear(it);
@@ -316,10 +327,9 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     typedef typename Value<TIndex>::Type                    TAlphabet;
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "goDown" << std::endl;
+    std::cout << "goDown" << std::endl;
 #endif
 
-    // TODO(esiragusa): use HideEmptyEdges()
     if (_isLeaf(it, HideEmptyEdges()))
         return false;
 
@@ -330,7 +340,7 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     // TODO(esiragusa): check nodeHullPredicate
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "parent: " << value(it).range << std::endl;
 #endif
 
     Pair<typename Size<TIndex>::Type> saRange = range(it);
@@ -352,8 +362,7 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     TAlphabet cRight = textAt(posAdd(saAt(saRange.i2 - 1, index), value(it).repLen), index);
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "cLeft: " << cLeft << std::endl;
-    //std::cout << "cRight: " << cRight << std::endl;
+    std::cout << "char: " << Pair<TAlphabet>(cLeft, cRight) << std::endl;
 #endif
 
     // Save vertex descriptor.
@@ -378,13 +387,13 @@ inline bool _goDown(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSpe
     {
         value(it).range.i2 = saRange.i2;
     }
-    
+
     // Update child repLen, lastChar.
     value(it).repLen++;
     value(it).lastChar = cLeft;
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "child: " <<  value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "child: " <<  value(it).range << std::endl;
 #endif
 
     return true;
@@ -402,7 +411,7 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     typedef typename Value<TIndex>::Type                    TAlphabet;
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "goRight" << std::endl;
+    std::cout << "goRight" << std::endl;
 #endif
 
     if (isRoot(it))
@@ -412,7 +421,7 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     TSA const & sa = indexSA(index);
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "current: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "current: " << value(it).range << std::endl;
 #endif
 
     Pair<typename Size<TIndex>::Type> saRange;
@@ -440,8 +449,7 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     SEQAN_ASSERT_NEQ(ordValue(cLeft), ordValue(value(it).lastChar));
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "cLeft: " << cLeft << std::endl;
-    //std::cout << "cRight: " << cRight << std::endl;
+    std::cout << "char: " << Pair<TAlphabet>(cLeft, cRight) << std::endl;
 #endif
 
     // Update left range.
@@ -470,7 +478,7 @@ inline bool _goRight(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<TSp
     value(it).lastChar = cLeft;
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "sibling: " <<  value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "sibling: " <<  value(it).range << std::endl;
 #endif
 
     return true;
@@ -484,39 +492,34 @@ inline bool _goDownChar(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<
     typedef typename Size<TIndex>::Type                     TSASize;
     typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
     typedef SearchTreeIterator<TSA const, SortedList>       TSearchTreeIterator;
-    //typedef typename Value<TIndex>::Type                    TAlphabet;
 
-    if (_isLeaf(it, HideEmptyEdges()))
-        return false;
+    // Save vertex descriptor.
+    _historyPush(it);
 
     TIndex const & index = container(it);
     TSA const & sa = indexSA(index);
     TText const & text = indexText(index);
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "parent: " << value(it).range << std::endl;
 #endif
 
     TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
     TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
     TSearchTreeIterator node(saBegin, saLen);
-
     Pair<TSAIterator> range = _equalRangeSA(text, node, c, value(it).repLen);
 
     if (range.i1 >= range.i2)
         return false;
 
-    // Save vertex descriptor.
-    _historyPush(it);
-    
     // Update range, lastChar and repLen.
     value(it).range.i1 = range.i1 - begin(sa, Standard());
     value(it).range.i2 = range.i2 - begin(sa, Standard());
-    value(it).lastChar = c;
     value(it).repLen++;
-    
+    value(it).lastChar = c;
+
 #ifdef SEQAN_DEBUG
-    //std::cout << "child: " <<  value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "child: " <<  value(it).range << std::endl;
 #endif
 
     return true;
@@ -532,36 +535,36 @@ inline bool _goDownString(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDow
     typedef typename Iterator<TSA const, Standard>::Type    TSAIterator;
     typedef SearchTreeIterator<TSA const, SortedList>       TSearchTreeIterator;
 
-    if (_isLeaf(it, HideEmptyEdges()))
-        return false;
-
-    TIndex const & index = container(it);
-    TSA const & sa = indexSA(index);
-    TText const & text = indexText(index);
-
-#ifdef SEQAN_DEBUG
-    //std::cout << "parent: " << value(it).range.i1 << " " << value(it).range.i2 << std::endl;
-#endif
-
-    TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
-    TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
-    TSearchTreeIterator node(saBegin, saLen);
-    Pair<TSAIterator> range = _equalRangeSA(text, node, pattern, value(it).repLen);
-
-    if (range.i1 >= range.i2)
-        return false;
-
     // Save vertex descriptor.
     _historyPush(it);
-    
-    // Update range, lastChar and repLen.
-    value(it).range.i1 = range.i1 - begin(sa, Standard());
-    value(it).range.i2 = range.i2 - begin(sa, Standard());
-    value(it).lastChar = back(pattern);
-    value(it).repLen += length(pattern);
 
 #ifdef SEQAN_DEBUG
-    //std::cout << "child: " <<  value(it).range.i1 << " " << value(it).range.i2 << std::endl;
+    std::cout << "parent: " << value(it).range << std::endl;
+#endif
+
+    if (!empty(pattern))
+    {
+        TIndex const & index = container(it);
+        TSA const & sa = indexSA(index);
+        TText const & text = indexText(index);
+
+        TSAIterator saBegin = begin(sa, Standard()) + value(it).range.i1;
+        TSASize saLen = isRoot(it) ? length(sa) : value(it).range.i2 - value(it).range.i1;
+        TSearchTreeIterator node(saBegin, saLen);
+        Pair<TSAIterator> range = _equalRangeSA(text, node, pattern, value(it).repLen);
+
+        if (range.i1 >= range.i2)
+            return false;
+
+        // Update range, lastChar and repLen.
+        value(it).range.i1 = range.i1 - begin(sa, Standard());
+        value(it).range.i2 = range.i2 - begin(sa, Standard());
+        value(it).repLen += length(pattern);
+        value(it).lastChar = back(pattern);
+    }
+
+#ifdef SEQAN_DEBUG
+    std::cout << "child: " <<  value(it).range << std::endl;
 #endif
 
     lcp = length(pattern);
@@ -575,15 +578,15 @@ inline typename VertexDescriptor<Index<TText, IndexSa<TIndexSpec> > >::Type
 nodeUp(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<ParentLinks<TSpec> > > > const & it)
 {
     typedef Index<TText, IndexSa<TIndexSpec> > TIndex;
-    
+
     if (!empty(it.history))
     {
         typename VertexDescriptor<TIndex>::Type desc;
         desc.range = back(it.history).range;
+        desc.repLen = back(it.history).repLen;
         desc.lastChar = back(it.history).lastChar;
-        desc.repLen = value(it).repLen - 1;
         if (length(it.history) >= 2)
-            desc.parentRight = topPrev(it.history).range.i2;
+            desc.parentRight = backPrev(it.history).range.i2;
         else
             desc.parentRight = value(it).parentRight;
         return desc;
@@ -595,15 +598,15 @@ template <typename TText, typename TIndexSpec, typename TSpec>
 inline bool _goUp(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<ParentLinks<TSpec> > > > & it)
 {
 #ifdef SEQAN_DEBUG
-    //std::cout << "goUp" << std::endl;
+    std::cout << "goUp" << std::endl;
 #endif
 
     if (!empty(it.history))
     {
         value(it).range = back(it.history).range;
+        value(it).repLen = back(it.history).repLen;
         value(it).lastChar = back(it.history).lastChar;
-        value(it).repLen--;
-        pop(it.history);
+        eraseBack(it.history);
         if (!empty(it.history))
             value(it).parentRight = back(it.history).range.i2;
         return true;
@@ -626,10 +629,11 @@ inline void _historyPush(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown
     typedef Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown<ParentLinks<TSpec> > > > TIter;
     typename HistoryStackEntry_<TIter>::Type h;
     h.range = value(it).range;
+    h.repLen = value(it).repLen;
     h.lastChar = value(it).lastChar;
+    appendValue(it.history, h);
 
     value(it).parentRight = value(it).range.i2;
-    appendValue(it.history, h);
 }
 
 // ============================================================================
@@ -637,7 +641,7 @@ inline void _historyPush(Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TopDown
 template <typename TText, typename TSpec>
 inline void clear(Index<TText, IndexSa<TSpec> > & index)
 {
-    clear(getFibre(index, EsaSA()));
+    clear(getFibre(index, FibreSA()));
 }
 
 template <typename TObject, typename TSpec>
@@ -646,11 +650,11 @@ inline bool open(Index<TObject, IndexSa<TSpec> > & index, const char * fileName,
     String<char> name;
 
     name = fileName;    append(name, ".txt");
-    if ((!open(getFibre(index, EsaText()), toCString(name), openMode)) &&
-        (!open(getFibre(index, EsaText()), fileName, openMode))) return false;
+    if ((!open(getFibre(index, FibreText()), toCString(name), openMode)) &&
+        (!open(getFibre(index, FibreText()), fileName, openMode))) return false;
 
     name = fileName;    append(name, ".sa");
-    if (!open(getFibre(index, EsaSA()), toCString(name), openMode)) return false;
+    if (!open(getFibre(index, FibreSA()), toCString(name), openMode)) return false;
 
     return true;
 }
@@ -665,13 +669,13 @@ template <typename TObject, typename TSpec>
 inline bool save(Index<TObject, IndexSa<TSpec> > & index, const char * fileName, int openMode)
 {
     String<char> name;
-    
+
     name = fileName;    append(name, ".txt");
-    if ((!save(getFibre(index, EsaText()), toCString(name), openMode)) &&
-        (!save(getFibre(index, EsaText()), fileName, openMode))) return false;
+    if ((!save(getFibre(index, FibreText()), toCString(name), openMode)) &&
+        (!save(getFibre(index, FibreText()), fileName, openMode))) return false;
 
     name = fileName;    append(name, ".sa");
-    if (!save(getFibre(index, EsaSA()), toCString(name), openMode)) return false;
+    if (!save(getFibre(index, FibreSA()), toCString(name), openMode)) return false;
 
     return true;
 }
@@ -684,4 +688,4 @@ inline bool save(Index<TObject, IndexSa<TSpec> > & index, const char * fileName)
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_EXTRAS_INDEX_SA_STREE_H_
+#endif  // #ifndef SEQAN_INDEX_SA_STREE_H_

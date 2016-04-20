@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Proxy base class definition.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_
 
 namespace seqan {
 
@@ -47,21 +47,22 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
-/**
-.Class.Proxy:
-..cat:Basic
-..summary:Emulates object of another class.
-..signature:Proxy<TSpec>
-..param.TSpec:The specializing type.
-...metafunction:Metafunction.Spec
-..remarks.text:Use @Metafunction.Value@ to get the emulated type.
-An instance of $Proxy$ behaves like an object of its value type.
-$Proxy$ can be used as reference type (see @Metafunction.Reference@).
-..remarks.text:Note that functions that are both general and specialized for
-the value type should be specialized for $Proxy<TSpec>$ too,
-since otherwise the general version will be called.
-..include:seqan/basic.h
-*/
+/*!
+ * @class Proxy
+ * @headerfile <seqan/basic.h>
+ * @brief Emulates object of another class.
+ *
+ * @signature template <typename TSpec>
+ *            class Proxy;
+ *
+ * @tparam TSpec The specializing types.
+ *
+ * Use Value to get the emulated type. An instance of <tt>Proxy</tt> behaves like an object of its value
+ * type.  <tt>Proxy</tt> can be used as reference type (see Reference).
+ *
+ * Note that functions that are both general and specialized for the value type should be specialized for
+ * <tt>Proxy&lt;TSpec&gt;</tt> too, since otherwise the general version will be called.
+ */
 
 template <typename TSpec>
 class Proxy;
@@ -71,11 +72,34 @@ class Proxy;
 // ============================================================================
 
 // ----------------------------------------------------------------------------
+// Metafunction Value
+// ----------------------------------------------------------------------------
+
+/*!
+ * @mfn Proxy#Value
+ * @brief Return emulated type.
+ *
+ * @signature Value<TProxy>::Type;
+ *
+ * @tparam TProxy The proxy type to query.
+ *
+ * @return Type The emulated type.
+ */
+
+// ----------------------------------------------------------------------------
 // Metafunction Spec
 // ----------------------------------------------------------------------------
 
-///.Metafunction.Spec.param.T.type:Class.Proxy
-///.Metafunction.Spec.class:Class.Proxy
+/*!
+ * @mfn Proxy#Spec
+ * @brief Return specialization tag of Proxy.
+ *
+ * @signature Spec<TProxy>::Type;
+ *
+ * @tparam TProxy The proxy type to query.
+ *
+ * @return Type The specializing tag.
+ */
 
 template <typename TSpec>
 struct Spec<Proxy<TSpec> >
@@ -472,4 +496,4 @@ operator<<(TStream & strm,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_PROXY_BASE_H_

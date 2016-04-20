@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_
 
 namespace seqan {
 
@@ -60,12 +60,6 @@ enum TraceDirection
 // Class JournalTraceBuffer
 // ----------------------------------------------------------------------------
 
-/**
- * Specialization of the JournalTraceBuffer for the use of Journal sequences.
- * Describes the trace back in form of journal nodes in a sorted array.
- * Note, that the nodes are entered in reversed order, because the trace back
- * is parsed from the end to the beginning of the alignment.
- */
 template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec>
 class JournalTraceBuffer<String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > >
 {
@@ -292,9 +286,6 @@ value(JournalTraceBuffer<TJournalString> & me,
     return me.revSortedOperation_[pos];
 }
 
-/**
- * Returns a reference to the node at the given position within the trace back.
- */
 template <typename TJournalString>
 inline typename Reference<JournalTraceBuffer<TJournalString> const>::Type
 value(JournalTraceBuffer<TJournalString> const & me,
@@ -353,10 +344,6 @@ getTraceReverse(JournalTraceBuffer<String< TValue, Journaled<THostSpec, TJournal
     return cpy;
 }
 
-/**
- * Returns the trace in reverse (left-to-right) order. Use this function to access the nodes
- * in consecutive order from the beginning to the end of the sequence.
- */
 template <typename TString>
 inline String <typename Value<JournalTraceBuffer<TString> const>::Type> const
 getTraceReverse(JournalTraceBuffer<TString> const & me)
@@ -471,50 +458,6 @@ _constructAndSetJournalTree(String<TValue, Journaled<THostSpec, SortedArray, TBu
     assign(journalSeq._insertionBuffer, insertionBuffer);
 }
 
-template <typename TValue, typename THostSpec, typename TBuffSpec, typename TCargo, typename THostSpec2>
-inline void
-_constructAndSetJournalTree(String<TValue, Journaled<THostSpec, UnbalancedTree, TBuffSpec> > & seq,
-                            String<TCargo, THostSpec2> const & cargoArray,
-                            String<TValue, TBuffSpec> const & insertionBuffer)
-{
-//    typedef String<TValue, Journaled<THostSpec, UnbalancedTree, TBuffSpec> > TJournalString;
-//      typedef typename TJournalString::TJournalEntry TEntry;
-//    typedef typename JournalEntries<TCargo, UnbalancedTree>::TNode TNode;
-    //sorted array
-    clear(seq._journalEntries._nodeAllocator);
-    _doConstructTree(seq._journalEntries._root,seq._journalEntries, cargoArray, 0, (int) length(cargoArray)-1);
-    assign(seq._insertionBuffer, insertionBuffer);
-}
-
-// ----------------------------------------------------------------------------
-// Function _doConstructTree()
-// ----------------------------------------------------------------------------
-
-template <typename TEntry, typename TTree, typename THostSpec, typename TPos>
-void
-_doConstructTree(JournalEntriesUnorderedTreeNode<TEntry> *& node,
-                TTree & tree,
-                String<TEntry, THostSpec> const & array,
-                TPos const begin,
-                TPos const end )
-{
-    typedef typename JournalEntries<TEntry, UnbalancedTree>::TNode TNode;
-
-    if (begin > end) {
-        return;
-    }
-    TPos mid = begin + (end - begin) /2;
-    TNode * tmp;
-    allocate(tree._nodeAllocator, tmp, 1);
-    node = new (tmp) TNode(array[mid]);
-    doConstructTree(node->left, tree, array, begin, mid-1);
-    if (node->left != 0)
-        node->left->parent = node;
-    doConstructTree(node->right, tree, array, mid+1, end);
-    if (node->right != 0)
-        node->right->parent = node;
-}
-
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOURNAL_TRACE_DESCRIPTOR_H_

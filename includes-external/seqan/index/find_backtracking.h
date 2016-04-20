@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Approximate string matching via backtracking on VSTrees
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_FIND_BACKTRACKING_H_
-#define SEQAN_EXTRAS_FIND_BACKTRACKING_H_
+#ifndef SEQAN_FIND_BACKTRACKING_H_
+#define SEQAN_FIND_BACKTRACKING_H_
 
 //#define SEQAN_DEBUG
 
@@ -45,33 +45,31 @@ namespace seqan {
 // Forwards
 // ============================================================================
 
+template <typename TDistance, typename TSpec>
+struct Backtracking;
+
 // ============================================================================
 // Tags, Classes, Enums
 // ============================================================================
 
-template <typename TDistance = HammingDistance, typename TSpec = void>
-struct Backtracking {};
-
-// ============================================================================
-
 template <typename TPrefix, typename TDistance>
-struct State {};
+struct BacktrackingState_ {};
 
 // ============================================================================
 
 template <typename TSuffix, typename TDistance>
-struct SuffixAligner
+struct SuffixAligner_
 {};
 
 template <typename TSuffix>
-struct SuffixAligner<TSuffix, HammingDistance>
+struct SuffixAligner_<TSuffix, HammingDistance>
 {
     typedef typename Size<TSuffix>::Type    TSize;
 
     TSize               suffix_length;
     TSize               suffix_position;
 
-    SuffixAligner() :
+    SuffixAligner_() :
         suffix_length(0),
         suffix_position(0)
     {}
@@ -80,11 +78,11 @@ struct SuffixAligner<TSuffix, HammingDistance>
 // ============================================================================
 
 template <typename TPrefix, typename TDistance>
-struct PrefixAligner
+struct PrefixAligner_
 {};
 
 template <typename TPrefix>
-struct PrefixAligner<TPrefix, HammingDistance>
+struct PrefixAligner_<TPrefix, HammingDistance>
 {
     typedef typename Size<TPrefix>::Type    TSize;
 
@@ -93,7 +91,7 @@ struct PrefixAligner<TPrefix, HammingDistance>
     TSize               global_position;
     unsigned            errors;
 
-    PrefixAligner() :
+    PrefixAligner_() :
         prefix_length(0),
         prefix_position(0),
         global_position(0),
@@ -102,28 +100,6 @@ struct PrefixAligner<TPrefix, HammingDistance>
 };
 
 // ============================================================================
-
-/**
-.Spec.Backtracking:
-..summary:Provides approximate string matching via backtracking on a substring index.
-..general:Class.Pattern
-..general:Class.Finder
-..cat:Searching
-..signature:Finder<TIndex, Backtracking<TDistance> >
-..signature:Pattern<TNeedle, Backtracking<TDistance> >
-..param.TIndex: An index of the sequence that should be searched.
-...type:Class.Index
-..param.TNeedle: The type of the sequence(s) that should be searched for.
-...type:Class.String
-...type:Class.Index
-..param.TDistance: Specifies the distance filter.
-...type:Tag.HammingDistance
-..include:seqan/index.h
-..remarks:
-The @Class.Pattern@ can be a sequence, or an index for a set of sequences. The tolerated backtracking distance must be given when @Function.find@ is called.
-*/
-///.Class.Pattern.param.TSpec.type:Spec.Backtracking
-///.Class.Finder.param.TSpec.type:Spec.Backtracking
 
 template <typename TText, typename TSpec, typename TDistance, typename TBacktrackingSpec>
 class Finder<Index<TText, TSpec>, Backtracking<TDistance, TBacktrackingSpec> >
@@ -138,7 +114,7 @@ protected:
     typedef typename Size<TIndex>::Type                                 TSize;
 
     typedef typename EdgeLabel<TIndexIterator>::Type                    TSuffix;
-    typedef SuffixAligner<TSuffix, TDistance>                           TSuffixAligner;
+    typedef SuffixAligner_<TSuffix, TDistance>                           TSuffixAligner;
 
 public:
     bool                index_iterator_at_root;
@@ -186,9 +162,9 @@ class Pattern<TNeedle, Backtracking<TDistance, TBacktrackingSpec> >
 {
 protected:
     typedef TNeedle                                     TPrefix;
-    typedef PrefixAligner<TPrefix, TDistance>           TPrefixAligner;
+    typedef PrefixAligner_<TPrefix, TDistance>           TPrefixAligner;
 
-    typedef typename State<TPrefix, TDistance>::Type    TState;
+    typedef typename BacktrackingState_<TPrefix, TDistance>::Type    TState;
     typedef String<TState>                              TStateStack;
 
 public:
@@ -224,9 +200,9 @@ protected:
     typedef typename Size<TIndex>::Type                                 TSize;
 
     typedef typename EdgeLabel<TIndexIterator>::Type                    TPrefix;
-    typedef PrefixAligner<TPrefix, TDistance>                           TPrefixAligner;
+    typedef PrefixAligner_<TPrefix, TDistance>                           TPrefixAligner;
 
-    typedef typename State<TPrefix, TDistance>::Type                    TState;
+    typedef typename BacktrackingState_<TPrefix, TDistance>::Type                    TState;
     typedef String<TState>                                              TStateStack;
 
     typedef String<bool>                                                TEndStack;
@@ -274,7 +250,7 @@ public:
     ~Pattern()
     {
 #ifdef SEQAN_DEBUG
-        std::cout << "State Height: " << length(this->state) << std::endl;
+        std::cout << "BacktrackingState_ Height: " << length(this->state) << std::endl;
         std::cout << "atEnd Height: " << length(this->atEnd) << std::endl;
         std::cout << "Pattern Parents Height: " << length(this->index_parents) << std::endl;
 #endif
@@ -292,7 +268,7 @@ public:
 // ============================================================================
 
 template <typename TPrefix>
-struct State<TPrefix, HammingDistance>
+struct BacktrackingState_<TPrefix, HammingDistance>
 {
     typedef typename Size<TPrefix>::Type            TSize;
     typedef Pair<TSize, unsigned>                   Type;
@@ -311,72 +287,72 @@ struct Position<Pattern<Index<TNeedle, TSpec>, Backtracking<TDistance, TBacktrac
 
 template <typename TPrefix>
 inline unsigned
-getScore(PrefixAligner<TPrefix, HammingDistance> const & me, bool atEnd)
+getScore(PrefixAligner_<TPrefix, HammingDistance> const & me, bool atEnd)
 {
     return atEnd ? me.errors : MaxValue<unsigned>::VALUE;
 }
 
 template <typename TPrefix>
 inline unsigned
-getMinScore(PrefixAligner<TPrefix, HammingDistance> const & me)
+getMinScore(PrefixAligner_<TPrefix, HammingDistance> const & me)
 {
     return me.errors;
 }
 
 template <typename TPrefix>
-inline typename State<TPrefix, HammingDistance>::Type
-getInitialState(PrefixAligner<TPrefix, HammingDistance> &)
+inline typename BacktrackingState_<TPrefix, HammingDistance>::Type
+getInitialState(PrefixAligner_<TPrefix, HammingDistance> &)
 {
-    typedef typename State<TPrefix, HammingDistance>::Type  TState;
+    typedef typename BacktrackingState_<TPrefix, HammingDistance>::Type  TState;
     return TState(0, 0);
 }
 
 template <typename TPrefix>
-inline typename State<TPrefix, HammingDistance>::Type
-getState(PrefixAligner<TPrefix, HammingDistance> & me)
+inline typename BacktrackingState_<TPrefix, HammingDistance>::Type
+getState(PrefixAligner_<TPrefix, HammingDistance> & me)
 {
-    typedef typename State<TPrefix, HammingDistance>::Type  TState;
+    typedef typename BacktrackingState_<TPrefix, HammingDistance>::Type  TState;
     return TState(me.global_position, me.errors);
 }
 
 template <typename TPrefix, typename TState>
 inline void
-setState(PrefixAligner<TPrefix, HammingDistance> & me, TState const & state)
+setState(PrefixAligner_<TPrefix, HammingDistance> & me, TState const & state)
 {
     me.global_position = state.i1;
     me.errors = state.i2;
 #ifdef SEQAN_DEBUG
-    std::cout << "Old State:      " << "(" << state.i1 << ", " << state.i2 << ")" << std::endl;
+    std::cout << "Old BacktrackingState_:      " << "(" << state.i1 << ", " << state.i2 << ")" << std::endl;
 #endif
 }
 
 template <typename TSuffix, typename TState>
 inline void
-setState(SuffixAligner<TSuffix, HammingDistance> &, TState const &)
+setState(SuffixAligner_<TSuffix, HammingDistance> &, TState const &)
 {
 //    me.global_position = state.i1;
 }
 
 template <typename TSuffix, typename TSize>
-inline void setLength(SuffixAligner<TSuffix, HammingDistance> & me, TSize suffix_length)
+inline void setLength(SuffixAligner_<TSuffix, HammingDistance> & me, TSize suffix_length)
 {
     me.suffix_length = suffix_length;
 }
 
 template <typename TPrefix, typename TSize>
-inline void setLength(PrefixAligner<TPrefix, HammingDistance> & me, TSize prefix_length)
+inline void setLength(PrefixAligner_<TPrefix, HammingDistance> & me, TSize prefix_length)
 {
     me.prefix_length = prefix_length;
 }
 
 template <typename TSuffix, typename TSize>
-inline void setPosition(SuffixAligner<TSuffix, HammingDistance> & me, TSize suffix_position)
+inline void setPosition(SuffixAligner_<TSuffix, HammingDistance> & me, TSize suffix_position)
 {
     me.suffix_position = suffix_position;
 }
 
 template <typename TPrefix, typename TSize>
-inline void setPosition(PrefixAligner<TPrefix, HammingDistance> & me, TSize prefix_position)
+inline void setPosition(PrefixAligner_<TPrefix, HammingDistance> & me, TSize prefix_position)
 {
     me.prefix_position = prefix_position;
 }
@@ -384,8 +360,8 @@ inline void setPosition(PrefixAligner<TPrefix, HammingDistance> & me, TSize pref
 // ============================================================================
 
 template <typename TSuffix, typename TPrefix, typename TErrors>
-inline bool align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                  PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool align(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                  PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                   TSuffix & suffix,
                   TPrefix & prefix,
                   TErrors errors)
@@ -395,8 +371,8 @@ inline bool align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix, typename TErrors>
-inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _align(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix & suffix,
                    TPrefix & prefix,
                    TErrors errors,
@@ -423,8 +399,8 @@ inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix, typename TErrors>
-inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _align(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix & suffix,
                    TPrefix & prefix,
                    TErrors errors,
@@ -446,13 +422,13 @@ inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
         prefix_aligner.prefix_position++;
         prefix_aligner.global_position++;
     }
-    
+
     return true;
 }
 
 template <typename TSuffix, typename TPrefix, typename TErrors>
-inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _align(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix & suffix,
                    TPrefix & prefix,
                    TErrors errors,
@@ -479,8 +455,8 @@ inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix, typename TErrors>
-inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _align(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix & suffix,
                    TPrefix & prefix,
                    TErrors errors,
@@ -511,8 +487,8 @@ inline bool _align(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 // ============================================================================
 
 template <typename TSuffix, typename TPrefix>
-inline bool match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                  PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool match(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                  PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                   TSuffix const & suffix,
                   TPrefix const & prefix)
 {
@@ -521,8 +497,8 @@ inline bool match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix>
-inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _match(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix const & suffix,
                    TPrefix const & prefix,
                    False const & /* tag */,
@@ -547,8 +523,8 @@ inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix>
-inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _match(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix const & suffix,
                    TPrefix const & prefix,
                    True const & /* tag */,
@@ -568,13 +544,13 @@ inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
         prefix_aligner.prefix_position++;
         prefix_aligner.global_position++;
     }
-    
+
     return true;
 }
 
 template <typename TSuffix, typename TPrefix>
-inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _match(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix const & suffix,
                    TPrefix const & prefix,
                    False const & /* tag */,
@@ -584,7 +560,7 @@ inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 
     TSize extension = _min(suffix_aligner.suffix_length - suffix_aligner.suffix_position,
                            prefix_aligner.prefix_length - prefix_aligner.prefix_position);
-    
+
     if (extension > 0)
     {
         if (suffix != prefix[prefix_aligner.prefix_position])
@@ -599,8 +575,8 @@ inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 }
 
 template <typename TSuffix, typename TPrefix>
-inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
-                   PrefixAligner<TPrefix, HammingDistance> & prefix_aligner,
+inline bool _match(SuffixAligner_<TSuffix, HammingDistance> & suffix_aligner,
+                   PrefixAligner_<TPrefix, HammingDistance> & prefix_aligner,
                    TSuffix const & suffix,
                    TPrefix const & prefix,
                    True const & /* tag */,
@@ -629,13 +605,13 @@ inline bool _match(SuffixAligner<TSuffix, HammingDistance> & suffix_aligner,
 // ============================================================================
 
 template <typename TPrefix>
-inline bool _atEnd(PrefixAligner<TPrefix, HammingDistance> const & me)
+inline bool _atEnd(PrefixAligner_<TPrefix, HammingDistance> const & me)
 {
     return me.prefix_position == me.prefix_length;
 }
 
 template <typename TSuffix>
-inline bool _atEnd(SuffixAligner<TSuffix, HammingDistance> const & me)
+inline bool _atEnd(SuffixAligner_<TSuffix, HammingDistance> const & me)
 {
     return me.suffix_position == me.suffix_length;
 }
@@ -653,7 +629,7 @@ clear(Finder<Index<TText, TSpec>, Backtracking<TDistance, TBacktrackingSpec> > &
     typedef typename Iterator<TSA const, Standard>::Type                TIterator;
 
     typedef typename EdgeLabel<TIndexIterator>::Type                    TSuffix;
-    typedef SuffixAligner<TSuffix, TDistance>                           TSuffixAligner;
+    typedef SuffixAligner_<TSuffix, TDistance>                           TSuffixAligner;
 
     // Init backtracking on root node
     me.index_iterator = TIndexIterator(host(me));
@@ -667,7 +643,7 @@ clear(Finder<Index<TText, TSpec>, Backtracking<TDistance, TBacktrackingSpec> > &
     me.range.i1 = me.range.i2 = TIterator();
     me.data_length = 0;
 
-    // Call SuffixAligner constructor
+    // Call SuffixAligner_ constructor
     me.suffix_aligner = TSuffixAligner();
 }
 
@@ -677,13 +653,13 @@ template <typename TNeedle, typename TDistance, typename TBacktrackingSpec, type
 void setHost(Pattern<TNeedle, Backtracking<TDistance, TBacktrackingSpec> > & me, TNewNeedle const & needle)
 {
     typedef TNeedle                                     TPrefix;
-    typedef PrefixAligner<TPrefix, TDistance>           TPrefixAligner;
-    //typedef typename State<TPrefix, TDistance>::Type    TState;
+    typedef PrefixAligner_<TPrefix, TDistance>           TPrefixAligner;
+    //typedef typename BacktrackingState_<TPrefix, TDistance>::Type    TState;
 
     SEQAN_ASSERT_NOT(empty(needle));
     setValue(me.data_host, needle);
 
-    // Call PrefixAligner constructor
+    // Call PrefixAligner_ constructor
     me.prefix_aligner = TPrefixAligner();
 
     // Init stack on empty word
@@ -709,8 +685,8 @@ void setHost(Pattern<Index<TNeedle, TSpec>, Backtracking<TDistance, TBacktrackin
     typedef typename Iterator<TSA const, Standard>::Type                TIterator;
 
     typedef typename EdgeLabel<TIndexIterator>::Type                    TPrefix;
-    typedef PrefixAligner<TPrefix, TDistance>                           TPrefixAligner;
-    //typedef typename State<TPrefix, TDistance>::Type                    TState;
+    typedef PrefixAligner_<TPrefix, TDistance>                           TPrefixAligner;
+    //typedef typename BacktrackingState_<TPrefix, TDistance>::Type                    TState;
 
     // TODO(esiragusa): Update index holder
     setValue(me.data_host, index);
@@ -740,7 +716,7 @@ void setHost(Pattern<Index<TNeedle, TSpec>, Backtracking<TDistance, TBacktrackin
     me.exact = 0;
     me.search = false;
 
-    // Call PrefixAligner constructor
+    // Call PrefixAligner_ constructor
     me.prefix_aligner = TPrefixAligner();
 }
 
@@ -855,8 +831,8 @@ _backtrack(Finder<Index<TText, TSpec>, Backtracking<TDistance, TBacktrackingSpec
     typedef typename EdgeLabel<TIndexIterator>::Type        TSuffix;
     typedef typename Size<TIndex>::Type                     TSuffixSize;
 
-    typedef typename State<TNeedle, TDistance>::Type        TState;
-    
+    typedef typename BacktrackingState_<TNeedle, TDistance>::Type        TState;
+
     setLength(pattern.prefix_aligner, length(needle(pattern)));
     setPosition(pattern.prefix_aligner, 0);
 
@@ -1003,7 +979,7 @@ _backtrack(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktracking
     typedef typename EdgeLabel<TNeedleIndexIterator>::Type              TPrefix;
     //typedef typename Size<TNeedleIndex>::Type                           TPrefixSize;
 
-    typedef typename State<TNeedle, TDistance>::Type                    TState;
+    typedef typename BacktrackingState_<TNeedle, TDistance>::Type                    TState;
 
     SEQAN_ASSERT_NOT(pattern.exact);
 
@@ -1013,7 +989,7 @@ _backtrack(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktracking
 
 #ifdef SEQAN_DEBUG
         std::cout << "Stack Height:   " << length(pattern.state) << std::endl;
-        std::cout << "Suffix:         "	<< representative(finder.index_iterator) << std::endl;
+        std::cout << "Suffix:         "    << representative(finder.index_iterator) << std::endl;
         std::cout << "Prefix:         " << representative(pattern.index_iterator) << std::endl;
 #endif
 
@@ -1179,8 +1155,8 @@ _search(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpe
     typedef typename EdgeLabel<TNeedleIndexIterator>::Type              TPrefix;
     typedef typename Size<TNeedleIndex>::Type                           TPrefixSize;
 
-    typedef typename State<TNeedle, TDistance>::Type                    TState;
-    
+    typedef typename BacktrackingState_<TNeedle, TDistance>::Type                    TState;
+
     do
     {
         SEQAN_ASSERT_NOT(empty(pattern.state));
@@ -1188,7 +1164,7 @@ _search(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpe
 #ifdef SEQAN_DEBUG
         std::cout << "Stack Height:   " << length(pattern.state) << std::endl;
         std::cout << "Exact Height:   " << pattern.exact << std::endl;
-        std::cout << "Suffix:         "	<< representative(finder.index_iterator) << std::endl;
+        std::cout << "Suffix:         "    << representative(finder.index_iterator) << std::endl;
         std::cout << "Prefix:         " << representative(pattern.index_iterator) << std::endl;
 #endif
 
@@ -1368,7 +1344,7 @@ find(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpec> 
         else
         {
             // Resume from last matching node and backtrack until next match
-//				if (_resume(finder, pattern) && _backtrack(finder, pattern, errors))
+//                if (_resume(finder, pattern) && _backtrack(finder, pattern, errors))
             if (_resume(finder, pattern, errors))
             {
                 // Set data iterator range to the interval containing matches
@@ -1377,10 +1353,10 @@ find(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpec> 
                 finder.range.i2 = hostIterator(finder) + finder.index_range.i2;
                 hostIterator(finder) = finder.range.i1;
 
-				hostIterator(pattern) = begin(indexSA(host(pattern)), Standard());
-				pattern.range.i1 = hostIterator(pattern) + pattern.index_range.i1;
-				pattern.range.i2 = hostIterator(pattern) + pattern.index_range.i2;
-				hostIterator(pattern) = pattern.range.i1;
+                hostIterator(pattern) = begin(indexSA(host(pattern)), Standard());
+                pattern.range.i1 = hostIterator(pattern) + pattern.index_range.i1;
+                pattern.range.i2 = hostIterator(pattern) + pattern.index_range.i2;
+                hostIterator(pattern) = pattern.range.i1;
 
                 // Set match length
                 _setFinderLength(finder, pattern.prefix_aligner.global_position);
@@ -1393,9 +1369,9 @@ find(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpec> 
                 finder.range.i1 = hostIterator(finder);
                 finder.range.i2 = hostIterator(finder);
 
-				hostIterator(pattern) = begin(indexSA(host(pattern)), Standard());
-				pattern.range.i1 = hostIterator(pattern);
-				pattern.range.i2 = hostIterator(pattern);
+                hostIterator(pattern) = begin(indexSA(host(pattern)), Standard());
+                pattern.range.i1 = hostIterator(pattern);
+                pattern.range.i2 = hostIterator(pattern);
             }
         }
 
@@ -1414,4 +1390,4 @@ find(Finder<Index<TText, TTextSpec>, Backtracking<TDistance, TBacktrackingSpec> 
 
 }
 
-#endif  // #ifndef SEQAN_EXTRAS_FIND_BACKTRACKING_H_
+#endif  // #ifndef SEQAN_FIND_BACKTRACKING_H_
