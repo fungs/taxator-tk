@@ -6,6 +6,8 @@
 set -o errexit
 set -o nounset
 
+compile_threads=${1:-1}
+
 arch="$(uname -m)"
 bdir="Build-$arch"
 
@@ -16,5 +18,6 @@ cd "$bdir"
 cmake ../
 
 echo "Compiling source code in $bdir"
-make
+
+make -j "$compile_threads"
 echo "Programs successfully built in $bdir, check it out!"
