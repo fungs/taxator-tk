@@ -222,7 +222,7 @@ void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConve
 int main( int argc, char** argv ) {
 
     vector< string > ranks;
-    string accessconverter_filename, algorithm, query_filename, query_index_filename, db_filename, db_index_filename, whitelist_filename, log_filename;
+    string accessconverter_filename, algorithm, query_filename, query_index_filename, db_filename, db_index_filename, whitelist_filename, log_filename, data_format;
     bool delete_unmarked, split_alignments, alignments_sorted;
     uint nbest, minsupport, number_threads;
     float toppercent, minscore, filterout;
@@ -241,8 +241,8 @@ int main( int argc, char** argv ) {
     ( "ref-sequences,f", po::value< string >( &db_filename ), "reference sequences FASTA" )
     ( "ref-sequences-index,i", po::value< string >( &db_index_filename ), "FASTA file index, for out-of-memory operation; is created if not existing" )
     ( "processors,p", po::value< uint >( &number_threads )->default_value( 1 ), "sets number of threads, number > 2 will heavily profit from multi-core architectures, set to 0 for max. performance" )
-    ( "logfile,l", po::value< std::string >( &log_filename )->default_value( "/dev/null" ), "specify name of file for logging (appending lines)" );
-
+    ( "logfile,l", po::value< std::string >( &log_filename )->default_value( "/dev/null" ), "specify name of file for logging (appending lines)" )
+    ( "dataformat,b", po::value< std::string >( &data_format)->default_value("nucleotide"), "specify used data (nucleotide, protein)");
     po::options_description hidden_options("Hidden options");
     hidden_options.add_options()
     ( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
@@ -292,14 +292,18 @@ int main( int argc, char** argv ) {
     }
 
     bool ignore_unclassified = vm.count( "ignore-unclassified" );
-
+    
+    std::cerr << "load taxonomy\n";
     boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );  // create taxonomy
     if( ! tax ) return EXIT_FAILURE;
-    
+    std::cerr << "end load taxonomy\n";
     if( delete_unmarked ) tax->deleteUnmarkedNodes();  // do everything only with the major NCBI ranks given by "ranks"
+    
+    std::cerr << "load idtotax\n";
     boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
     std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
-
+    std::cerr << "end load idtotax\n";
+    
     try {
       // choose appropriate prediction model from command line parameters
       //TODO: "address of temporary warning" is annoying but life-time is guaranteed until function returns
@@ -309,21 +313,31 @@ int main( int argc, char** argv ) {
       else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "rpa" ) {
-          typedef seqan::String< seqan::Dna5 > StringType;
+          typedef seqan::String<seqan::AminoAcid> StringType;
+          ///temp func
+          
           // load query sequences
+          std::cerr << "load queries\n";
           boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
-          if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType >( query_filename ) );
+          if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
           else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
-
+          std::cerr << "end load queries\n";
           // reference query sequences
           boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
           StopWatchCPUTime measure_db_loading( "loading reference db" );
           measure_db_loading.start();
-          if( db_index_filename.empty() ) db_storage.reset( new RandomInmemorySeqStoreRO< StringType >( db_filename ) );
-          else db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+          std::cerr << "db loading\n";
+          if( db_index_filename.empty() ) {
+              std::cerr << "db indexfile empty";
+              db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
+            }
+          else {
+              std::cerr << "not empty";
+              db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+          }
           measure_db_loading.stop();
-
-          doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+          std::cerr << "db loaded\n";
+          doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
       } else {
           cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
           return EXIT_FAILURE;
@@ -331,7 +345,7 @@ int main( int argc, char** argv ) {
       return EXIT_SUCCESS;
     } catch(Exception &e) {
        cerr << "An unrecoverable error occurred." << endl;
-//        cerr << e.what() << endl;
+       //cerr << e.what() << endl;
        cerr << boost::diagnostic_information(e) << endl;
        return EXIT_FAILURE;
     }

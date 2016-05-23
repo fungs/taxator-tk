@@ -107,7 +107,7 @@ public:
             std::cerr << std::endl;
         } else BOOST_THROW_EXCEPTION(FileError{} << file_info{filename});
     }
-
+    
     const StorageStringType& getSequence ( const std::string& id ) const {
         std::map< std::string, large_unsigned_int >::const_iterator find_it = id2pos_.find( id );
         if( find_it == id2pos_.end() ) BOOST_THROW_EXCEPTION(SequenceNotFound {} << seqid_info{id});
@@ -132,7 +132,8 @@ public:
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
     };
-
+    
+    
 protected:
     seqan::StringSet< StorageStringType > data_;
     std::map< std::string, large_unsigned_int > id2pos_; //hash_map aka unordered_map would be more apt
@@ -232,7 +233,7 @@ public:
     const StringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
         assert( start <= stop );
         StringType seq = getSequence( id , start, stop );
-        seqan::reverseComplement( seq );
+        //seqan::reverseComplement( seq );
         return seq;
     }
 
