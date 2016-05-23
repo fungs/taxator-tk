@@ -44,7 +44,7 @@ public:
     PredictionRecordBase( const PredictionRecordBase& rec ) : taxinter_( rec.taxinter_ ) {}
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length ) {
-        initialize( query_identifier, query_length, 0, query_length );
+        initialize( query_identifier, query_length, 1, query_length );
     }
 
     void initialize( const std::string& query_identifier, large_unsigned_int query_length, large_unsigned_int feature_begin, large_unsigned_int feature_end ) {
@@ -124,7 +124,7 @@ public:
     const TaxonNode* getLowerNode() const {
         return lower_node_;
     }
-    const TaxonNode* getRtax() const {
+    const TaxonNode* getBestReferenceTaxon() const {
         return rtax_;
     }
 
@@ -214,14 +214,14 @@ public:
 
 
 
-        } catch ( boost::bad_lexical_cast& e ) {
+        } catch ( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse feature position number" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 feature position"} );
         }
 
         try {
             setSignalStrength( fields[5] == "." ? std::numeric_limits< float >::quiet_NaN() : boost::lexical_cast< float >( fields[5] ) );
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
 //             std::cerr << "could not parse signal strength (score field) in input" << std::endl;
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info{"bad GFF3 taxonomic signal score"} );
         }
@@ -231,7 +231,7 @@ public:
             std::vector< std::string > key_value_fields;
             std::vector< std::string > key_value;
             tokenizeSingleCharDelim( fields[8], key_value_fields, ";", 0, true );
-            for ( std::vector< std::string >::const_iterator it = key_value_fields.begin(); ! it->empty(); ++it ) {
+            for ( std::vector< std::string >::const_iterator it = key_value_fields.begin(); it != key_value_fields.end(); ++it ) {
                 tokenizeSingleCharDelim( *it, key_value, "=", 2, false );
                 parseKeyValue(key_value[0], key_value[1]); //set values
                 key_value.clear();
@@ -374,7 +374,7 @@ protected:
                 setBestReferenceTaxon(rtax_node);
                 return;
             }
-        } catch( boost::bad_lexical_cast& e ) {
+        } catch( boost::bad_lexical_cast& ) {
             BOOST_THROW_EXCEPTION(ParsingError{} << general_info {"bad GFF3 key value"} << general_info{key});
         }
     }
@@ -483,7 +483,7 @@ public:
         PredictionRecordType* rec = new PredictionRecordType( tax_ );
         std::string line;
         while( std::getline( handle, line ) ) {
-            if(ignoreLine( line )) continue;
+            if(emptyLine(line) || ignoreLine(line)) continue;
             rec->parse( line );
             return rec;
         }
