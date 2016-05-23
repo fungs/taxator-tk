@@ -211,9 +211,9 @@ int main( int argc, char** argv ) {
 //
 // 		try {
 // 			seqid2taxid[ "1000000" ];
-// 		} catch( std::out_of_range e ) {
+// 		} catch( std::out_of_range &e ) {
 // 			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" );
-// 		} catch( std::exception e ) {
+// 		} catch( std::exception &e ) {
 // 			alltests = alltests && unittest_assert( typeid( e ) == typeid( std::out_of_range ), "SQLITE_OUT_OF_RANGE" ); //why this?
 // 		}
 // 	}

@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/iterator/iterator_concepts.hpp>
 #include <boost/lexical_cast.hpp>
 #include "types.hh"
+#include "exception.hh"
 #include "taxonomyinterface.hh"
 #include "constants.hh"
 
@@ -58,7 +59,7 @@ class NewickTaxonFilter : public TaxonFilter {
 			for (small_unsigned_int i = 0; i < rank_names.size(); ++i ) {
 				const std::string& rank = taxinter.getRankInternal( rank_names[i] );
 				if( rank.empty() ) {
-					std::cerr << "Rank '" << rank_names_[i] << "' not found in taxonomy, ignoring..." << std::endl;
+					std::cerr << "Rank '" << rank_names_[i] << "' not found in taxonomy, ignoring." << std::endl;
 					continue;
 				}
 				ranks_[&rank] = i;
@@ -68,14 +69,19 @@ class NewickTaxonFilter : public TaxonFilter {
 		
 		void operator()( std::string& inputstr ) {
 			TaxonID taxid = boost::lexical_cast< TaxonID >( inputstr );
-			const TaxonNode* node = taxinter_.getNode( taxid );
-			while( node != taxinter_.getRoot() && ! ranks_.count( &(node->data->annotation->rank) ) ) node = node->parent;
-			small_unsigned_int& depth = node->data->root_pathlength;
-			if ( newicklists.size() <= depth ) {
-				newicklists.resize( depth + 1 );
-				maxdepth_ = depth;
-			}
-			newicklists[depth][node]; //standard constructor = std::list<std::string&>>();
+      try {
+        const TaxonNode* node = taxinter_.getNode( taxid );
+        while( node != taxinter_.getRoot() && ! ranks_.count( &(node->data->annotation->rank) ) ) node = node->parent;
+        small_unsigned_int& depth = node->data->root_pathlength;
+        if ( newicklists.size() <= depth ) {
+          newicklists.resize( depth + 1 );
+          maxdepth_ = depth;
+        }
+        newicklists[depth][node]; //standard constructor = std::list<std::string&>>();
+      } catch ( TaxonNotFound &e ) {
+        if( TaxonID const * taxid = boost::get_error_info<taxid_info>(e) ) std::cerr << "Could not find node with taxid " << *taxid << " in the taxonomy, skipping record." << std::endl;
+        else std::cerr << "Could not find node by its taxid in the taxonomy, skipping record." << std::endl;
+      }
 		};
 		
 		~NewickTaxonFilter() { //writes the actual newick tree
