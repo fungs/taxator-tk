@@ -98,7 +98,7 @@ public:
             seq++;
         }
     }
-
+    
     const StorageStringType& getSequence ( const std::string& id ) const {
         seqan::CharString id_ss = id;
         std::map< seqan::CharString, large_unsigned_int >::const_iterator find_it = id2pos_.find( id_ss );
@@ -125,7 +125,8 @@ public:
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
     };
-
+    
+    
 protected:
     seqan::StringSet< StorageStringType > data_;
     std::map< seqan::CharString, large_unsigned_int > id2pos_;
