@@ -233,7 +233,7 @@ public:
     const StringType getSequenceReverseComplement ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
         assert( start <= stop );
         StringType seq = getSequence( id , start, stop );
-        //seqan::reverseComplement( seq );
+        seqan::reverseComplement( seq );
         return seq;
     }
 
