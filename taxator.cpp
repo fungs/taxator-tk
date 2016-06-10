@@ -75,6 +75,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     delete recgen;
 }
 
+
 class BoostProducer {
 public:
     BoostProducer( BoundedBuffer< RecordSetType >& buffer, AlignmentRecordFactory< AlignmentRecordTaxonomy >& fac, bool split_alignments, bool alignments_sorted ) :
@@ -120,7 +121,6 @@ private:
     }
 
 };
-
 
 
 class BoostConsumer {
@@ -177,7 +177,6 @@ private:
 };
 
 
-
 void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted , std::ostream& logsink, uint number_threads  ) {
     AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 
@@ -210,14 +209,46 @@ void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, St
 }
 
 
-
 // TODO: use function template?
 void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted, std::ostream& logsink, uint number_threads ) {
     if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink, number_threads );
     doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink );
 }
 
+template<typename StringType>
+void execute(string db_filename,string db_index_filename,string query_filename, string query_index_filename,
+            boost::scoped_ptr< Taxonomy >& tax, float filterout, float toppercent, boost::scoped_ptr< StrIDConverter >& seqid2taxid,//
+            bool split_alignments, bool alignments_sorted, std::ofstream& logsink, uint number_threads){
 
+   //  &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent )
+   //  , *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // T
+    
+    // load query sequences
+    std::cerr << "load queries\n";
+    boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
+    
+    if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
+    else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
+    
+    std::cerr << "end load queries\n";
+    
+    // reference query sequences
+    boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
+    StopWatchCPUTime measure_db_loading( "loading reference db" );
+    measure_db_loading.start();
+    std::cerr << "db loading\n";
+    if( db_index_filename.empty() ) {
+        std::cerr << "db indexfile empty";
+        db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
+    }
+    else {
+        std::cerr << "not empty";
+        db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+    }
+    measure_db_loading.stop();
+    std::cerr << "db loaded\n";
+    doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+}
 
 int main( int argc, char** argv ) {
 
@@ -313,32 +344,74 @@ int main( int argc, char** argv ) {
       else if( algorithm == "ic-megan-lca" ) doPredictions( &ICMeganLCAPredictionModel< RecordSetType >( tax.get(), toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       else if( algorithm == "rpa" ) {
-          typedef seqan::String<seqan::AminoAcid> StringType;
-          ///temp func
           
-          // load query sequences
-          std::cerr << "load queries\n";
-          boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
-          if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
-          else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
-          std::cerr << "end load queries\n";
-          // reference query sequences
-          boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
-          StopWatchCPUTime measure_db_loading( "loading reference db" );
-          measure_db_loading.start();
-          std::cerr << "db loading\n";
-          if( db_index_filename.empty() ) {
-              std::cerr << "db indexfile empty";
-              db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
-            }
-          else {
-              std::cerr << "not empty";
-              db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+          if(data_format == "nucleotide"){
+              execute<seqan::String<seqan::Dna5>>(db_filename, db_index_filename, query_filename, query_index_filename,
+                                                  tax , filterout, toppercent, seqid2taxid, 
+                                                  split_alignments, alignments_sorted, logsink, number_threads);
+//                typedef seqan::String<seqan::Dna5> StringType;
+//                ///temp func
+//          
+//                // load query sequences
+//                std::cerr << "load queries\n";
+//                boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
+//                if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
+//                else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
+//                std::cerr << "end load queries\n";
+//                // reference query sequences
+//                boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
+//                StopWatchCPUTime measure_db_loading( "loading reference db" );
+//                measure_db_loading.start();
+//                std::cerr << "db loading\n";
+//                if( db_index_filename.empty() ) {
+//                    std::cerr << "db indexfile empty";
+//                    db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
+//                }
+//                else {
+//                    std::cerr << "not empty";
+//                    db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+//                }
+//                measure_db_loading.stop();
+//                std::cerr << "db loaded\n";
+//                doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+//                    
           }
-          measure_db_loading.stop();
-          std::cerr << "db loaded\n";
-          doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
-      } else {
+//          else if(data_format == "protein"){
+//               execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
+//                                                  tax.get(), filterout, toppercent, *seqid2taxid, 
+//                                                  split_alignments, alignments_sorted, logsink, number_threads);
+//          
+//                typedef seqan::String<seqan::AminoAcid> StringType;
+//                ///temp func
+//          
+//                // load query sequences
+//                std::cerr << "load queries\n";
+//                boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
+//                if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
+//                else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
+//                std::cerr << "end load queries\n";
+//                // reference query sequences
+//                boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
+//                StopWatchCPUTime measure_db_loading( "loading reference db" );
+//                measure_db_loading.start();
+//                std::cerr << "db loading\n";
+//                if( db_index_filename.empty() ) {
+//                    std::cerr << "db indexfile empty";
+//                    db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
+//                }
+//                else {
+//                    std::cerr << "not empty";
+//                    db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+//                }
+//                measure_db_loading.stop();
+//                std::cerr << "db loaded\n";
+//                doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+//          }
+          else{
+          cout << "data format can either be nucleotide or protein" << endl;
+          return EXIT_FAILURE;
+          }
+          } else {
           cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
           return EXIT_FAILURE;
       }
