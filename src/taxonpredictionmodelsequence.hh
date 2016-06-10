@@ -644,10 +644,24 @@ public:
     }
     
     const StringType getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
+        if(typeid(StringType) == typeid(seqan::String<seqan::Dna5>)){
+            if(start <= stop) {
+            large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
+            large_unsigned_int newstop = stop + right_ext;
+            return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
+            }
+            large_unsigned_int newstart = right_ext < stop ? stop - right_ext : 1;
+            large_unsigned_int newstop = start + left_ext;
+            return db_sequences_.getSequenceReverseComplement(id, newstart, newstop); 
+        }else if(typeid(StringType) == typeid(seqan::String<seqan::AminoAcid>)){
         assert(start <= stop);
         large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
         large_unsigned_int newstop = stop + right_ext;
         return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
+        }
+        else{
+            assert(false);
+        }
     }
 
 protected:
@@ -701,14 +715,14 @@ private:
         assignSource(row(selfalignB, 1), B);
         
         selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
-        
+        // score without alignment
         //align sequences
         TAlign diffalign;
         resize(rows(diffalign), 2);
         assignSource(row(diffalign, 0), A);
         assignSource(row(diffalign, 1), B);
         
-        int alignscore = seqan::globalAlignment(diffalign,AlignMethod());
+        int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
         //int returnscore = selfcomp - alignscore;
         
         //logsink << diffalign << std::endl;
