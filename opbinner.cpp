@@ -902,7 +902,7 @@ std::ofstream binning_debug_output( log_filename.c_str() );
             // initialize temporary data structure (list of tuples)
             medium_unsigned_int summed_support = 0;
             for ( boost::ptr_list< PredictionRecordBinning >::iterator itp = predictions.begin(); itp != predictions.end(); ++itp ) {
-                const TaxonNode* lower_node = itp->getRtax();
+                const TaxonNode* lower_node = itp->getBestReferenceTaxon();
                 int i = lower_node->data->root_pathlength;
                 medium_unsigned_int support = itp->getSupportAt( i , true );
                 //std::cerr << "got support\n";
