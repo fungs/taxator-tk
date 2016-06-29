@@ -377,11 +377,11 @@ int main( int argc, char** argv ) {
 //                doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
 //                    
           }
-//          else if(data_format == "protein"){
-//               execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
-//                                                  tax.get(), filterout, toppercent, *seqid2taxid, 
-//                                                  split_alignments, alignments_sorted, logsink, number_threads);
-//          
+          else if(data_format == "protein"){
+               execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
+                                                  tax , filterout, toppercent, seqid2taxid, 
+                                                  split_alignments, alignments_sorted, logsink, number_threads);
+          }
 //                typedef seqan::String<seqan::AminoAcid> StringType;
 //                ///temp func
 //          
