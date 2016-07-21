@@ -1,6 +1,6 @@
 # File formats
 
-The taxator-tk suite uses simple, text-based and, if possible, standard intermediate formats. Thereby, data can be easily transformed, edited, compressed and saved.
+The taxator-tk suite uses simple, text-based and, if possible, standard formats. Thereby, data can be easily transformed, edited, compressed and saved.
 
 ## Alignments
 
