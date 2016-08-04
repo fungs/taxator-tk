@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/progress.hpp>
 #include <boost/concept_check.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
 #include <set>
 #include <string>
 #include "ncbidata.hh"
@@ -332,8 +334,11 @@ public:
         }
     }
 
+    
+
     const StringType getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
-        assert( start <= stop );
+        
+	assert( start <= stop );
         unsigned int seq_num;
         StringType seq;
         
@@ -348,8 +353,13 @@ public:
         }
         
         stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
-        seqan::readRegion( seq, index_, seq_num, start - 1, stop );
-        assert( seqan::length( seq ) == (stop - start + 1) );
+	
+	{
+		boost::mutex::scoped_lock lock(seq_mutex);
+        	seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+	}        
+
+	assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
     }
    
@@ -394,6 +404,7 @@ protected:
     seqan::FaiIndex index_;
     bool write_on_exit_;
     std::map<seqan::CharString, unsigned int> refid2position_;
+    mutable boost::mutex seq_mutex;
 };
 
 // AA Template Specialisation --------------------------------------------------------------------------------
@@ -419,7 +430,8 @@ public:
         }
 
         const seqan::String<seqan::AminoAcid> getSequence ( const std::string& id, large_unsigned_int start, large_unsigned_int stop ) const {
-        assert( start <= stop );
+        
+	assert( start <= stop );
         unsigned int seq_num;
         seqan::String<seqan::AminoAcid> seq;
         
@@ -434,7 +446,10 @@ public:
         }
         
         stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
-        seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+	{
+		boost::mutex::scoped_lock lock(seq_mutex);
+        	seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+	}
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
         }
@@ -452,7 +467,7 @@ public:
     seqan::FaiIndex index_;
     bool write_on_exit_;
     std::map<seqan::CharString, unsigned int> refid2position_;
-
+    mutable boost::mutex seq_mutex;
 };
 
 
