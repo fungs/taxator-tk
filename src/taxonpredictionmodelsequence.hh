@@ -138,6 +138,10 @@ public:
         StopWatchCPUTime stopwatch_init("initializing this record");  // log overall time for this predict phase
         stopwatch_init.start();
 
+	// prepare alignment/ score type
+	//seqan::Score<int> myBlosum = seqan::Blosum80(); 
+	//align_method = &myBlosum;
+
         // push records into active_records  TODO: remove intermediate active_records?
         active_list_type_ active_records;
         {
@@ -678,6 +682,7 @@ private:
     StopWatchCPUTime measure_pass_0_alignment_;
     StopWatchCPUTime measure_pass_1_alignment_;
     StopWatchCPUTime measure_pass_2_alignment_;
+    //const seqan::Score<int> *align_method;
     
 //    int getAlignment(StringType A, StringType B){
 //        int selfcomp = seqan::globalAlignmentScore(B,B,seqan::Blosum80());
@@ -693,37 +698,58 @@ private:
 //    }
     template<typename AlignMethod>
     alignment<StringType> getAlignment(StringType A, StringType B){
-        alignment<StringType> returnalignment;
-        //typedef StringType TSequence;     
+	alignment<StringType> returnalignment;
+            
         typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
         typedef typename seqan::Row<TAlign>::Type TRow;
-        typedef typename seqan::Iterator<TRow>::Type TRowIterator;
-        
-        //align sequence to itselftypedef typename 
-        TAlign selfalignA;
+        typedef typename seqan::Iterator<TRow>::Type TRowIterator;	
+
+ 	TAlign selfalignA;
         TAlign selfalignB; 
+	TAlign diffalign;
         
         resize(rows(selfalignA), 2);
         assignSource(row(selfalignA, 0), A);
         assignSource(row(selfalignA, 1), A);
-        
-        int selfcomp = seqan::globalAlignment(selfalignA,AlignMethod());
-        
-        //TAlign selfalignB;
-        resize(rows(selfalignB), 2);
+
+	resize(rows(selfalignB), 2);
         assignSource(row(selfalignB, 0), B);
         assignSource(row(selfalignB, 1), B);
-        
-        selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
-        // score without alignment
-        //align sequences
-        TAlign diffalign;
+
         resize(rows(diffalign), 2);
         assignSource(row(diffalign, 0), A);
         assignSource(row(diffalign, 1), B);
+
+	int selfcomp;
+	int alignscore;
+
+	if(typeid(StringType)==typeid(seqan::AminoAcid)){        
+	
         
-        int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
-        //int returnscore = selfcomp - alignscore;
+        //align sequence to itself
+       
+        //int selfcomp = seqan::globalAlignment(selfalignA,AlignMethod());
+        //selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
+        
+        //int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
+	
+	selfcomp = seqan::globalAlignment(selfalignA,seqan::Blosum80());
+        selfcomp += seqan::globalAlignment(selfalignB,seqan::Blosum80());
+        
+        alignscore = seqan::globalAlignment(diffalign,seqan::Blosum80()); 
+	
+	}
+	else{
+	
+        //align sequence to itself
+       
+        selfcomp = seqan::globalAlignment(selfalignA,seqan::MyersHirschberg());
+        selfcomp += seqan::globalAlignment(selfalignB,seqan::MyersHirschberg());
+        
+	// score without alignment
+        
+        alignscore = seqan::globalAlignment(diffalign,seqan::MyersHirschberg()); 	
+	}
         
         //logsink << diffalign << std::endl;
         
@@ -763,6 +789,7 @@ private:
         //std::cerr << selfcomp <<" "<< alignscore <<" "<< returnscore <<" "<< std::endl;
         //assert(selfcomp >= alignscore);
         //assert(returnalignment.score >= 0);
+	
         return returnalignment;
         //return returnscore;
         //return -seqan::globalAlignmentScore(A,B,seqan::Blosum30());
