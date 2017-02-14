@@ -4,7 +4,7 @@ A set of programs for the taxonomic analysis of nucleotide sequence data
 ## Introduction
 This is the source code for the taxator toolkit. If you are looking for pre-packaged
 programs or sample refpacks for taxonomic assignment, please go to the
-[official download page](research.bifo.helmholtz-hzi.de/webapps/wa-download/).
+[official download page](http://research.bifo.helmholtz-hzi.de/webapps/wa-download/).
 
 Issues concerning the extended version (binaries, workflow scripts etc.) which you have downloaded from the official download page should be mailed to us (see contact below).
 
