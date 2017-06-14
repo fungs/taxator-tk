@@ -11,6 +11,9 @@ Issues concerning the extended version (binaries, workflow scripts etc.) which y
 Issues which apply to the taxator-tk core can be filed in the
 [official GitHub repository](https://github.com/fungs/taxator-tk/).
 
+## Documentation
+Please see separate documentation: [install guide](INSTALL.md) and [usage instructions](USAGE.md).
+
 ## Code licensing
 The taxator-tk source is licensend under the GPLv3 and builds on the following software components:
 
