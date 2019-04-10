@@ -303,7 +303,6 @@ int main( int argc, char** argv ) {
 
     try {
       // choose appropriate prediction model from command line parameters
-      //TODO: "address of temporary warning" is annoying but life-time is guaranteed until function returns
       if( algorithm == "dummy" ) {
         auto dpm = DummyPredictionModel< RecordSetType >( tax.get() );
         doPredictions( &dpm, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
