@@ -304,12 +304,22 @@ int main( int argc, char** argv ) {
     try {
       // choose appropriate prediction model from command line parameters
       //TODO: "address of temporary warning" is annoying but life-time is guaranteed until function returns
-      if( algorithm == "dummy" ) doPredictions( &DummyPredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "simple-lca" ) doPredictions( &LCASimplePredictionModel< RecordSetType >( tax.get() ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "ic-megan-lca" ) doPredictions( &MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "n-best-lca" ) doPredictions( &NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
-      else if( algorithm == "rpa" ) {
+      if( algorithm == "dummy" ) {
+        auto dpm = DummyPredictionModel< RecordSetType >( tax.get() );
+        doPredictions( &dpm, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      } else if( algorithm == "simple-lca" ) {
+        auto lcas = LCASimplePredictionModel< RecordSetType >( tax.get() );
+        doPredictions( &lcas, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      } else if( algorithm == "megan-lca" ) {
+        auto megan = MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue );
+        doPredictions( &megan, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      } else if( algorithm == "ic-megan-lca" ) {
+        auto megan = MeganLCAPredictionModel< RecordSetType >( tax.get(), ignore_unclassified, toppercent, minscore, minsupport, maxevalue );
+        doPredictions( &megan, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      } else if( algorithm == "n-best-lca" ) {
+        auto nbestLCA = NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest );
+        doPredictions( &nbestLCA, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
+      } else if( algorithm == "rpa" ) {
           typedef seqan::String< seqan::Dna5 > StringType;
           // load query sequences
           boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
@@ -324,7 +334,8 @@ int main( int argc, char** argv ) {
           else db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
           measure_db_loading.stop();
 
-          doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+          auto rpapred = RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent );
+          doPredictions( &rpapred, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
       } else {
           cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
           return EXIT_FAILURE;
