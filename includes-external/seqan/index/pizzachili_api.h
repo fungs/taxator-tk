@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 
 #include <seqan/basic.h>
 
-namespace SEQAN_NAMESPACE_MAIN {
+namespace seqan {
 
 namespace impl {
     typedef unsigned char uchar_t;
@@ -55,26 +55,66 @@ struct PizzaChiliCodeProvider {
     typedef InvalidPizzaChiliSpec Type;
 };
 
-/**
-.Tag.Pizza & Chili Index Tags
-..summary:Tag specifying the Pizza & Chili library to use.
-..remarks:More information for all the index libraries can be found in the
-@http://pizzachili.dcc.uchile.cl|original documentation@ (or the
-@http://pizzachili.di.unipi.it|Italian mirror@).
-..cat:Index
-..tag.PizzaChiliAF:The alphabet-friendly FM index.
-..tag.PizzaChiliCcsa:The compressed compact suffix array index.
-..tag.PizzaChiliFM: The FM (full-text in minute space) index.
-..tag.PizzaChiili_RSA:The repair suffix array index.
-...remarks:The index cannot be saved and loaded.
-..tag.PizzaChiliSA: The simple suffix array index.
-...remarks:The index cannot be saved and loaded.
-..tag.PizzaChiliSada: the compressed suffix array index.
-...remarks:The index cannot be saved and loaded.
-..see:Spec.Pizza & Chili Index
-..see:Spec.Pizza & Chili String
-..include:seqan/index.h
-*/
+/*!
+ * @defgroup PizzaChiliIndexTags Pizza &amp; Chili Index Tags
+ *
+ * @brief Tag specifying the Pizza &amp; Chili library to use.
+ *
+ * @section Remarks
+ *
+ * More information for all the index libraries can be found at <a href="dcc.uchile.cl">original documentation</a> (or the <a href="di.unipi.it">Italian mirror</a>).
+ *
+ * @see PizzaChiliIndex
+ * @see PizzaChiliString
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiliSada
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief the compressed suffix array index.
+ *
+ * @section Remarks
+ *
+ * The index cannot be saved and loaded.
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiliAF
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief The alphabet-friendly FM index.
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiili_RSA
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief The repair suffix array index.
+ *
+ * @section Remarks
+ *
+ * The index cannot be saved and loaded.
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiliSA
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief The simple suffix array index.
+ *
+ * @section Remarks
+ *
+ * The index cannot be saved and loaded.
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiliFM
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief The FM (full-text in minute space) index.
+ *
+ * @tag PizzaChiliIndexTags#PizzaChiliCcsa
+ *
+ * @deprecated Module is outdated and is not maintained anymore. Will presumably be removed in the next major release.
+ *
+ * @brief The compressed compact suffix array index.
+ */
 
 // We need to declare these explicitly instead through macro expansion in order
 // for them to be included in the forward generated declarations.
@@ -177,6 +217,6 @@ SEQAN_MAKE_PIZZACHILI_PROVIDER(Test)
 
 #undef SEQAN_MAKE_PIZZACHILI_PROVIDER
 
-} // namespace SEQAN_NAMESPACE_MAIN
+} // namespace seqan
 
 #endif // SEQAN_HEADER_PIZZACHILI_API_H

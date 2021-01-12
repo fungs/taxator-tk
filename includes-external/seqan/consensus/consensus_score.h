@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,11 +32,11 @@
 // Author: Tobias Rausch <rausch@embl.de>
 // ==========================================================================
 
-#ifndef SEQAN_HEADER_SEQAN_CONSENSUS_SCORE_H
-#define SEQAN_HEADER_SEQAN_CONSENSUS_SCORE_H
+#ifndef SEQAN_HEADER_SEQAN_CONSENSUS_SH
+#define SEQAN_HEADER_SEQAN_CONSENSUS_SH
 
 
-namespace SEQAN_NAMESPACE_MAIN
+namespace seqan
 {
 
 
@@ -85,10 +85,10 @@ template <typename TValue>
 class Score<TValue, ConsensusScore>
 {
 public:
-	String<TValue> consensus_set;		// Is the alphabet character part of the consensus set for each column
+    String<TValue> consensus_set;        // Is the alphabet character part of the consensus set for each column
 
 public:
-	Score() {}
+    Score() {}
 
 };
 
@@ -96,18 +96,18 @@ public:
 // Class ConsensusScoreSequenceEntry
 // --------------------------------------------------------------------------
 
-/**
-.Class.ConsensusScoreSequenceEntry
-..cat:Alignments
-..signature:ConsensusScoreSequenceEntry<TSequence>
-..summary:Wrapper for a pointer to a sequence and a position in this sequence.
-..description:This is used for unified interfaces for position dependent and independent scores.
-..param.TSequence:The underlying sequence of the alignments or gaps.
-...type:Concept.SequenceConcept
-..see:Metafunction.Score#SequenceEntryForScore
-..see:Function.Score#sequenceEntryForScore
-..include:seqan/score.h
-*/
+/*!
+ * @class ConsensusScoreSequenceEntry
+ * @headerfile <seqan/consensus.h>
+ * @brief Wrapper for a pointer to a sequence and a position in this sequence.
+ *
+ * @signature template <typename TSequence>
+ *            class ConsensusScoreSequenceEntry;
+ *
+ * @tparam TSequence The sequence type this entry type is for.
+ *
+ * This is used for unified interfaces for position dependent and independetn scores.
+ */
 
 template <typename TSequence>
 class ConsensusScoreSequenceEntry
@@ -126,17 +126,16 @@ public:
     {}
 };
 
-/**
-.Function.ConsensusScoreSequenceEntry#host
-..cat:Alignments
-..class:Class.ConsensusScoreSequenceEntry
-..signature:TSequence host(entry)
-..summary:Returns reference to sequence from entry.
-..param.entry:The entry to query.
-...type:Class.ConsensusScoreSequenceEntry
-..return:Reference to the underying sequence, is of type $TSequence const &$.
-..include:seqan/consensus.h
-*/
+/*!
+ * @fn ConsensusScoreSequenceEntry#host
+ * @brief Returns reference to sequence from entry.
+ *
+ * @signature TSequence host(entry);
+ *
+ * @param[in] entry The ConsensusScoreSequenceEntry to query for its host.
+ *
+ * @return TSequence A reference to the underlying sequence.
+ */
 
 template <typename TSequence>
 inline TSequence const &
@@ -152,17 +151,18 @@ host(ConsensusScoreSequenceEntry<TSequence> const & entry)
     return *entry._seq;
 }
 
-/**
-.Function.ConsensusScoreSequenceEntry#position
-..cat:Alignments
-..class:Class.ConsensusScoreSequenceEntry
-..signature:TPosition position(entry)
-..summary:Returns position stored in $entry$.
-..param.entry:The entry to query.
-...type:Class.ConsensusScoreSequenceEntry
-..return:The position of the score, has type $Position<TSequence>::Type$ where $TSequence$ is the parameter from type type of $entry$.
-..include:seqan/consensus.h
-*/
+/*!
+ * @fn ConsensusScoreSequenceEntry#position
+ * @brief Returns position stored in <tt>entry</tt>.
+ *
+ * @signature TPosition position(entry);
+ *
+ * @param[in] entry The ConsensusScoreSequenceEntry to query.
+ *
+ * @return TPosition The position of the entry.  The type is
+ *                   <tt>ConsensusScoreSequenceEntry&lt;TSequence&gt;::TPosition</tt>.
+ */
+
 template <typename TSequence>
 inline typename ConsensusScoreSequenceEntry<TSequence>::TPosition
 position(ConsensusScoreSequenceEntry<TSequence> const & entry)
@@ -170,17 +170,17 @@ position(ConsensusScoreSequenceEntry<TSequence> const & entry)
     return entry._pos;
 }
 
-/**
-.Function.ConsensusScoreSequenceEntry#value
-..cat:Alignments
-..class:Class.ConsensusScoreSequenceEntry
-..signature:TPosition value(entry)
-..summary:Returns value of character referenced by $entry$.
-..param.entry:The entry to query.
-...type:Class.ConsensusScoreSequenceEntry
-..return:The value, of type $Value<TSequence>::Type$.
-..include:seqan/consensus.h
-*/
+/*!
+ * @fn ConsensusScoreSequenceEntry#value
+ * @brief Returns value of character referenced by <tt>entry</tt>.
+ *
+ * @signature TValue value(entry);
+ *
+ * @param[in] entry The ConsensusScoreSequenceEntry to query.
+ *
+ * @return TValue The value of the sequence at the current position.
+ */
+
 template <typename TSequence>
 inline typename Value<TSequence>::Type
 value(ConsensusScoreSequenceEntry<TSequence> & entry)
@@ -252,67 +252,67 @@ sequenceEntryForScore(Score<TScoreValue, ConsensusScore> const &, TSequence cons
 template <typename TValue, typename TString>
 inline void
 assignProfile(Score<TValue, ConsensusScore>& me,
-			  TString const & profile)
+              TString const & profile)
 {
 //IOREV _notio_
-	typedef typename Size<TString>::Type TSize;
-	TSize alphSize = ValueSize<typename Value<TString>::Type>::VALUE;
-	resize(me.consensus_set, alphSize * length(profile));
+    typedef typename Size<TString>::Type TSize;
+    TSize alphSize = ValueSize<typename Value<TString>::Type>::VALUE;
+    resize(me.consensus_set, alphSize * length(profile));
 
-	typedef typename Iterator<TString const, Standard>::Type TIter;
-	typedef typename Iterator<String<TValue>, Standard>::Type TConsSetIter;
-	TConsSetIter itConsSet = begin(me.consensus_set, Standard());
-	TIter it = begin(profile, Standard());
-	TIter itEnd = end(profile, Standard());
-	TSize maxCount = 0;
-	for(;it!=itEnd;++it) {
-		maxCount = 0;
-		for(TSize i = 0; i<alphSize; ++i)
-			if ((*it).count[i] > maxCount) maxCount = (*it).count[i];
-		for(TSize i = 0; i<alphSize; ++i, ++itConsSet)
-			*itConsSet = ((*it).count[i] == maxCount)? 0 : (-SEQAN_CONSENSUS_UNITY);
-	}
+    typedef typename Iterator<TString const, Standard>::Type TIter;
+    typedef typename Iterator<String<TValue>, Standard>::Type TConsSetIter;
+    TConsSetIter itConsSet = begin(me.consensus_set, Standard());
+    TIter it = begin(profile, Standard());
+    TIter itEnd = end(profile, Standard());
+    TSize maxCount = 0;
+    for(;it!=itEnd;++it) {
+        maxCount = 0;
+        for(TSize i = 0; i<alphSize; ++i)
+            if ((*it).count[i] > maxCount) maxCount = (*it).count[i];
+        for(TSize i = 0; i<alphSize; ++i, ++itConsSet)
+            *itConsSet = ((*it).count[i] == maxCount)? 0 : (-SEQAN_CONSENSUS_UNITY);
+    }
 }
 
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendHorizontal(
-	Score<TValue, ConsensusScore> const & me,
+    Score<TValue, ConsensusScore> const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return ((int)position(entry2) < 0) ? -SEQAN_CONSENSUS_UNITY : me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + (ValueSize<typename Value<TSeq1>::Type>::VALUE - 1)];
+    return ((int)position(entry2) < 0) ? -SEQAN_CONSENSUS_UNITY : me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + (ValueSize<typename Value<TSeq1>::Type>::VALUE - 1)];
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenHorizontal(
-	Score<TValue, ConsensusScore> const & me,
+    Score<TValue, ConsensusScore> const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return ((int)position(entry2) < 0) ? -2 * SEQAN_CONSENSUS_UNITY : 2 * me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + (ValueSize<typename Value<TSeq1>::Type>::VALUE - 1)];
+    return ((int)position(entry2) < 0) ? -2 * SEQAN_CONSENSUS_UNITY : 2 * me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + (ValueSize<typename Value<TSeq1>::Type>::VALUE - 1)];
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendVertical(
-	Score<TValue, ConsensusScore> const &,
+    Score<TValue, ConsensusScore> const &,
     ConsensusScoreSequenceEntry<TSeq1> const & /*entry1*/,
     ConsensusScoreSequenceEntry<TSeq2> const & /*entry2*/)
 {
-	return -SEQAN_CONSENSUS_UNITY;
+    return -SEQAN_CONSENSUS_UNITY;
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenVertical(
-	Score<TValue, ConsensusScore> const &,
+    Score<TValue, ConsensusScore> const &,
     ConsensusScoreSequenceEntry<TSeq1> const & /*entry1*/,
     ConsensusScoreSequenceEntry<TSeq2> const & /*entry2*/)
 {
-	return -2 * SEQAN_CONSENSUS_UNITY;
+    return -2 * SEQAN_CONSENSUS_UNITY;
 }
 
 
@@ -322,7 +322,7 @@ score(Score<TValue, ConsensusScore> const & me,
       ConsensusScoreSequenceEntry<TSeq1> const & entry1,
       ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + value(entry2).count[0]];
+    return me.consensus_set[position(entry1) * (ValueSize<typename Value<TSeq1>::Type>::VALUE) + value(entry2).count[0]];
 }
 
 
@@ -344,10 +344,10 @@ template <typename TValue>
 class Score<TValue, FractionalScore>
 {
 public:
-	String<int> sum;		// Total number of profile characters in each column
+    String<int> sum;        // Total number of profile characters in each column
 
 public:
-	Score() {}
+    Score() {}
 };
 
 
@@ -365,63 +365,63 @@ sequenceEntryForScore(Score<TScoreValue, FractionalScore> const &, TSequence con
 template <typename TValue, typename TString>
 inline void
 assignProfile(Score<TValue, FractionalScore> & me,
-			  TString const & profile)
+              TString const & profile)
 {
 //IOREV _notio_
-	typedef typename Size<TString>::Type TSize;
-	resize(me.sum, length(profile));
-	typedef typename Iterator<TString const, Standard>::Type TIter;
-	typedef typename Iterator<String<int>, Standard>::Type TSumIter;
-	TSumIter itSum = begin(me.sum, Standard());
-	TIter it = begin(profile, Standard());
-	TIter itEnd = end(profile, Standard());
-	for (; it!=itEnd; ++it, ++itSum)
+    typedef typename Size<TString>::Type TSize;
+    resize(me.sum, length(profile));
+    typedef typename Iterator<TString const, Standard>::Type TIter;
+    typedef typename Iterator<String<int>, Standard>::Type TSumIter;
+    TSumIter itSum = begin(me.sum, Standard());
+    TIter it = begin(profile, Standard());
+    TIter itEnd = end(profile, Standard());
+    for (; it!=itEnd; ++it, ++itSum)
     {
-		*itSum = 0;
-		for (TSize i = 0; i < (TSize) ValueSize<typename Value<TString>::Type>::VALUE; ++i) 
-			*itSum += (*it).count[i];
-	}
+        *itSum = 0;
+        for (TSize i = 0; i < (TSize) ValueSize<typename Value<TString>::Type>::VALUE; ++i)
+            *itSum += (*it).count[i];
+    }
 }
 
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendHorizontal(
-	Score<TValue, FractionalScore> const & me,
+    Score<TValue, FractionalScore> const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (( (int)position(entry2) < 0) || (!me.sum[position(entry1)])) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (( (int)value(entry1).count[ValueSize<typename Value<TSeq1>::Type>::VALUE - 1] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
+    return (( (int)position(entry2) < 0) || (!me.sum[position(entry1)])) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (( (int)value(entry1).count[ValueSize<typename Value<TSeq1>::Type>::VALUE - 1] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenHorizontal(
-	Score<TValue, FractionalScore> const & me,
+    Score<TValue, FractionalScore> const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (( (int)position(entry2) < 0) || (!me.sum[position(entry1)])) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (( (int) value(entry1).count[ValueSize<typename Value<TSeq1>::Type>::VALUE - 1] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
+    return (( (int)position(entry2) < 0) || (!me.sum[position(entry1)])) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (( (int) value(entry1).count[ValueSize<typename Value<TSeq1>::Type>::VALUE - 1] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendVertical(
-	Score<TValue, FractionalScore> const &,
+    Score<TValue, FractionalScore> const &,
     ConsensusScoreSequenceEntry<TSeq1> const & /*entry1*/,
     ConsensusScoreSequenceEntry<TSeq2> const & /*entry2*/)
 {
-	return -SEQAN_CONSENSUS_UNITY;
+    return -SEQAN_CONSENSUS_UNITY;
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenVertical(
-	Score<TValue, FractionalScore> const &,
+    Score<TValue, FractionalScore> const &,
     ConsensusScoreSequenceEntry<TSeq1> const & /*entry1*/,
     ConsensusScoreSequenceEntry<TSeq2> const & /*entry2*/)
 {
-	return -SEQAN_CONSENSUS_UNITY;
+    return -SEQAN_CONSENSUS_UNITY;
 }
 
 template <typename TValue, typename TSeq1, typename TSeq2>
@@ -430,7 +430,7 @@ score(Score<TValue, FractionalScore> const & me,
       ConsensusScoreSequenceEntry<TSeq1> const & entry1,
       ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (!me.sum[position(entry1)]) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (((int)value(entry1).count[value(entry2).count[0]] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
+    return (!me.sum[position(entry1)]) ? -SEQAN_CONSENSUS_UNITY : ((TValue) (((int)value(entry1).count[value(entry2).count[0]] - me.sum[position(entry1)]) * SEQAN_CONSENSUS_UNITY) / me.sum[position(entry1)]);
 }
 
 
@@ -451,11 +451,11 @@ template <typename TValue, typename TScore1, typename TScore2>
 class Score<TValue, WeightedConsensusScore<TScore1, TScore2> >
 {
 public:
-	TScore1 sc1;
-	TScore2 sc2;
+    TScore1 sc1;
+    TScore2 sc2;
 
 public:
-	Score() : sc1(), sc2() {}
+    Score() : sc1(), sc2() {}
 
 };
 
@@ -475,11 +475,11 @@ sequenceEntryForScore(Score<TScoreValue, WeightedConsensusScore<TScore1, TScore2
 template <typename TValue, typename TScore1, typename TScore2, typename TString>
 inline void
 assignProfile(Score<TValue, WeightedConsensusScore<TScore1, TScore2> >& me,
-			  TString const& profile)
+              TString const& profile)
 {
 //IOREV _notio_
-	assignProfile(me.sc1, profile);
-	assignProfile(me.sc2, profile);
+    assignProfile(me.sc1, profile);
+    assignProfile(me.sc2, profile);
 }
 
 
@@ -487,42 +487,42 @@ assignProfile(Score<TValue, WeightedConsensusScore<TScore1, TScore2> >& me,
 template <typename TValue, typename TScore1, typename TScore2, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendHorizontal(
-	Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
+    Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (scoreGapExtendHorizontal(me.sc1, entry1, entry2) + scoreGapExtendHorizontal(me.sc2, entry1, entry2)) / (TValue) 2;
+    return (scoreGapExtendHorizontal(me.sc1, entry1, entry2) + scoreGapExtendHorizontal(me.sc2, entry1, entry2)) / (TValue) 2;
 }
 
 template <typename TValue, typename TScore1, typename TScore2, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenHorizontal(
-	Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
+    Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (scoreGapOpenHorizontal(me.sc1, entry1, entry2) + scoreGapOpenHorizontal(me.sc2, entry1, entry2)) / (TValue) 2;
+    return (scoreGapOpenHorizontal(me.sc1, entry1, entry2) + scoreGapOpenHorizontal(me.sc2, entry1, entry2)) / (TValue) 2;
 }
 
 
 template <typename TValue, typename TScore1, typename TScore2, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapExtendVertical(
-	Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
+    Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (scoreGapExtendVertical(me.sc1, entry1, entry2) + scoreGapExtendVertical(me.sc2, entry1, entry2)) / (TValue) 2;
+    return (scoreGapExtendVertical(me.sc1, entry1, entry2) + scoreGapExtendVertical(me.sc2, entry1, entry2)) / (TValue) 2;
 }
 
 template <typename TValue, typename TScore1, typename TScore2, typename TSeq1, typename TSeq2>
 inline TValue
 scoreGapOpenVertical(
-	Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
+    Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
     ConsensusScoreSequenceEntry<TSeq1> const & entry1,
     ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (scoreGapOpenVertical(me.sc1, entry1, entry2) + scoreGapOpenVertical(me.sc2, entry1, entry2)) / (TValue) 2;
+    return (scoreGapOpenVertical(me.sc1, entry1, entry2) + scoreGapOpenVertical(me.sc2, entry1, entry2)) / (TValue) 2;
 }
 
 
@@ -532,7 +532,7 @@ score(Score<TValue, WeightedConsensusScore<TScore1, TScore2> > const & me,
       ConsensusScoreSequenceEntry<TSeq1> const & entry1,
       ConsensusScoreSequenceEntry<TSeq2> const & entry2)
 {
-	return (score(me.sc1, entry1, entry2) + score(me.sc2, entry1, entry2)) / (TValue) 2;
+    return (score(me.sc1, entry1, entry2) + score(me.sc2, entry1, entry2)) / (TValue) 2;
 }
 
 }

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // General purpose allocator.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_
 
 #include <seqan/basic/allocator_interface.h>
 
@@ -49,18 +49,20 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
-/**
-.Spec.Simple Allocator:
-..cat:Allocators
-..general:Class.Allocator
-..summary:General purpose allocator.
-..signature:Allocator< SimpleAlloc<ParentAllocator> >
-..param.ParentAllocator:An allocator that is by the simple allocator used to allocate memory.
-...default:@Tag.Default@
-...remarks:@Tag.Default@ used as allocator means that the default implementations
-of @Function.allocate@ and @Function.deallocate@ are used.
-..include:seqan/basic.h
-*/
+/*!
+ * @class SimpleAllocator
+ * @extends Allocator
+ * @headerfile <seqan/basic.h>
+ * @brief General purpose allocator.
+ *
+ * @signature template <typename TParentAllocator>
+ *            class Allocator<SimpleAlloc<TParentAllocator> >;
+ *
+ * @tparam TParentAllocator An allocator that is used by the simple allocator to allocate memory.
+ *
+ * The tag Default used as TparentAllocator means that the default implementations of <tt>allocate</tt> and
+ * <tt>deallocate</tt> are used.
+ */
 
 template <typename TParentAllocator = Default>
 struct SimpleAlloc;
@@ -83,13 +85,11 @@ struct Allocator<SimpleAlloc<TParentAllocator> >
     Allocator()
         : data_storages(0)
     {
-        SEQAN_CHECKPOINT;
     }
 
     Allocator(TParentAllocator & parent_alloc)
         : data_storages(0)
     {
-        SEQAN_CHECKPOINT;
         setValue(data_parent_allocator, parent_alloc);
     }
 
@@ -108,7 +108,6 @@ struct Allocator<SimpleAlloc<TParentAllocator> >
 
     ~Allocator()
     {
-        SEQAN_CHECKPOINT;
         clear(*this);
     }
 };
@@ -129,7 +128,6 @@ template <typename TParentAllocator>
 inline TParentAllocator &
 parentAllocator(Allocator<SimpleAlloc<TParentAllocator> > & me)
 {
-    SEQAN_CHECKPOINT;
     return value(me.data_parent_allocator);
 }
 
@@ -137,27 +135,25 @@ parentAllocator(Allocator<SimpleAlloc<TParentAllocator> > & me)
 // Function clear()
 // ----------------------------------------------------------------------------
 
+/*!
+ * @fn Allocator#clear
+ * @brief Deallocates all memory blocks.
+ *
+ * @signature void clear(allocator);
+ *
+ * @param[in,out] The allocator to clear.
+ *
+ * @section Remarks
+ *
+ * This function deallocates all memory block sthat were allocated using <tt>allocate()</tt> for <tt>allocator</tt>.
+ * The memory is not pooled but directly passed back to the heap manager.
+ */
+
 // TODO(holtgrew): Using #-functions messes up search results.
-/**
-.Function.Allocator#clear
-..class:Class.Allocator
-..cat:Memory
-..summary:Deallocates all memory blocks.
-..signature:clear(allocator)
-..param.allocator:Allocator object.
-...type:Class.Allocator
-..remarks:This function deallocates all memory blocks 
-that was allocated using @Function.allocate@ for $allocator$.
-The memory is not pooled but directly passed back to the heap manager.
-..see:Function.allocate
-..see:Function.deallocate
-..include:seqan/basic.h
-*/
 template <typename TParentAllocator>
 void
 clear(Allocator<SimpleAlloc<TParentAllocator> > & me)
 {
-    SEQAN_CHECKPOINT;
     typedef Allocator<SimpleAlloc<TParentAllocator> > TAllocator;
 
     while (me.data_storages)
@@ -174,12 +170,11 @@ clear(Allocator<SimpleAlloc<TParentAllocator> > & me)
 
 template <typename TParentAllocator, typename TValue, typename TSize, typename TUsage>
 inline void
-allocate(Allocator<SimpleAlloc<TParentAllocator> > & me, 
+allocate(Allocator<SimpleAlloc<TParentAllocator> > & me,
          TValue * & data,
          TSize count,
          Tag<TUsage> const &)
 {
-    SEQAN_CHECKPOINT;
     typedef Allocator<SimpleAlloc<TParentAllocator> > TAllocator;
     typedef typename TAllocator::Header THeader;
 
@@ -210,13 +205,12 @@ allocate(Allocator<SimpleAlloc<TParentAllocator> > & me,
 // ----------------------------------------------------------------------------
 
 template <typename TParentAllocator, typename TValue, typename TSize, typename TUsage>
-inline void 
+inline void
 deallocate(Allocator<SimpleAlloc<TParentAllocator> > & me,
-           TValue * data, 
+           TValue * data,
            TSize,
            Tag<TUsage> const &)
 {
-    SEQAN_CHECKPOINT;
     typedef Allocator<SimpleAlloc<TParentAllocator> > TAllocator;
     typedef typename TAllocator::Header THeader;
 
@@ -242,4 +236,4 @@ deallocate(Allocator<SimpleAlloc<TParentAllocator> > & me,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_ALLOCATOR_SIMPLE_H_

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 
 #include <functional>
 
-namespace SEQAN_NAMESPACE_MAIN
+namespace seqan
 {
 
 //////////////////////////////////////////////////////////////////////////////
@@ -44,21 +44,20 @@ struct PriorityHeap;
 
 //////////////////////////////////////////////////////////////////////////////
 
+/*!
+ * @class PriorityType
+ * @headerfile <seqan/misc/priority_type_base.h>
+ * @brief STores items in such a way that the item with the highest priority is at the top.
+ *
+ * @signature template <[typename TValue[, typename TLess[, typename TSpec]]]>
+ *            class PriorityType;
+ *
+ * @tparam TValue The value type.  Default: <tt>int</tt>.
+ * @tparam TLess  The less-than comparator.  Default: <tt>std::less&lt;TValue&gt;</tt>.
+ * @tparam TSpec  The specialization.  Default: <tt>PriorityHeap</tt>.
+ */
 
-/**
-.Class.PriorityType:
-..cat:Miscellaneous
-..summary:Stores items in such a way that the item with the highest priority is at the top.
-..signature:PriorityType<TValue, TLess, TSpec>
-..param.TValue:The value type that is stored.
-...default:int
-..param.TLess:The comparator type that is used for sorting the items stored.
-...default:std::less<TValue>
-..param.TSpec:The specializing type.
-...default:@Spec.PriorityHeap@
-..include:seqan/misc.h
-*/
-template <typename TValue = int, typename TLess = ::std::less<TValue>, typename TSpec = PriorityHeap>
+template <typename TValue = int, typename TLess = std::less<TValue>, typename TSpec = PriorityHeap>
 class PriorityType;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -66,17 +65,17 @@ class PriorityType;
 template <typename TValue, typename TLess, typename TSpec>
 struct Value< PriorityType<TValue, TLess, TSpec> >
 {
-	typedef TValue Type;
+    typedef TValue Type;
 };
 
 template <typename TValue, typename TLess, typename TSpec>
 struct Size< PriorityType<TValue, TLess, TSpec> >
 {
-	typedef typename Size<TValue>::Type Type;
+    typedef typename Size<TValue>::Type Type;
 };
 
 //////////////////////////////////////////////////////////////////////////////
 
-}// namespace SEQAN_NAMESPACE_MAIN
+}// namespace seqan
 
 #endif //#ifndef SEQAN_HEADER_...

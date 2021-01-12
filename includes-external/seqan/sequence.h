@@ -1,7 +1,8 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -43,41 +44,63 @@
 #ifndef SEQAN_HEADER_SEQUENCE_H
 #define SEQAN_HEADER_SEQUENCE_H
 
-//____________________________________________________________________________
-// prerequisites
+// ===========================================================================
+// Prerequisites.
+// ===========================================================================
 
-#include <seqan/basic.h>
+// ----------------------------------------------------------------------------
+// STL prerequisites.
+// ----------------------------------------------------------------------------
+// The classes std::string, std::list and std::vector are adapted in this module.
 
 #include <cassert>
 
 #include <map>  // used in string set
-// The classes std::string, std::list and std::vector are adapted in this
-// module.
 #include <string>
 #include <list>
 #include <vector>
+#include <deque>
 #include <algorithm>
+#include <numeric>
 
-//____________________________________________________________________________
+#include <seqan/platform.h>
+#include <forward_list>
+#include <array>
+
+// ----------------------------------------------------------------------------
+// Basic
+// ----------------------------------------------------------------------------
+
+#include <seqan/basic.h>
+#include <seqan/misc/bit_twiddling_functors.h>
+#include <seqan/misc/bit_twiddling.h>
+
+// ===========================================================================
+// Forwards.
+// ===========================================================================
 
 #include <seqan/sequence/sequence_forwards.h>
 
-//____________________________________________________________________________
+// ===========================================================================
 // Miscellaneous sequence-related code.
+// ===========================================================================
 
 #include <seqan/sequence/sequence_lexical.h>
 
-//____________________________________________________________________________
+// ===========================================================================
 // Segments: Suffixes, Infixes, Prefixes.
+// ===========================================================================
 
 #include <seqan/sequence/sequence_interface.h>
 #include <seqan/sequence/segment_base.h>
 #include <seqan/sequence/segment_infix.h>
 #include <seqan/sequence/segment_suffix.h>
 #include <seqan/sequence/segment_prefix.h>
+#include <seqan/sequence/segment_utils.h>
 
-//____________________________________________________________________________
-// Strings
+// ===========================================================================
+// Strings.
+// ===========================================================================
 
 #include <seqan/sequence/string_base.h>
 #include <seqan/sequence/string_array.h>
@@ -88,27 +111,32 @@
 
 #include <seqan/sequence/sequence_shortcuts.h>
 
-//____________________________________________________________________________
-// StringSets
+// ===========================================================================
+// Lightweight Containers.
+// ===========================================================================
+
+#include <seqan/sequence/container_view.h>
+#include <seqan/sequence/container_view_zip.h>
+
+// ===========================================================================
+// Adaptions.
+// ===========================================================================
+
+#include <seqan/sequence/adapt_stl_container.h>
+#include <seqan/sequence/adapt_array_pointer.h>
+
+// ===========================================================================
+// StringSets.
+// ===========================================================================
+
 #include <seqan/sequence/iter_concat_virtual.h>
 #include <seqan/sequence/sequence_concatenator.h>
 #include <seqan/sequence/string_set_base.h>
+#include <seqan/sequence/string_set_view.h>
 #include <seqan/sequence/string_set_concat_direct.h>
 #include <seqan/sequence/string_set_dependent_tight.h>
 #include <seqan/sequence/string_set_dependent_generous.h>
 #include <seqan/sequence/string_set_owner.h>
-
-//____________________________________________________________________________
-// Adaptions
-
-#include <seqan/sequence/adapt_std_list.h>
-#include <seqan/sequence/adapt_std_string.h>
-#include <seqan/sequence/adapt_std_vector.h>
-#include <seqan/sequence/adapt_array_pointer.h>
-
-
-//____________________________________________________________________________
-// Utilities
-#include <seqan/sequence/segment_utils.h>
+#include <seqan/sequence/string_set_segment.h>
 
 #endif //#ifndef SEQAN_HEADER_...

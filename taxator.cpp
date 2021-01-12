@@ -51,7 +51,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
     FileParser< AlignmentRecordFactory< AlignmentRecordTaxonomy > > parser( cin, fac );
     RecordSetGenerator<AlignmentRecordTaxonomy, RecordSetType>* recgen = NULL; // TODO: boost smpt??
-    
+
     if (alignments_sorted) { // stupid nesting because template parameters must be const
         if (split_alignments) recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
         else recgen = new RecordSetGeneratorSorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
@@ -62,7 +62,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
     }
 
     RecordSetType rset;
-    
+
     PredictionRecord prec( tax );
 
     std::cout << GFF3Header();
@@ -75,6 +75,7 @@ void doPredictionsSerial( TaxonPredictionModel< RecordSetType >* predictor, StrI
 
 //     delete recgen;
 }
+
 
 class BoostProducer {
 public:
@@ -108,7 +109,7 @@ private:
             if (split_alignments_) recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, true>( parser );
             else recgen = new RecordSetGeneratorUnsorted<AlignmentRecordTaxonomy, RecordSetType, false>( parser );
         }
-        
+
         RecordSetType tmprset;
 
         while( recgen->notEmpty() ) {
@@ -121,7 +122,6 @@ private:
     }
 
 };
-
 
 
 class BoostConsumer {
@@ -178,7 +178,6 @@ private:
 };
 
 
-
 void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted , std::ostream& logsink, uint number_threads  ) {
     AlignmentRecordFactory< AlignmentRecordTaxonomy > fac( seqid2taxid, tax );
 
@@ -211,19 +210,52 @@ void doPredictionsParallel( TaxonPredictionModel< RecordSetType >* predictor, St
 }
 
 
-
 // TODO: use function template?
 void doPredictions( TaxonPredictionModel< RecordSetType >* predictor, StrIDConverter& seqid2taxid, const Taxonomy* tax, bool split_alignments, bool alignments_sorted, std::ostream& logsink, uint number_threads ) {
     if ( number_threads > 1 ) return doPredictionsParallel( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink, number_threads );
     doPredictionsSerial( predictor, seqid2taxid, tax, split_alignments, alignments_sorted, logsink );
 }
 
+// TODO: redo naming (RPA-specific)
+template<typename StringType>
+void execute(string db_filename,string db_index_filename,string query_filename, string query_index_filename,
+            boost::scoped_ptr< Taxonomy >& tax, float filterout, float toppercent, boost::scoped_ptr< StrIDConverter >& seqid2taxid,//
+            bool split_alignments, bool alignments_sorted, std::ofstream& logsink, uint number_threads){
 
+   //  &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent )
+   //  , *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // T
+
+    // load query sequences
+    std::cerr << "load queries\n";
+    boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
+
+    if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
+    else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
+
+    std::cerr << "end load queries\n";
+
+    // reference query sequences
+    boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
+    StopWatchCPUTime measure_db_loading( "loading reference db" );
+    measure_db_loading.start();
+    std::cerr << "db loading\n";
+    if( db_index_filename.empty() ) {
+        std::cerr << "db indexfile empty";
+        db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
+    }
+    else {
+        std::cerr << "not empty";
+        db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
+    }
+    measure_db_loading.stop();
+    std::cerr << "db loaded\n";
+    doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+}
 
 int main( int argc, char** argv ) {
 
     vector< string > ranks;
-    string accessconverter_filename, algorithm, query_filename, query_index_filename, db_filename, db_index_filename, whitelist_filename, log_filename;
+    string accessconverter_filename, algorithm, query_filename, query_index_filename, db_filename, db_index_filename, whitelist_filename, log_filename, data_format;
     bool delete_unmarked, split_alignments, alignments_sorted;
     uint nbest, minsupport, number_threads;
     float toppercent, minscore, filterout;
@@ -242,8 +274,8 @@ int main( int argc, char** argv ) {
     ( "ref-sequences,f", po::value< string >( &db_filename ), "reference sequences FASTA" )
     ( "ref-sequences-index,i", po::value< string >( &db_index_filename ), "FASTA file index, for out-of-memory operation; is created if not existing" )
     ( "processors,p", po::value< uint >( &number_threads )->default_value( 1 ), "sets number of threads, number > 2 will heavily profit from multi-core architectures, set to 0 for max. performance" )
-    ( "logfile,l", po::value< std::string >( &log_filename )->default_value( "/dev/null" ), "specify name of file for logging (appending lines)" );
-
+    ( "logfile,l", po::value< std::string >( &log_filename )->default_value( "/dev/null" ), "specify name of file for logging (appending lines)" )
+    ( "dataformat,b", po::value< std::string >( &data_format)->default_value("nucleotide"), "specify used data (nucleotide, protein)");
     po::options_description hidden_options("Hidden options");
     hidden_options.add_options()
     ( "ranks,r", po::value< vector< string > >( &ranks )->multitoken(), "set node ranks at which to do predictions" )
@@ -294,12 +326,16 @@ int main( int argc, char** argv ) {
 
     bool ignore_unclassified = vm.count( "ignore-unclassified" );
 
+    std::cerr << "load taxonomy\n";
     boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );  // create taxonomy
     if( ! tax ) return EXIT_FAILURE;
-    
+    std::cerr << "end load taxonomy\n";
     if( delete_unmarked ) tax->deleteUnmarkedNodes();  // do everything only with the major NCBI ranks given by "ranks"
+
+    std::cerr << "load idtotax\n";
     boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
     std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
+    std::cerr << "end load idtotax\n";
 
     try {
       // choose appropriate prediction model from command line parameters
@@ -319,22 +355,19 @@ int main( int argc, char** argv ) {
         auto nbestLCA = NBestLCAPredictionModel< RecordSetType >( tax.get(), nbest );
         doPredictions( &nbestLCA, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );
       } else if( algorithm == "rpa" ) {
-          typedef seqan::String< seqan::Dna5 > StringType;
-          // load query sequences
-          boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
-          if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType >( query_filename ) );
-          else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
-
-          // reference query sequences
-          boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
-          StopWatchCPUTime measure_db_loading( "loading reference db" );
-          measure_db_loading.start();
-          if( db_index_filename.empty() ) db_storage.reset( new RandomInmemorySeqStoreRO< StringType >( db_filename ) );
-          else db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
-          measure_db_loading.stop();
-
-          auto rpapred = RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType > >( tax.get(), *query_storage, *db_storage, filterout, toppercent );
-          doPredictions( &rpapred, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+        if(data_format == "nucleotide"){
+          execute<seqan::String<seqan::Dna5>>(db_filename, db_index_filename, query_filename, query_index_filename,
+                                                tax , filterout, toppercent, seqid2taxid,
+                                                split_alignments, alignments_sorted, logsink, number_threads);
+        }
+        else if(data_format == "protein"){
+          execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
+                                                tax , filterout, toppercent, seqid2taxid,
+                                                split_alignments, alignments_sorted, logsink, number_threads);
+        } else {
+          cout << "data format can either be nucleotide or protein" << endl;
+          return EXIT_FAILURE;
+        }
       } else {
           cout << "classification algorithm can either be: rpa (default), simple-lca, megan-lca, ic-megan-lca, n-best-lca" << endl;
           return EXIT_FAILURE;
@@ -343,6 +376,7 @@ int main( int argc, char** argv ) {
     } catch(Exception &e) {
        cerr << "An unrecoverable error occurred: " << e.what() << endl;
        cerr << endl << "Here is some debugging information to locate the problem:" << endl << boost::diagnostic_information(e) << endl;
+
        return EXIT_FAILURE;
     }
 }

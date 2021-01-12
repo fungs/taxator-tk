@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -57,27 +57,32 @@ struct Concatenator;
 template <typename TDelimiter = void >
 struct ConcatVirtual;
 
-// TODO(holtgrew): Ask David about objNo and offset.
-/**
-.Spec.ConcatVirtual Iterator
-..cat:Sequences
-..general:Class.Iter
-..summary:Iterator that sequentially iterates through the elements of a @Class.StringSet@ as if they were directly concatenated, cmp. @Spec.ConcatDirect@.
-..signature:Iter<TStringSet, ConcatVirtual<TSpec> >
-..param.TStringSet:Type of the @Class.StringSet@.
-..param.TSpec:The delimiter to use.
-..include:seqan/sequence.h
-
-.Memfunc.ConcatVirtual Iterator#Iter:
-..class:Spec.ConcatVirtual Iterator
-..summary:Constructor
-..signature:Iter(host)
-..signature:Iter(host, objNo, offset)
-..param.host:Container to iterate.
-..param.objNo:Sequence number to set the iterator to.
-..param.offset:Offset in the object (specified by objNo) to point to.
-..remarks:If $objNo$ and $offset$ are not given, the iterator will point to the first element with offset 0.
+/*!
+ * @class ConcatVirtualIterator
+ * @extends Iter
+ * @headerfile <seqan/sequence.h>
+ * @brief Iterator that sequentially iterates through the elements of a @link StringSet @endlink as if they were
+ *        directly concatenated, also see @link ConcatDirectStringSet @endlink.
+ *
+ * @signature template <typename TStringSet[, typename TDelimiter]>
+ *            class Iter<TStringSet, ConcatVirtual<TDelimiter> >;
+ *
+ * @tparam TStringSet The @link StringSet @endlink to iterate.
+ * @tparam TDelimiter The delimiter character.  Default: <tt>void</tt>.
+ *
+ *
+ * @fn ConcatVirtualIterator::Iter
+ * @brief Constructor.
+ *
+ * @signature Iter::Iter(host[, objNo, offset]);
+ *
+ * @param[in] host   Container to iterate.
+ * @param[in] objNo  Sequence number to set the iterator to.  Default: 0.
+ * @param[in] offset Offset in the object (specified by objNo) to point to.  Defaults 0.
+ *
+ * If <tt>objNo</tt> and <tt>offset</tt> are not given then the iterator will point to the first element with offset 0.
  */
+
 template <typename TStringSet, typename TSpec >
 class Iter<TStringSet, ConcatVirtual<TSpec> >
 {
@@ -93,7 +98,7 @@ public:
     // ----------------------------------------------------------------------
     // STL compatible public iterator interface
     typedef Iter                                iterator;
-    typedef ::std::bidirectional_iterator_tag   iterator_category;
+    typedef std::bidirectional_iterator_tag   iterator_category;
     typedef TValue                              value_type;
     typedef TValue &                            reference;
     typedef TValue const &                      const_reference;
@@ -106,31 +111,29 @@ public:
     unsigned        objNo;
     obj_iterator    _begin, _cur, _end;
 
-    inline Iter() {}
+    Iter() {}
 
-    inline Iter(TStringSet &_host)
-        : host(&_host)
+    Iter(TStringSet &_host):
+        host(&_host),
+        objNo(0)
     {
-        objNo = 0;
-        _begin = _cur = begin(_host[objNo]);
-        _end = end(_host[objNo]);
-        _testEnd();
+        if (!empty(_host))
+        {
+            _begin = _cur = begin(_host[0]);
+            _end = end(_host[0]);
+            _testEnd();
+        }
+        else
+        {
+            _begin = _cur = _end = obj_iterator();
+        }
     }
 
-    inline Iter(TStringSet &_host, unsigned _objNo, difference_type _offset)
-        : host(&_host)
+    Iter(TStringSet &_host, unsigned _objNo, difference_type _offset):
+        host(&_host),
+        objNo(0)
     {
-        if (_objNo <length(_host)) {
-            objNo = _objNo;
-            _begin = _cur = begin(_host[objNo]);
-            _end = end(_host[objNo]);
-            goFurther(_cur, _offset);
-            _testEnd();
-        } else {
-            objNo = length(_host) - 1;
-            _begin = begin(_host[objNo]);
-            _cur = _end = end(_host[objNo]);
-        }
+        _setPosition(_objNo, _offset);
     }
 
     // ----------------------------------------------------------------------
@@ -155,11 +158,41 @@ public:
     // non-public function is allowed.
     inline void _testEnd()
     {
-        while (_cur == _end && objNo < (length(*host) - 1)) {
-            ++objNo;
+        if (objNo >= length(*host))
+        {
+            SEQAN_ASSERT(_begin == obj_iterator());
+            SEQAN_ASSERT(_cur == obj_iterator());
+            SEQAN_ASSERT(_end == obj_iterator());
+            return;
+        }
+
+        while (true)
+        {
+            if (_cur != _end)
+                return;
+            if (++objNo == length(*host))
+                break;
             _begin = _cur = begin((*host)[objNo]);
             _end = end((*host)[objNo]);
-        };
+        }
+
+        _begin = _cur = _end = obj_iterator();
+    }
+
+    inline void _setPosition(unsigned _objNo, difference_type _offset)
+    {
+        objNo = _objNo;
+        if (_objNo < length(*host))
+        {
+            _begin = _cur = begin((*host)[objNo]);
+            _end = end((*host)[objNo]);
+            goFurther(_cur, _offset);
+            _testEnd();
+        }
+        else
+        {
+            _begin = _cur = _end = obj_iterator();
+        }
     }
 };
 
@@ -269,7 +302,7 @@ operator++(Iter<TStringSet, ConcatVirtual<TSpec> > & me)
 }
 
 template <typename TStringSet, typename TSpec>
-inline Iter<TStringSet, ConcatVirtual<TSpec> > const &
+inline Iter<TStringSet, ConcatVirtual<TSpec> >
 operator++(Iter<TStringSet, ConcatVirtual<TSpec> > & me, int)
 {
     Iter<TStringSet, ConcatVirtual<TSpec> > before = me;
@@ -285,7 +318,8 @@ template <typename TStringSet, typename TSpec>
 inline void
 goPrevious(Iter<TStringSet, ConcatVirtual<TSpec> > & me)
 {
-    while (me._cur == me._begin && me.objNo > 0) {
+    while (me._cur == me._begin && me.objNo > 0)
+    {
         --me.objNo;
         me._begin = begin((*me.host)[me.objNo]);
         me._end = me._cur = end((*me.host)[me.objNo]);
@@ -302,7 +336,7 @@ operator--(Iter<TStringSet, ConcatVirtual<TSpec> > & me)
 }
 
 template <typename TStringSet, typename TSpec>
-inline Iter<TStringSet, ConcatVirtual<TSpec> > const &
+inline Iter<TStringSet, ConcatVirtual<TSpec> >
 operator--(Iter<TStringSet, ConcatVirtual<TSpec> > & me, int)
 {
     Iter<TStringSet, ConcatVirtual<TSpec> > before = me;
@@ -346,6 +380,20 @@ operator+(Iter<TStringSet, ConcatVirtual<TSpec> > const & me, Pair<T1, T2, TPack
 }
 
 // --------------------------------------------------------------------------
+// Function operator+=()
+// --------------------------------------------------------------------------
+
+template <typename TStringSet, typename TSpec, typename TDelta>
+inline Iter<TStringSet, ConcatVirtual<TSpec> >
+operator+=(Iter<TStringSet, ConcatVirtual<TSpec> > & me, TDelta delta)
+{
+    Pair<unsigned, typename Size<typename Value<TStringSet>::Type>::Type> pos;
+    posLocalize(pos, _tell(me) + delta, stringSetLimits(*me.host));
+    me._setPosition(getValueI1(pos), getValueI2(pos));
+    return me;
+}
+
+// --------------------------------------------------------------------------
 // Function operator-()
 // --------------------------------------------------------------------------
 
@@ -365,6 +413,20 @@ operator-(Iter<TStringSet, ConcatVirtual<TSpec> > const & me, TDelta delta)
     Pair<unsigned, typename Size<typename Value<TStringSet>::Type>::Type> pos;
     posLocalize(pos, _tell(me) - delta, stringSetLimits(*me.host));
     return Iter<TStringSet, ConcatVirtual<TSpec> > (*me.host, getValueI1(pos), getValueI2(pos));
+}
+
+// --------------------------------------------------------------------------
+// Function operator-=()
+// --------------------------------------------------------------------------
+
+template <typename TStringSet, typename TSpec, typename TDelta>
+inline Iter<TStringSet, ConcatVirtual<TSpec> >
+operator-=(Iter<TStringSet, ConcatVirtual<TSpec> > & me, TDelta delta)
+{
+    Pair<unsigned, typename Size<typename Value<TStringSet>::Type>::Type> pos;
+    posLocalize(pos, _tell(me) - delta, stringSetLimits(*me.host));
+    me._setPosition(getValueI1(pos), getValueI2(pos));
+    return me;
 }
 
 // --------------------------------------------------------------------------
@@ -420,14 +482,14 @@ operator > (
 // --------------------------------------------------------------------------
 
 template <typename TSSet, typename TSpec>
-inline typename Concatenator<TSSet>::Type
+inline typename Concatenator<TSSet>::Type &
 container(Iter<TSSet, ConcatVirtual<TSpec> > & me)
 {
     return concat(*me.host);
 }
 
 template <typename TSSet, typename TSpec>
-inline typename Concatenator<TSSet>::Type
+inline typename Concatenator<TSSet>::Type &
 container(Iter<TSSet, ConcatVirtual<TSpec> > const & me)
 {
     return concat(*me.host);
@@ -459,14 +521,14 @@ template <typename TSSet, typename TSpec>
 inline bool
 atEnd(Iter<TSSet, ConcatVirtual<TSpec> > & me)
 {
-    return me._cur == me._end && me.objNo == (length(*me.host) - 1);
+    return me._cur == me._end;
 }
 
 template <typename TSSet, typename TSpec>
 inline bool
 atEnd(Iter<TSSet, ConcatVirtual<TSpec> > const & me)
 {
-    return me._cur == me._end && me.objNo == (length(*me.host) - 1);
+    return me._cur == me._end;
 }
 
 // --------------------------------------------------------------------------
@@ -475,19 +537,6 @@ atEnd(Iter<TSSet, ConcatVirtual<TSpec> > const & me)
 
 // TODO(holtgrew): Specifying a catch-all implementation appears a bit too generous, what about concept checking?
 
-/**
-.Function.atEndOfSequence
-..class:Spec.ConcatVirtual Iterator
-..summary:Returns true if the iterator is at the end of a sequence.
-..cat:Sequences
-..signature:atEndOfSequence(iter)
-..param.iter:Iterator to test.
-...type:Spec.ConcatVirtual Iterator
-...type:Class.Iter
-..returns:$true$ if the iterator is at the end of a sequence.
-...type:nolink:$bool$
-..include:seqan/sequence.h
- */
 template <typename TIterator>
 inline bool
 atEndOfSequence(TIterator const & me)
@@ -499,11 +548,7 @@ template <typename TSSet, typename TSpec>
 inline bool
 atEndOfSequence(Iter<TSSet, ConcatVirtual<TSpec> > const & me)
 {
-    if (me._cur == me._begin && me.objNo > 0)
-        return true;
-    if (me._cur == me._end)
-        return true;
-    return false;
+    return me._cur == me._begin && me.objNo > 0;
 }
 
 template <typename TIterator>

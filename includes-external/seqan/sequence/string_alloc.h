@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -62,18 +62,6 @@ namespace seqan {
 
 // TODO(holtgrew): Where is Alloc<> defined? In module base?
 
-/**
-.Spec.Alloc String:
-..cat:Strings
-..general:Class.String
-..summary:Expandable string that is stored on heap.
-..signature:String<TValue, Alloc<TSpec> >
-..param.TValue:The value type, that is the type of the items/characters stored in the string.
-...remarks:Use @Metafunction.Value@ to get the value type for a given class.
-..param.TSpec:The specializing type.
-...default:$void$
-..include:seqan/sequence.h
-*/
 template <typename TValue, typename TSpec>
 class String<TValue, Alloc<TSpec> >
 {
@@ -100,7 +88,7 @@ public:
             assign(*this, source);
         SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
     }
-    
+
     template <typename TSource>
     String(TSource const & source)
         : data_begin(0),
@@ -111,17 +99,29 @@ public:
             assign(*this, source);
         SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
     }
-    
+
+    String(String & source)
+        : data_begin(0),
+          data_end(0),
+          data_capacity(0)
+    {
+        reserve(*this, std::min(capacity(source), computeGenerousCapacity(source, length(source))), Exact());
+        if (length(source) > 0u)
+            assign(*this, source);
+        SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
+    }
+
     String(String const & source)
         : data_begin(0),
           data_end(0),
           data_capacity(0)
     {
+        reserve(*this, std::min(capacity(source), computeGenerousCapacity(source, length(source))), Exact());
         if (length(source) > 0u)
             assign(*this, source);
         SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
     }
-    
+
     String(String & source, Move const &)
         : data_begin(0),
           data_end(0),
@@ -130,7 +130,16 @@ public:
         move(*this, source);
         SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
     }
-    
+
+    String(String && source, Move const &)
+        : data_begin(0),
+          data_end(0),
+          data_capacity(0)
+    {
+        move(*this, source);
+        SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
+    }
+
     template <typename TSource, typename TSize>
     String(TSource & source, TSize limit)
             : data_begin(0),
@@ -141,7 +150,7 @@ public:
             assign(*this, source, limit);
         SEQAN_ASSERT_LEQ_MSG(data_begin, data_end, "String end is before begin!");
     }
-    
+
     template <typename TSource, typename TSize>
     String(TSource const & source, TSize limit)
             : data_begin(0),
@@ -224,6 +233,14 @@ template <typename TValue, typename TSpec>
 struct IsContiguous<String<TValue, Alloc<TSpec> > > :
     True {};
 
+// ----------------------------------------------------------------------------
+// Metafunction HasMoveConstructor
+// ----------------------------------------------------------------------------
+
+template <typename TValue, typename TSpec>
+struct HasMoveConstructor<String<TValue, Alloc<TSpec> > > :
+    True {};
+
 // ============================================================================
 // Functions
 // ============================================================================
@@ -295,10 +312,6 @@ capacity(String<TValue, Alloc<TSpec> > const & me)
 // Internal Function _setBegin()
 // ----------------------------------------------------------------------------
 
-/**
-.Internal._setBegin:
-..remarks:Called by Function.move in string_base.h
-*/
 template <typename TValue, typename TSpec, typename TPtr>
 inline void
 _setBegin(String<TValue, Alloc<TSpec> > & me,
@@ -308,19 +321,9 @@ _setBegin(String<TValue, Alloc<TSpec> > & me,
 }
 
 // ----------------------------------------------------------------------------
-// Internal Function _setBegin()
+// Internal Function _setLength()
 // ----------------------------------------------------------------------------
 
-/**
-.Internal._setLength:
-..remarks:Called in string_base.h
-..cat:Functions
-..summary:Set the length of container.
-..signature:_setLength(object, new_length)
-..param.object:A container.
-..param.object.type:Spec.Alloc String
-..param.new_length:The new length.
-*/
 template <typename TValue, typename TSpec, typename TSize>
 inline void
 _setLength(String<TValue, Alloc<TSpec> > & me,
@@ -333,10 +336,6 @@ _setLength(String<TValue, Alloc<TSpec> > & me,
 // Internal Function _setCapacity()
 // ----------------------------------------------------------------------------
 
-/**
-.Internal._setCapacity:
-..remarks:Called in string_base.h
-*/
 template <typename TValue, typename TSpec, typename TSize>
 inline void
 _setCapacity(String<TValue, Alloc<TSpec> > & me,
@@ -349,28 +348,16 @@ _setCapacity(String<TValue, Alloc<TSpec> > & me,
 // Internal Function _allocateStorage()
 // ----------------------------------------------------------------------------
 
-/**
-.Internal._allocateStorage:
-..cat:Functions
-..remarks:Called in string_base.h
-..summary:Allocates a new buffer for a container.
-..signature:_allocateStorage(object, new_capacity)
-..param.object:A container.
-..param.object.type:Spec.Alloc String
-..param.new_capacity:The capacity of the new allocated buffer.
-..returns:The old butter $object$, that is replaced by the new allocated buffer.
-..remarks:The returned buffer must be deallocated by @Internal._deallocateStorage@.
-..remarks:This function does not construct objects in the allocated buffer.
-..see:Internal._reallocateStorage
-*/
 template <typename TValue, typename TSpec, typename TSize>
 inline typename Value<String<TValue, Alloc<TSpec> > >::Type *
 _allocateStorage(String<TValue, Alloc<TSpec> > & me,
                  TSize new_capacity)
 {
+    typedef typename If<IsSameType<TSpec, OverAligned>, TagAllocateAlignedMalloc, TagAllocateStorage>::Type AllocTag;
+
     typename Size<String<TValue, Alloc<TSpec> > >::Type size = _computeSizeForCapacity(me, new_capacity);
     typename Value<String<TValue, Alloc<TSpec> > >::Type * _returnValue = me.data_begin;
-    allocate(me, me.data_begin, size, TagAllocateStorage());
+    allocate(me, me.data_begin, size, AllocTag());
     me.data_capacity = new_capacity;
     return _returnValue;
 }
@@ -379,27 +366,16 @@ _allocateStorage(String<TValue, Alloc<TSpec> > & me,
 // Internal Function _deallocateStorage()
 // ----------------------------------------------------------------------------
 
-/**
-.Internal._deallocateStorage:
-..cat:Functions
-..summary:Deallocates a buffer of a container.
-..signature:_deallocateStorage(object, buffer, capacity)
-..param.object:A container.
-..param.object.type:Spec.Alloc String
-..param.buffer:The buffer that will be deallocated.
-..param.capacity:The capacity of $buffer$.
-..remarks:All objects in the buffer must be destroyed before calling $_deallocateStorage$.
-..see:Internal._allocateStorage
-..see:Internal._reallocateStorage
-*/
 template <typename TValue, typename TSpec, typename TPtr, typename TSize>
 inline void
 _deallocateStorage(String<TValue, Alloc<TSpec> > & me,
                    TPtr * ptr,
                    TSize capacity)
 {
+    typedef typename If<IsSameType<TSpec, OverAligned>, TagAllocateAlignedMalloc, TagAllocateStorage>::Type AllocTag;
+
     typename Size<String<TValue, Alloc<TSpec> > >::Type size = _computeSizeForCapacity(me, capacity);
-    deallocate(me, ptr, size, TagAllocateStorage());
+    deallocate(me, ptr, size, AllocTag());
 }
 
 // ----------------------------------------------------------------------------

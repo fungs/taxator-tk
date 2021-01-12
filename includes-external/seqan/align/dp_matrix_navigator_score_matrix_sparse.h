@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,8 @@
 // cells needed for the recursion formula.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_
 
 namespace seqan {
 
@@ -62,25 +62,13 @@ public:
     typedef typename Pointer_<TDPMatrix_>::Type TDPMatrixPointer_;
     typedef typename Iterator<TDPMatrix_, Standard>::Type TDPMatrixIterator;
 
-    TDPMatrixPointer_ _ptrDataContainer;        // Pointer to the underlying matrix to navigate on.
-    int _laneLeap;                              // The distance to leap when going to the next column.
-    TDPMatrixIterator _activeColIterator;       // The iterator over the active column.
-    TDPMatrixIterator _prevColIterator;         // The iterator over the previous column.
-    TValue _prevCellDiagonal;                   // The previous value in diagonal direction.
-    TValue _prevCellHorizontal;                 // The previous value in horizontal direction.
-    TValue _prevCellVertical;                   // The previous value in vertical direction.
-
-
-
-    DPMatrixNavigator_() :
-        _ptrDataContainer(TDPMatrixPointer_(0)),
-        _laneLeap(0),
-        _activeColIterator(),
-        _prevColIterator(),
-        _prevCellDiagonal(),
-        _prevCellHorizontal(),
-        _prevCellVertical()
-    {}
+    TDPMatrixPointer_ _ptrDataContainer     = nullptr;  // Pointer to the underlying matrix to navigate on.
+    int _laneLeap                           = 0;  // The distance to leap when going to the next column.
+    TDPMatrixIterator _activeColIterator    = TDPMatrixIterator();  // The iterator over the active column.
+    TDPMatrixIterator _prevColIterator      = TDPMatrixIterator();  // The iterator over the previous column.
+    TValue _prevCellDiagonal                = TValue();  // The previous value in diagonal direction.
+    TValue _prevCellHorizontal              = TValue();  // The previous value in horizontal direction.
+    TValue _prevCellVertical                = TValue();  // The previous value in vertical direction.
 };
 
 // ============================================================================
@@ -101,12 +89,13 @@ template <typename TValue>
 inline void
 _init(DPMatrixNavigator_<DPMatrix_<TValue, SparseDPMatrix>, DPScoreMatrix, NavigateColumnWise> & navigator,
       DPMatrix_<TValue, SparseDPMatrix> & dpMatrix,
-      DPBand_<BandOff> const &)
+      DPBandConfig<BandOff> const &)
 {
     navigator._ptrDataContainer = &dpMatrix;
     navigator._activeColIterator = begin(dpMatrix, Standard());
     navigator._prevColIterator = navigator._activeColIterator;
     navigator._laneLeap = 1 - _dataLengths(dpMatrix)[DPMatrixDimension_::VERTICAL];
+    assignValue(navigator._activeColIterator, TValue());
 }
 
 // Initializes the navigator for banded alignments
@@ -114,7 +103,7 @@ template <typename TValue>
 inline void
 _init(DPMatrixNavigator_<DPMatrix_<TValue, SparseDPMatrix>, DPScoreMatrix, NavigateColumnWise> & navigator,
       DPMatrix_<TValue, SparseDPMatrix> & dpMatrix,
-      DPBand_<BandOn> const & band)
+      DPBandConfig<BandOn> const & band)
 {
     typedef DPMatrix_<TValue, SparseDPMatrix> TSparseDPMatrix;
     typedef typename Size<TSparseDPMatrix>::Type TSize;
@@ -138,6 +127,7 @@ _init(DPMatrixNavigator_<DPMatrix_<TValue, SparseDPMatrix>, DPScoreMatrix, Navig
         navigator._activeColIterator = begin(dpMatrix, Standard()) + length(dpMatrix, DPMatrixDimension_::VERTICAL) + navigator._laneLeap - 1;
     }
     navigator._prevColIterator = navigator._activeColIterator;
+    assignValue(navigator._activeColIterator, TValue());
 }
 
 // ----------------------------------------------------------------------------
@@ -376,4 +366,4 @@ _goNextCell(DPMatrixNavigator_<DPMatrix_<TValue, SparseDPMatrix>, DPScoreMatrix,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_MATRIX_NAVIGATOR_SCORE_SPARSE_H_

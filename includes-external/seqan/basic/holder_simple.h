@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -47,21 +47,20 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
-#ifdef PLATFORM_WINDOWS_VS
-// Disable warning C4521 locally (multiple copy constructors).
-#pragma warning( push )
-#pragma warning( disable: 4521 )
-#endif  // PLATFORM_WINDOWS_VS
-
-/**
-.Spec.Simple Holder
-..cat:Holders
-..summary:Simple copying wrapper without any additional state.
-..signature:Holder<TValue, Simple>
-..param.TValue:Type of the managed object.
-..general:Class.Holder
-..remarks.text:This holder stores a copy of the value.
-..include:seqan/basic.h
+/*!
+ * @class SimpleHolder
+ * @extends Holder
+ * @headerfile <seqan/basic.h>
+ * @brief Simple copying wrapper without any additional state.
+ *
+ * @signature template <typename TValue>
+ *            class Holder<TValue, Simple>;
+ *
+ * @tparam TValue Type of the managed object.
+ *
+ * @section Remarks
+ *
+ * This holder stores a copy of the value.
  */
 
 template <typename TValue>
@@ -84,26 +83,22 @@ struct Holder<TValue, Simple>
 
     Holder(Holder & source_) : data_value(source_.data_value)
     {
-        SEQAN_CHECKPOINT;
     }
 
     Holder(Holder const & source_) : data_value(source_.data_value)
     {
-        SEQAN_CHECKPOINT;
     }
 
     template <typename TSource>
     explicit
     Holder(TSource & value_) : data_value(value_)
     {
-        SEQAN_CHECKPOINT;
     }
 
     template <typename TSource>
     explicit
     Holder(TSource const & value_) : data_value(value_)
     {
-        SEQAN_CHECKPOINT;
     }
 
     // ------------------------------------------------------------------------
@@ -113,7 +108,6 @@ struct Holder<TValue, Simple>
     Holder &
     operator=(Holder const & source_)
     {
-        SEQAN_CHECKPOINT;
         data_value = source_.data_value;
         return *this;
     }
@@ -121,7 +115,6 @@ struct Holder<TValue, Simple>
     Holder &
     operator=(THolderValue const & value_)
     {
-        SEQAN_CHECKPOINT;
         data_value = value_;
         return *this;
     }
@@ -132,15 +125,9 @@ struct Holder<TValue, Simple>
 
     operator THolderParameter()
     {
-        SEQAN_CHECKPOINT;
         return *data_value;
     }
 };
-
-#ifdef PLATFORM_WINDOWS_VS
-// Set old warning C4521 state again (multiple copy constructors).
-#pragma warning( pop )
-#endif  // PLATFORM_WINDOWS_VS
 
 // ============================================================================
 // Metafunctions
@@ -158,7 +145,6 @@ template <typename TValue>
 inline bool
 empty(Holder<TValue, Simple> const & /*me*/)
 {
-    SEQAN_CHECKPOINT;
     return false;
 }
 
@@ -170,7 +156,6 @@ template <typename TValue>
 inline bool
 dependent(Holder<TValue, Simple> const & /*me*/)
 {
-    SEQAN_CHECKPOINT;
     return false;
 }
 
@@ -182,7 +167,6 @@ template <typename TValue>
 inline void
 clear(Holder<TValue, Simple> & /*me*/)
 {
-    SEQAN_CHECKPOINT;
 }
 
 // ----------------------------------------------------------------------------
@@ -193,7 +177,6 @@ template <typename TValue>
 inline void
 create(Holder<TValue, Simple> & /*me*/)
 {
-    SEQAN_CHECKPOINT;
     // TODO(holtgrew): Should be create(me.data_value), right?
 }
 
@@ -202,7 +185,6 @@ inline void
 create(Holder<TValue, Simple> & me,
        TValue const & value_)
 {
-    SEQAN_CHECKPOINT;
     me.data_value = value_;
 }
 
@@ -212,7 +194,6 @@ create(Holder<TValue, Simple> & me,
        TValue const & value_,
        Move const &)
 {
-    SEQAN_CHECKPOINT;
     // TODO(holtgrew): Real implementation once HasMoveConstructor metafunction is in place.
     me.data_value = value_;
 }
@@ -225,7 +206,6 @@ template <typename TValue>
 inline void
 detach(Holder<TValue, Simple> & /*me*/)
 {
-    SEQAN_CHECKPOINT;
 }
 
 // ----------------------------------------------------------------------------
@@ -237,7 +217,6 @@ inline void
 setValue(Holder<TValue, Simple> & me,
          TValue const & value_)
 {
-    SEQAN_CHECKPOINT;
     set(me.data_value, value_);
 }
 
@@ -249,7 +228,6 @@ template <typename TValue>
 inline typename Reference<Holder<TValue, Simple> >::Type
 value(Holder<TValue, Simple> & me)
 {
-    SEQAN_CHECKPOINT;
     return me.data_value;
 }
 
@@ -257,7 +235,6 @@ template <typename TValue>
 inline typename Reference<Holder<TValue, Simple> const>::Type
 value(Holder<TValue, Simple> const & me)
 {
-    SEQAN_CHECKPOINT;
     return me.data_value;
 }
 
@@ -269,7 +246,6 @@ template <typename TValue>
 inline typename GetValue<Holder<TValue, Simple> >::Type
 getValue(Holder<TValue, Simple> & me)
 {
-    SEQAN_CHECKPOINT;
     return me.data_value;
 }
 
@@ -277,7 +253,6 @@ template <typename TValue>
 inline typename GetValue<Holder<TValue, Simple> const>::Type
 getValue(Holder<TValue, Simple> const & me)
 {
-    SEQAN_CHECKPOINT;
     return me.data_value;
 }
 
@@ -290,7 +265,6 @@ inline void
 assignValue(Holder<TValue, Simple> & me,
             TSource const & value_)
 {
-    SEQAN_CHECKPOINT;
     assign(me.data_value, value_);
 }
 
@@ -303,7 +277,6 @@ inline void
 moveValue(Holder<TValue, Simple> & me,
           TSource const & value_)
 {
-    SEQAN_CHECKPOINT;
     move(me.data_value, value_);
 }
 
@@ -316,7 +289,6 @@ inline void
 assign(Holder<TValue, Simple> & target_,
        Holder<TValue, Simple> const & source_)
 {
-    SEQAN_CHECKPOINT;
     assignValue(target_, source_);
 }
 

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,14 +32,10 @@
 // Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
 // ==========================================================================
 
-#ifndef CORE_INCLUDE_SEQAN_BED_IO_BED_RECORD_H_
-#define CORE_INCLUDE_SEQAN_BED_IO_BED_RECORD_H_
+#ifndef INCLUDE_SEQAN_BED_IO_BED_RECORD_H_
+#define INCLUDE_SEQAN_BED_IO_BED_RECORD_H_
 
 namespace seqan {
-
-// ============================================================================
-// Forwards
-// ============================================================================
 
 // ============================================================================
 // Tags, Classes, Enums
@@ -64,73 +60,62 @@ typedef Tag<Bed12_> Bed12;
 // Class BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Class.BedRecord
-..cat:BED I/O
-..summary:Data structure for storing BED records.
-..signature:BedRecord<TSpec>
-..description:
-BED files allow the easy representation of intervals on the genome.
-Originally, they were designed for tracks in the UCSC genome browser.
-The original format has 12 columns but often variants using fewer
-columns with interpreted data are used and the rest is kept as application
-dependent data.
-..description:
-The BedRecord class allows for storing BED records.
-The various subclasses provide access to 3, 4, 5, 6, or 12 fields of the BED format.
-For example, a $BedRecord<Bed5>$ has members variables for the first 5 columns of a BED file.
-The remaining data is stored as the @Shortcut.CharString@ member variable $data$.
-..remarks:
-The $ref$ field is the name of the reference as loaded from the BED file.
-The $rID$ field can be used to store a numeric reference id.
-When loading without using a @Class.BedIOContext@, the $rID$ field remains set to @Memvar.BedRecord#INVALID_REFID@, otherwise the field is set to a different value.
-..remarks:
-Note that while the BED file format is 1-based, the coordinates in the BedRecord are 0-based.
-..param.TSpec:The specialization to use.
-...default:$Bed12$
-..include:seqan/bed_io.h
+/*!
+ * @class BedRecord
+ * @implements FormattedFileRecordConcept
+ * @headerfile <seqan/bed_io.h>
+ * @brief Data structure for storing BED records.
+ *
+ * @signature template <typename TSpec>
+ *            class BedRecord;
+ *
+ * @tparam TSpec The specialization to use.  Default: <tt>Bed12</tt>.
+ *
+ * BED files allow the easy representation of intervals on the genome.  Originally, they were designed for tracks in the
+ * UCSC genome browser. The original format has 12 columns but often variants using fewer columns with interpreted data
+ * are used and the rest is kept as application dependent data.
+ *
+ * The BedRecord class allows for storing BED records. The various subclasses provide access to 3, 4, 5, 6, or 12 fields
+ * of the BED format. For example, a <tt>BedRecord&lt;Bed&gt;></tt> has members variables for the first 5 columns of a BED
+ * file. The remaining data is stored as the @link CharString @endlink member variable <tt>data</tt>.
+ *
+ * @section Remarks
+ *
+ * The <tt>ref</tt> field is the name of the reference as loaded from the BED file. The <tt>rID</tt> field can be used
+ * to store a numeric reference id.
+ *
+ * Note that while the BED file format is 1-based, the coordinates in the BedRecord are 0-based.
+ *
+ * @var CharString BedRecord::ref;
+ * @brief Name of the interval's reference name.
+ *
+ * @var int32_t BedRecord::beginPosition;
+ * @brief Begin position on the reference.
+ *
+ * @var int32_t BedRecord::rID;
+ * @brief Numeric id of the interval's reference (<tt>int32_t</tt>, defaults to <tt>INVALID_REFID</tt>).
+ *
+ * @var int32_t BedRecord::INVALID_REFID;
+ * @brief Constant for invalid references.
+ * @signature static const int32_t BedRecord::INVALID_REFID = -1;
+ *
+ * @var int32_t BedRecord::endPosition;
+ * @brief End position on the reference.
+ *
+ * @var int32_t BedRecord::INVALID_POS;
+ * @brief Constant for invalid positions.
+ * @signature static const int32_t BedRecord::INVALID_POS = -1;
+ *
+ * @var CharString BedRecord::data;
+ * @brief Any data after the last position.
+ */
 
-.Memfunc.BedRecord#BedRecord
-..class:Class.BedRecord
-..summary:Constructor.
-..description:Default constructor.
-..signature:BedRecord::BedRecord()
-
-.Memvar.BedRecord#INVALID_REFID
-..class:Class.BedRecord
-..summary:Constant for invalid references.
-..signature:static const __int32 INVALID_REFID = -1
-
-.Memvar.BedRecord#INVALID_POS
-..class:Class.BedRecord
-..summary:Constant for invalid positions.
-..signature:static const __int32 INVALID_POS = -1
-
-.Memvar.BedRecord#ref
-..class:Class.BedRecord
-..summary:Name of the interval's reference (@Shortcut.CharString@).
-..signature:CharString ref
-
-.Memvar.BedRecord#rID
-..class:Class.BedRecord
-..summary:Numeric id of the interval's reference ($__int32$, defaults to $INVALID_REFID$).
-..signature:__int32 rID
-
-.Memvar.BedRecord#beginPosition
-..class:Class.BedRecord
-..summary:Begin position on the reference.
-..signature:__int32 beginPosition
-
-.Memvar.BedRecord#endPosition
-..class:Class.BedRecord
-..summary:End position on the reference.
-..signature:__int32 endPosition
-
-.Memvar.BedRecord#data
-..class:Class.BedRecord
-..summary:Any data after the last position.
-..signature:CharString data
-*/
+/*!
+ * @fn BedRecord::BedRecord
+ * @brief Constructor.
+ *
+ * @signature BedRecord::BedRecord();
+ */
 
 template <typename TSpec = Bed12>
 class BedRecord;
@@ -139,16 +124,17 @@ class BedRecord;
 // Class Bed3 BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Bed3 BedRecord
-..cat:BED I/O
-..general:Class.BedRecord
-..summary:BedRecord with 3 fields.
-..signature:class BedRecord<Bed3>
-..description:
-This BedRecord specialization stores the first three fields (ref, beginPos, endPos) of a BED file.
-..include:seqan/bed_io.h
-*/
+/*!
+ * @class Bed3Record
+ * @extends BedRecord
+ * @headerfile <seqan/bed_io.h>
+ * @brief BedRecord with 3 fields.
+ *
+ * @signature template <>
+ *            class BedRecord<Bed3>;
+ *
+ * This BedRecord specialization stores the first three fields (ref, beginPos, endPos) of a BED file.
+ */
 
 template <>
 class BedRecord<Bed3>
@@ -160,11 +146,11 @@ public:
     // The chromosome name.
     CharString ref;
     // The id of the chromosome, -1 if not translated.
-    __int32 rID;
+    int32_t rID;
     // The start position.
-    __int32 beginPos;
+    int32_t beginPos;
     // The end position;
-    __int32 endPos;
+    int32_t endPos;
     // The remaining data from the file, unparsed.
     CharString data;
 
@@ -185,20 +171,20 @@ public:
 // Class Bed4 BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Bed4 BedRecord
-..cat:BED I/O
-..general:Spec.Bed3 BedRecord
-..summary:BedRecord with 4 fields.
-..signature:class BedRecord<Bed3>
-..description:
-This BedRecord specialization stores the first four fields (ref, beginPos, endPos, name) of a BED file.
-..include:seqan/bed_io.h
-
-.Memvar.Bed4 BedRecord#name
-..class:Spec.Bed4 BedRecord
-..summary:The name of the interval (@Shortcut.CharString@).
-*/
+/*!
+ * @class Bed4Record
+ * @extends Bed3Record
+ * @headerfile <seqan/bed_io.h>
+ * @brief BedRecord with 4 fields.
+ *
+ * @signature template <>
+ *            class BedRecord<Bed3>;
+ *
+ * This BedRecord specialization stores the first four fields (ref, beginPos, endPos, name) of a BED file.
+ *
+ * @var CharString Bed4Record::name;
+ * @brief The name of the interval (@link CharString @endlink).
+ */
 
 template <>
 class BedRecord<Bed4> : public BedRecord<Bed3>
@@ -221,21 +207,25 @@ public:
 // Class Bed5 BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Bed5 BedRecord
-..cat:BED I/O
-..general:Spec.Bed4 BedRecord
-..summary:BedRecord with 5 fields.
-..signature:class BedRecord<Bed5>
-..description:
-This BedRecord specialization stores the first five fields (ref, beginPos, endPos, name, score) of a BED file.
-..include:seqan/bed_io.h
-
-.Memvar.Bed5 BedRecord#score
-..class:Spec.Bed5 BedRecord
-..summary:The score of the interval (stored as @Shortcut.CharString@ to allow more flexible annotation).
-..remarks:Storing the score as a @Shortcut.CharString@ is provided for compatibility with bedtools.
-*/
+/*!
+ * @class Bed5Record
+ * @extends Bed4Record
+ * @headerfile <seqan/bed_io.h>
+ *
+ * @brief BedRecord with 5 fields.
+ *
+ * @signature template <>
+ *            class BedRecord<Bed5>;
+ *
+ * This BedRecord specialization stores the first five fields (ref, beginPos, endPos, name, score) of a BED file.
+ *
+ * @var CharString Bed5Record::score;
+ * @brief The score of the interval (stored as @link CharString @endlink to allow more flexible annotation).
+ *
+ * @section Remarks
+ *
+ * Storing the score as a @link CharString @endlink is provided for compatibility with bedtools.
+ */
 
 template <>
 class BedRecord<Bed5> : public BedRecord<Bed4>
@@ -258,21 +248,23 @@ public:
 // Class Bed6 BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Bed6 BedRecord
-..cat:BED I/O
-..general:Spec.Bed5 BedRecord
-..summary:BedRecord with 6 fields.
-..signature:class BedRecord<Bed6>
-..description:
-This BedRecord specialization stores the first six fields (ref, beginPos, endPos, name, score, strand) of a BED file.
-..include:seqan/bed_io.h
-
-.Memvar.Bed6 BedRecord#strand
-..class:Spec.Bed6 BedRecord
-..summary:The strand of the interval (stored as $char$, one of $.$, '-', and $+$).
-..remarks:Defaults to '.'.
-*/
+/*!
+ * @class Bed6Record
+ * @extends Bed5Record
+ * @headerfile <seqan/bed_io.h>
+ *
+ * @brief BedRecord with 6 fields.
+ *
+ * @signature template <>
+ *            class BedRecord<Bed6>;
+ *
+ * This BedRecord specialization stores the first six fields (ref, beginPos, endPos, name, score, strand) of a BED file.
+ *
+ * @var char Bed6Record::strand;
+ * @brief The strand of the interval (stored as <tt>char</tt>, one of <tt>.</tt>, '-', and <tt>+</tt>).
+ *
+ * Defaults to '.'.
+ */
 
 template <>
 class BedRecord<Bed6> : public BedRecord<Bed5>
@@ -295,38 +287,39 @@ public:
 // Class BedRgb
 // ----------------------------------------------------------------------------
 
-/**
-.Class.BedRgb
-..cat:BED I/O
-..signature:class BedRgb
-..summary:RGB color for @Spec.Bed12 BedRecord@.
+/*!
+ * @class BedRgb
+ * @headerfile <seqan/bed_io.h>
+ * @brief RGB color for @link Bed12Record @endlink.
+ *
+ * @signature class BedRgb;
+ *
+ * @var int32_t BedRgb::red;
+ * @brief Red value of RGB color (default is <tt>0</tt>).
+ *
+ * @var int32_t BedRgb::green;
+ * @brief Green value of RGB color (default is <tt>0</tt>).
+ *
+ * @var int32_t BedRgb::blue;
+ * @brief Blue value of RGB color (default is <tt>0</tt>).
+ */
 
-.Memfunc.BedRgb#BedRgb
-..class:Class.BedRgb
-..signature:BedRgb::BedRgb()
-..signature:BedRgb::BedRgb(red, green, blue)
-..summary:Default constructor and initialization of integer RGB values.
-..param.red:Integer red value $0-255$.
-..param.green:Integer green value $0-255$.
-..param.blue:Integer blue value $0-255$.
-
-.Memvar.BedRgb#red
-..class:Class.BedRgb
-..summary:Red value of RGB color (default is $0$).
-
-.Memvar.BedRgb#green
-..class:Class.BedRgb
-..summary:Green value of RGB color (default is $0$).
-
-.Memvar.BedRgb#blue
-..class:Class.BedRgb
-..summary:Blue value of RGB color (default is $0$).
-*/
+/*!
+ * @fn BedRgb::BedRgb
+ * @brief Default constructor and initialization of integer RGB values.
+ *
+ * @signature BedRgb::BedRgb();
+ * @signature BedRgb::BedRgb(red, green, blue);
+ *
+ * @param[in] blue  int32_t blue value <tt>0-255</tt> (defaults to <tt>0</tt>).
+ * @param[in] green int32_t green value <tt>0-255</tt> (defaults to <tt>0</tt>).
+ * @param[in] red   int32_t red value <tt>0-255</tt> (defaults to <tt>0</tt>).
+ */
 
 class BedRgb
 {
 public:
-    __int32 red, green, blue;
+    int32_t red, green, blue;
 
     BedRgb() : red(0), green(0), blue(0)
     {}
@@ -349,57 +342,52 @@ public:
 // Class Bed12 BedRecord
 // ----------------------------------------------------------------------------
 
-/**
-.Spec.Bed12 BedRecord
-..cat:BED I/O
-..general:Spec.Bed6 BedRecord
-..summary:BedRecord with 12 fields.
-..signature:class BedRecord<Bed12>
-..description:
-This BedRecord specialization stores all fields of a BED file.
-..include:seqan/bed_io.h
-
-.Memvar.Bed12 BedRecord#thickBegin
-..class:Spec.Bed12 BedRecord
-..summary:The begin position of thick drawing ($__int32$).
-
-.Memvar.Bed12 BedRecord#thickEnd
-..class:Spec.Bed12 BedRecord
-..summary:The end position of thick drawing ($__int32$).
-
-.Memvar.Bed12 BedRecord#itemRgb
-..class:Spec.Bed12 BedRecord
-..summary:RGB color of item (@Class.BedRgb@).
-
-.Memvar.Bed12 BedRecord#blockCount
-..class:Spec.Bed12 BedRecord
-..summary:The number of blocks.
-
-.Memvar.Bed12 BedRecord#blockSizes
-..class:Spec.Bed12 BedRecord
-..summary:The sizes of the blocks (@Spec.Alloc String@ of $__int32$).
-
-.Memvar.Bed12 BedRecord#blockBegins
-..class:Spec.Bed12 BedRecord
-..summary:The begin positions of the blocks (@Spec.Alloc String@ of $__int32$).
-*/
+/*!
+ * @class Bed12Record
+ * @extends BedRecord
+ * @headerfile <seqan/bed_io.h>
+ * @brief BedRecord with 12 fields.
+ *
+ * @signature template <>
+ *            class BedRecord<Bed12>;
+ *
+ * This @link BedRecord @endlink specialization stores all fields of a BED file.
+ *
+ * @var int32_t Bed12Record::itemRgb;
+ * @brief RGB color of item (@link BedRgb @endlink).
+ *
+ * @var int32_t Bed12Record::blockCount;
+ * @brief The number of blocks.
+ *
+ * @var TIntString Bed12Record::blockBegins;
+ * @brief The begin positions of the blocks (@link AllocString @endlink of <tt>int32_t</tt>).
+ *
+ * @var TIntString Bed12Record::blockSizes;
+ * @brief The sizes of the blocks (@link AllocString @endlink of <tt>int32_t</tt>).
+ *
+ * @var int32_t Bed12Record::thickBegin;
+ * @brief The begin position of thick drawing.
+ *
+ * @var int32_t Bed12Record::thickEnd;
+ * @brief The end position of thick drawing.
+ */
 
 template <>
 class BedRecord<Bed12> : public BedRecord<Bed6>
 {
 public:
     // The starting position of thick line for feature.
-    __int32 thickBegin;
+    int32_t thickBegin;
     // The end position of thick line for feature.
-    __int32 thickEnd;
+    int32_t thickEnd;
     // The color of the item.
     BedRgb itemRgb;
     // The number of blocks/exons for the feature.
-    __int32 blockCount;
+    int32_t blockCount;
     // The list of block size.
-    String<__int32> blockSizes;
+    String<int32_t> blockSizes;
     // List of block starts.
-    String<__int32> blockBegins;
+    String<int32_t> blockBegins;
 
     BedRecord() : BedRecord<Bed6>(), thickBegin(INVALID_POS), thickEnd(INVALID_POS), blockCount(0)
     {}
@@ -417,10 +405,6 @@ public:
 };
 
 // ============================================================================
-// Metafunctions
-// ============================================================================
-
-// ============================================================================
 // Functions
 // ============================================================================
 
@@ -428,15 +412,14 @@ public:
 // Function clear()
 // ----------------------------------------------------------------------------
 
-/**
-.Function.BedRecord#clear
-..class:Class.BedRecord
-..signature:void clear(record)
-..summary:Reset BED record to state after default initialization.
-..param.record:@Class.BedRecord@ to reset.
-...type:Class.BedRecord
-..include:seqan/bed_io.h
-*/
+/*!
+ * @fn BedRecord#clear
+ * @brief Reset BED record to state after default initialization.
+ *
+ * @signature void clear(record);
+ *
+ * @param[in,out] record BedRecord to reset.
+ */
 
 template <typename TSpec>
 void clear(BedRecord<TSpec> & record)
@@ -446,4 +429,4 @@ void clear(BedRecord<TSpec> & record)
 
 }  // namespace seqan
 
-#endif  // #ifndef CORE_INCLUDE_SEQAN_BED_IO_BED_RECORD_H_
+#endif  // #ifndef INCLUDE_SEQAN_BED_IO_BED_RECORD_H_

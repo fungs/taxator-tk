@@ -37,6 +37,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sequencestorage.hh"
 #include "profiling.hh"
 
+// alignment object
+template <typename StringType>
+struct alignment{
+                int score; 
+                int matches;
+                int mmatches;
+                int gaps;
+                seqan::Align<StringType, seqan::ArrayGaps> alignment;
+                };
+
 // helper class
 class BandFactor {
 public:
@@ -106,7 +116,7 @@ private:
 };
 
 // TODO: make timers thread-safe
-template< typename ContainerT, typename QStorType, typename DBStorType >
+template< typename ContainerT, typename QStorType, typename DBStorType ,typename StringType>
 class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 public:
     RPAPredictionModel(const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float exclude_factor ,float reeval_bandwidth = .1) :
@@ -127,6 +137,9 @@ public:
         boost::format seqname_fmt("%d:%d@%s");  // local variable because not thread-safe
         StopWatchCPUTime stopwatch_init("initializing this record");  // log overall time for this predict phase
         stopwatch_init.start();
+	// prepare alignment/ score type
+	//seqan::Score<int> myBlosum = seqan::Blosum80(); 
+	//align_method = &myBlosum;
 
         // push records into active_records  TODO: remove intermediate active_records?
         active_list_type_ active_records;
@@ -194,7 +207,7 @@ public:
         sort_.filter(active_records);
         
         // data storage  TODO: maybe use Boost ptr containers
-        const seqan::Dna5String qrseq = query_sequences_.getSequence(qid, qrstart, qrstop);
+        const StringType qrseq = query_sequences_.getSequence(qid, qrstart, qrstop);
         
         std::vector< typename ContainerT::value_type > records(n);  //TODO: move below next section and do not create records if q==r_best
         {
@@ -253,9 +266,9 @@ public:
             return;
         }
         
-        std::vector<seqan::Dna5String> segments(n);    //TODO: don't call element constructors
+        std::vector< StringType > segments(n);    //TODO: don't call element constructors
         std::vector< int > queryscores(n, std::numeric_limits< int >::max());
-        std::vector< large_unsigned_int > querymatches(n, 0);   //TODO: value is not really relevant
+        std::vector< large_int > querymatches(n, 0);   //TODO: value is not really relevant
         stopwatch_init.stop();
         
         // count number of alignment calculations in each of the three passes
@@ -283,50 +296,59 @@ public:
 
             for (uint i = 0; i < n; ++i) { //calculate scores for best-scoring references
                 int score;
-                large_unsigned_int matches;
+                large_int matches;
+                alignment<StringType> queryalignment;
+                //int matches;
                 const float qlscore = records[i]->getScore();
                 const large_unsigned_int qlmatch = records[i]->getIdentities();
                 const double qlpid = static_cast<double>(qlmatch)/qrlength;
-                
+
                 if(records[i]->getAlignmentLength() == qrlength && records[i]->getIdentities() == qrlength) {
+
                     qgroup.insert(i);
                     score = 0;
                     matches = records[i]->getIdentities();
                     logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; score=" << score << "; match=" << matches << "; qpid=1.0" << std::endl;
                     ++pass_0_counter_naive;
                 } else if (records[i]->getScore() >= dbalignment_score_threshold) {
+
                     qgroup.insert(i);
                     
                     
                     stopwatch_seqret.start();
                     if(seqan::empty(segments[i])) segments[i] = getSequence(records[i]->getReferenceIdentifier(),  records[i]->getReferenceStart(), records[i]->getReferenceStop(), records[i]->getQueryStart() - qrstart, qrstop - records[i]->getQueryStop());
                     stopwatch_seqret.stop();                   
-                    score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::MyersBitVector());
-                    
+                    //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::MyersBitVector());
+                    //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::Blosum30());
+                    queryalignment = getAlignment<seqan::Blosum80>(segments[i],qrseq);
+                    score = queryalignment.score;
                     ++pass_0_counter;
                     ++pass_0_counter_naive;
-                    matches = std::max(static_cast<large_unsigned_int>(std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), records[i]->getIdentities());
+                   
+                    //matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), static_cast<large_int>(records[i]->getIdentities()));
+                    matches = std::max(static_cast<large_int>(queryalignment.matches), static_cast<large_int>(records[i]->getIdentities()));
+                    //matches = std::max((std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), static_cast<int>records[i]->getIdentities());
                     double qpid = static_cast<double>(matches)/qrlength;
                     logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; qlpid=" << qlpid << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << std::endl;
+                    //logsink << queryalignment.alignment << std::endl;
+                    
                 } else {  // not similar -> fill in some dummy values
                     score = std::numeric_limits< int >::max();
                     matches = records[i]->getIdentities();
                 }
                 queryscores[i] = score;
                 querymatches[i] = matches;
-                
                 if (score < queryscores[index_best]) index_best = i;
                 else if (score == queryscores[index_best]) {
                     if (matches > querymatches[index_best]) index_best = i;
                     else if (matches == querymatches[index_best] && qlscore > records[index_best]->getScore()) index_best = i;
                 }
-                
-                anchors_support = std::max(anchors_support, matches);  //TODO: move to previous if-statement?
+                //anchors_support = std::max(anchors_support, matches);
+                anchors_support = std::max(static_cast<large_int>(anchors_support), matches);  //TODO: move to previous if-statement?
                 lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records[i]->getReferenceNode());
             }
             
             // TODO: resort alignments by local score (already done), and by secondary vector (matches)
-
             // only keep and use the best-scoring reference sequences
             rtax = records[index_best]->getReferenceNode();
             for (std::set< uint >::iterator it = qgroup.begin(); it != qgroup.end();) {
@@ -343,13 +365,14 @@ public:
             logsink << "    NUMALN\t" << pass_0_counter << tab << pass_0_counter_naive - pass_0_counter << std::endl << std::endl;
         }
 
+
         float anchors_taxsig = 1.;  // a measure of tree-like scores  
         float ival_global = 0.;
         const TaxonNode* lnode_global = rtax;
         const TaxonNode* unode_global = rtax;
         std::set<uint> outgroup;
         float bandfactor_max = 1.;
-
+		
         {   // pass 1 (best reference alignment)
             logsink << "  PASS\t1" << std::endl;
 
@@ -389,6 +412,7 @@ public:
                     if(qpid >= qpid_thresh) {  //TODO: implement command line option
                         int score;
                         large_unsigned_int matches;
+                        alignment<StringType> segmentalignment;
                         
                         if (i == index_anchor) score = 0;
                         else {
@@ -403,10 +427,17 @@ public:
                                 if(seqan::empty(segments[i])) segments[i] = getSequence(records[i]->getReferenceIdentifier(),  records[i]->getReferenceStart(), records[i]->getReferenceStop(), records[i]->getQueryStart() - qrstart, qrstop - records[i]->getQueryStop());
                                 stopwatch_seqret.stop();
                                 
-                                score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
+                                //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
+                                //score = getAlignment(segments[i],segments[index_anchor]);
+                                segmentalignment = getAlignment<seqan::Blosum80>(segments[i],segments[index_anchor]);
+                                score = segmentalignment.score;
+                                
                                 ++pass_1_counter;
-                                matches = std::max(seqan::length(segments[i]), seqan::length(segments[index_anchor])) - score;
+                                //matches = std::max(seqan::length(segments[i]), seqan::length(segments[index_anchor])) - score;
+                                large_int matches = segmentalignment.matches;
+                                
                                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; qlpid=" << qlpid << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << "; qlscore_cut=" << qlscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
+                                //logsink << segmentalignment.alignment << std::endl;
                             }
                         }
                         
@@ -534,6 +565,7 @@ public:
                         const float qlscore = records[i]->getScore();
                         const large_unsigned_int qlmatch = records[i]->getIdentities();
                         int score;
+                        alignment<StringType> segmentalignment;
 
                         if (i == index_anchor) score = 0;
                         else {
@@ -545,8 +577,14 @@ public:
                                 if(seqan::empty(segments[i])) segments[i] = getSequence(records[i]->getReferenceIdentifier(),  records[i]->getReferenceStart(), records[i]->getReferenceStop(), records[i]->getQueryStart() - qrstart, qrstop - records[i]->getQueryStop());
                                 stopwatch_seqret.stop();
                                 
-                                score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
+                                //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
+                                //score = getAlignment(segments[i], segments[index_anchor]);
+                                segmentalignment = getAlignment<seqan::Blosum80>(segments[i], segments[index_anchor]);
+                                score = segmentalignment.score;
+                                
+                                
                                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; score=" << score << "; qpid=" << qpid << std::endl;
+                                //logsink << segmentalignment.alignment << std::endl;
                                 ++pass_2_counter;
                                 queryscores[i] = score;
                             }
@@ -560,14 +598,22 @@ public:
                                 if(seqan::empty(segments[index_anchor])) segments[index_anchor] = getSequence(records[index_anchor]->getReferenceIdentifier(),  records[index_anchor]->getReferenceStart(), records[index_anchor]->getReferenceStop(), records[index_anchor]->getQueryStart() - qrstart, qrstop - records[index_anchor]->getQueryStop());
                                 stopwatch_seqret.stop();
                                 
-                                int score = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, seqan::MyersBitVector());
-                                large_unsigned_int matches = std::max(static_cast<large_unsigned_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
+                                //int score = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, seqan::MyersBitVector());
+                                //int score = getAlignment(segments[index_anchor],qrseq);
+                                segmentalignment =  getAlignment<seqan::Blosum80>(segments[index_anchor], qrseq);
+                                int score = segmentalignment.score;
+                                
+                                //large_int matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
+                                //TODO
+                                large_int matches = std::max(static_cast<large_int>(segmentalignment.matches), querymatches[index_anchor]);
+                                
                                 double qpid = static_cast<double>(matches)/qrlength;
                                 logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qlscore=" << records[index_anchor]->getScore() << "; qlmatch=" << qlmatch << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << std::endl;
                                 queryscores[index_anchor] = score;
                                 querymatches[index_anchor] = matches;
                                 qscore_ex = score*bandfactor_max;
                                 logsink << "      query: (" << qscore_ex << ") unknown" << std::endl;
+                                //logsink << segmentalignment.alignment << std::endl;
                                 ++pass_2_counter;
                             } else qscore_ex = queryscores[index_anchor]*bandfactor_max;
 
@@ -585,7 +631,6 @@ public:
         }
 
         if(unode_global == lnode_global) ival_global = 1.;
-        
         logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
 
         prec.setSignalStrength(anchors_taxsig);
@@ -600,15 +645,25 @@ public:
         logsink << "STATS" << tab << qrseqname << tab << n << tab << pass_0_counter << tab << pass_1_counter << tab << pass_2_counter << tab << gcounter << tab << stopwatch_init.read() << tab << stopwatch_seqret.read() << tab << stopwatch_process.read() << tab << std::setprecision(2) << std::fixed << normalised_rt << std::endl << std::endl;
     }
     
-    const seqan::Dna5String getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
-        if(start <= stop) {
+    const StringType getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
+        if(typeid(StringType) == typeid(seqan::String<seqan::Dna5>)){
+            if(start <= stop) {
             large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
             large_unsigned_int newstop = stop + right_ext;
             return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
+            }
+            large_unsigned_int newstart = right_ext < stop ? stop - right_ext : 1;
+            large_unsigned_int newstop = start + left_ext;
+            return db_sequences_.getSequenceReverseComplement(id, newstart, newstop); 
+        }else if(typeid(StringType) == typeid(seqan::String<seqan::AminoAcid>)){
+        assert(start <= stop);
+        large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
+        large_unsigned_int newstop = stop + right_ext;
+        return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
         }
-        large_unsigned_int newstart = right_ext < stop ? stop - right_ext : 1;
-        large_unsigned_int newstop = start + left_ext;
-        return db_sequences_.getSequenceReverseComplement(id, newstart, newstop); //TODO: can we avoid copying
+        else{
+            assert(false);
+        }
     }
 
 protected:
@@ -625,6 +680,141 @@ private:
     StopWatchCPUTime measure_pass_0_alignment_;
     StopWatchCPUTime measure_pass_1_alignment_;
     StopWatchCPUTime measure_pass_2_alignment_;
+    //const seqan::Score<int> *align_method;
+    
+//    int getAlignment(StringType A, StringType B){
+//        int selfcomp = seqan::globalAlignmentScore(B,B,seqan::Blosum80());
+//        int alignscore = seqan::globalAlignmentScore(A,B,seqan::Blosum80());
+//        int returnscore = selfcomp - alignscore;
+//        //std::cerr << A << std::endl;
+//        //std::cerr << B << std::endl;
+//        //std::cerr << selfcomp <<" "<< alignscore <<" "<< returnscore <<" "<< std::endl;
+//        assert(selfcomp >= alignscore);
+//        assert(returnscore >= 0);
+//        return returnscore;
+//        //return -seqan::globalAlignmentScore(A,B,seqan::Blosum30());
+//    }
+template<typename AlignMethod>
+alignment<StringType> getAlignment(StringType A, StringType B){
+	
+	alignment<StringType> returnalignment;
+            
+    typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
+    typedef typename seqan::Row<TAlign>::Type TRow;
+    typedef typename seqan::Iterator<TRow>::Type TRowIterator;	
+
+ 	TAlign selfalignA;
+    TAlign selfalignB; 
+	TAlign diffalign;
+        
+	int selfcomp;
+	int alignscore;
+
+	if(typeid(StringType)==typeid(seqan::String<seqan::AminoAcid>)){ 
+        
+        //align sequence to itself
+       
+        //int selfcomp = seqan::globalAlignment(selfalignA,AlignMethod());
+        //selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
+        
+        //int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
+	
+
+        resize(rows(selfalignA), 2);
+        assignSource(row(selfalignA, 0), A);
+        assignSource(row(selfalignA, 1), A);
+
+	selfcomp = seqan::globalAlignment(selfalignA,seqan::Blosum80());
+
+	resize(rows(selfalignB), 2);
+        assignSource(row(selfalignB, 0), B);
+        assignSource(row(selfalignB, 1), B);
+
+        selfcomp += seqan::globalAlignment(selfalignB,seqan::Blosum80());
+        
+
+        resize(rows(diffalign), 2);
+        assignSource(row(diffalign, 0), A);
+        assignSource(row(diffalign, 1), B);
+
+        alignscore = seqan::globalAlignment(diffalign,seqan::Blosum80()); 
+	
+	}
+	else if(typeid(StringType)==typeid(seqan::String<seqan::Dna5>)){
+        //align sequence to itself
+		
+        resize(rows(selfalignA), 2);
+        assignSource(row(selfalignA, 0), A);
+        assignSource(row(selfalignA, 1), A);
+        
+        selfcomp = seqan::globalAlignment(selfalignA,seqan::MyersHirschberg());
+
+		resize(rows(selfalignB), 2);
+        assignSource(row(selfalignB, 0), B);
+        assignSource(row(selfalignB, 1), B);
+
+        selfcomp += seqan::globalAlignment(selfalignB,seqan::MyersHirschberg());
+        
+	// score without alignment
+
+        resize(rows(diffalign), 2);
+        assignSource(row(diffalign, 0), A);
+        assignSource(row(diffalign, 1), B);
+        alignscore = seqan::globalAlignment(diffalign,seqan::MyersHirschberg()); 	
+	}
+	else{
+		std::cerr << "Something went wrong";
+		assert(false);
+	}
+        
+        //logsink << diffalign << std::endl;
+        
+        TRow & row1 = row(diffalign, 0);
+        TRow & row2 = row(diffalign, 1);
+        
+        TRowIterator itRow1 = begin(row1);
+        TRowIterator itEndRow1 = end(row1);
+        TRowIterator itRow2 = begin(row2);
+        
+        int gapCount = 0;
+        int matchCount = 0;
+        int missmatchCount = 0;
+        
+        
+        
+        for (; itRow1 != itEndRow1; ++itRow1, ++itRow2){
+        if(seqan::isGap(itRow1) || seqan::isGap(itRow2)){  
+            gapCount ++;
+        }
+        else if(*itRow1==*itRow2){
+                matchCount ++;
+            }
+            else{
+                missmatchCount ++;
+            }
+        
+        }
+        
+        returnalignment.score = selfcomp-alignscore;
+        returnalignment.matches = matchCount;
+        returnalignment.mmatches = missmatchCount;
+        returnalignment.gaps = gapCount;
+        returnalignment.alignment = diffalign;
+        //std::cerr << A << std::endl;
+        //std::cerr << B << std::endl;
+        //std::cerr << selfcomp <<" "<< alignscore << std::endl;
+	//std::cerr << diffalign << std::endl;
+	//std::cerr << "score: " << returnalignment.score << std::endl;
+	//std::cerr << "match: " << matchCount << std::endl;
+	//std::cerr << "mm: " << missmatchCount << std::endl;
+	//std::cerr << "gaps :" << gapCount << std::endl; 
+	//assert(selfcomp >= alignscore);
+        //assert(returnalignment.score >= 0);
+	
+        return returnalignment;
+        //return returnscore;
+        //return -seqan::globalAlignmentScore(A,B,seqan::Blosum30());
+    }
 };
 
 #endif // taxonpredictionmodelsequence_hh_

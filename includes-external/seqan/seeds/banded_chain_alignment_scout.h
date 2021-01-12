@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,8 @@
 // the next matrix.
 // ==========================================================================
 
-#ifndef CORE_INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_
-#define CORE_INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_
+#ifndef INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_
+#define INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_
 
 namespace seqan {
 
@@ -131,8 +131,9 @@ public:
 // Metafunction ScoutSpecForAlignmentAlgorithm_
 // ----------------------------------------------------------------------------
 
-template <typename TSpec, typename TDPMatrixLocation>
-struct ScoutSpecForAlignmentAlgorithm_<BandedChainAlignment_<TSpec, TDPMatrixLocation> >
+template <typename TSpec, typename TDPMatrixLocation, typename TDPCell>
+struct ScoutSpecForAlignmentAlgorithm_<BandedChainAlignment_<TSpec, TDPMatrixLocation>,
+                                       DPScoutState_<BandedChainAlignmentScoutState<TDPCell> > >
 {
     typedef BandedChainAlignmentScout Type;
 };
@@ -283,6 +284,18 @@ _scoutBestScore(DPScout_<TDPCell, BandedChainAlignmentScout> &,
     //no-op
 }
 
+// Delegate.
+template <typename TDPCell, typename TTraceMatrixNavigator, typename TIsLastColumn, typename TIsLastRow>
+inline void
+_scoutBestScore(DPScout_<TDPCell, BandedChainAlignmentScout> & dpScout,
+                TDPCell const & activeCell,
+                TTraceMatrixNavigator const & navigator,
+                TIsLastColumn const & /**/,
+                TIsLastRow const & /**/)
+{
+    _scoutBestScore(dpScout, activeCell, navigator, TIsLastColumn::VALUE, TIsLastRow::VALUE);
+}
+
 // ----------------------------------------------------------------------------
 // Function maxScore()
 // ----------------------------------------------------------------------------
@@ -291,14 +304,14 @@ template <typename TDPCell>
 inline typename Value<TDPCell>::Type &
 maxScore(DPScout_<TDPCell, BandedChainAlignmentScout> & scout)
 {
-	return _scoreOfCell(scout._maxScore);
+    return _scoreOfCell(scout._maxScore);
 }
 
 template <typename TDPCell>
 inline typename Value<TDPCell>::Type const &
 maxScore(DPScout_<TDPCell, BandedChainAlignmentScout> const & scout)
 {
-	return _scoreOfCell(scout._maxScore);
+    return _scoreOfCell(scout._maxScore);
 }
 
 // ----------------------------------------------------------------------------
@@ -309,7 +322,7 @@ template <typename TDPCell>
 inline typename DPScout_<TDPCell, BandedChainAlignmentScout>::TMaxHostPositionString const &
 maxHostPositions(DPScout_<TDPCell, BandedChainAlignmentScout> const & scout)
 {
-	return scout._maxHostPositions;
+    return scout._maxHostPositions;
 }
 
 template <typename TDPCell>
@@ -327,7 +340,7 @@ template <typename TDPCell>
 inline unsigned int
 maxHostPosition(DPScout_<TDPCell, BandedChainAlignmentScout> const & scout)
 {
-	return scout._maxHostPositions[0];
+    return scout._maxHostPositions[0];
 }
 
 // ----------------------------------------------------------------------------
@@ -338,7 +351,7 @@ template <typename TDPCell>
 inline unsigned int
 _nextMatrixBeginH(DPScout_<TDPCell, BandedChainAlignmentScout> const & scout)
 {
-	return scout._posH;
+    return scout._posH;
 }
 
 // ----------------------------------------------------------------------------
@@ -349,9 +362,9 @@ template <typename TDPCell>
 inline unsigned int
 _nextMatrixBeginV(DPScout_<TDPCell, BandedChainAlignmentScout> const & scout)
 {
-	return scout._posV;
+    return scout._posV;
 }
 
 }  // namespace seqan
 
-#endif  // #ifndef CORE_INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_
+#endif  // #ifndef INCLUDE_SEQAN_SEEDS_BANDED_CHAIN_ALIGNMENT_SCOUT_H_

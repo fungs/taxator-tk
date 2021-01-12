@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_
 
 namespace seqan {
 
@@ -57,10 +57,10 @@ namespace seqan {
 // Function _joinInternal()                   [GlobalAlign<JournaledManhatten>]
 // ----------------------------------------------------------------------------
 
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec>
+template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TJournalString2>
 inline void
-_joinInternal(String <TValue, THostSpec> const & reference,
-              String <TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > & journal,
+_joinInternal(String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > & journal,
+              StringSet<TJournalString2, Owner<JournaledSet> > const & journalSet,
               JoinConfig<GlobalAlign<JournaledManhatten> > const &)
 {
 
@@ -73,9 +73,9 @@ _joinInternal(String <TValue, THostSpec> const & reference,
     stream << journal;
     appendValue(getTrace(traceDescriptor), TJounralEntry(SOURCE_PATCH, 0, 0, 0,length(journal)));
     append(getInsertionBuffer(traceDescriptor), stream.str());
-    _applyTraceOperations(journal, reference, traceDescriptor);
+    _applyTraceOperations(journal, host(journalSet), traceDescriptor);
 }
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_JOIN_GLOBAL_ALIGN_MANHATTEN_H_

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -53,15 +53,21 @@ namespace seqan {
 // TODO(holtgrew): Is volatile pointer the correct name?
 // TODO(holtgrew): Metafunctions etc. missing.
 
-/**
-.Class.VolatilePtr
-..summary:Helper data structure for handling volatile data.
-..cat:Basic
-..signature:VolatilePtr<T>
-..param.T:The pointed-to type.
-..remarks:Allows you to handle volatile data (used by ext. string during swapping).
-..remarks:Imagine volatile pointers as nodes in an undirected graph.  When you assign one to another then they are connected.  All pointers in a connection component points to the same value.  By calling @Function.nukeCopies@ you can destroy the component and set all pointers to $NULL$.
-..include:seqan/basic.h
+/*!
+ * @class VolatilePtr
+ * @headerfile <seqan/basic.h>
+ * @brief Helper data structure for handling volatile data.
+ *
+ * @signature template <typename T>
+ *            class VolatilePtr;
+ *
+ * @tparam T The pointed-to type.
+ *
+ * Allows you to handle volatile data (used by ext. string during swapping).
+ *
+ * Imagine volatile pointers as nodes in an undirected graph.  When you assign one to another then they are connected.
+ * All pointers in a connection component points to the same value.  By calling nukeCopies you can destroy
+ * the component and set all pointers to <tt>NULL</tt>.
  */
 
 template < typename Type >
@@ -192,15 +198,14 @@ struct VolatilePtr
 // ----------------------------------------------------------------------------
 // Function nukeCopies()
 // ----------------------------------------------------------------------------
-    
-/**
-.Function.nukeCopies
-..class:Class.VolatilePtr
-..cat:Basic
-..summary:Reset all pointers connected to a given one.
-..signature:nukeCopies(ptr)
-..param.ptr:One pointer of the connected component to reset.
-...type:Class.VolatilePtr
+
+/*!
+ * @fn VolatilePtr#nukeCopies
+ * @brief Reset all pointers connected to a given one.
+ *
+ * @signature void nukeCopies(ptr);
+ *
+ * @param[in] ptr One pointer of the connected component to reset.
  */
 
 // TODO(holtgrew): Remove this version?

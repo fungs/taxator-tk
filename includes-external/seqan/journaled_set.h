@@ -1,7 +1,7 @@
 // ==========================================================================
 //                               journaled_set
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Facade header for module journaled_set.
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_H_
 
 // ===========================================================================
 // Prerequisites.
@@ -76,4 +76,4 @@
 #include <seqan/journaled_set/journaled_set_join_global_align_manhatten.h>
 #include <seqan/journaled_set/journaled_set_join_global_align_compact.h>
 
-#endif  // EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_H_
+#endif  // INCLUDE_SEQAN_JOURNALED_SET_H_

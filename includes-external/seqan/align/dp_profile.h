@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,8 @@
 
 // TODO(holtgrew): Documentation in this header necessary or internal only?
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
 
 namespace seqan {
 
@@ -82,6 +82,8 @@ typedef Tag<AlignmentSplitBreakpoint_> SplitBreakpointAlignment;
 template <typename TSpec = FreeEndGaps_<> >
 struct GlobalAlignment_;
 
+typedef GlobalAlignment_<> DPGlobal;
+
 // ----------------------------------------------------------------------------
 // Class SuboptimalAlignment
 // ----------------------------------------------------------------------------
@@ -103,27 +105,93 @@ typedef Tag<AlignmentSuboptimal_> SuboptimalAlignment;
 template <typename TSpec = Default>
 struct LocalAlignment_;
 
+typedef LocalAlignment_<> DPLocal;
+typedef LocalAlignment_<SuboptimalAlignment> DPLocalEnumerate;
 
-// ----------------------------------------------------------------------------
-// Class TraceBitMap_
-// ----------------------------------------------------------------------------
+// Use macro expansion to define all possible SIMD initialization types.
 
-// Used to globally ditinguish different traceback directions and the underlying
-// type to store the values.
-struct TraceBitMap_
+template <typename TVector, __uint8 FILL_VALUE, unsigned SIZE>
+struct InitSimdTrace_;
+
+#define SEQAN_SIMD_INIT_FILL_VALUE_2_ FILL_VALUE, FILL_VALUE
+#define SEQAN_SIMD_INIT_FILL_VALUE_4_ SEQAN_SIMD_INIT_FILL_VALUE_2_, SEQAN_SIMD_INIT_FILL_VALUE_2_
+#define SEQAN_SIMD_INIT_FILL_VALUE_8_ SEQAN_SIMD_INIT_FILL_VALUE_4_, SEQAN_SIMD_INIT_FILL_VALUE_4_
+#define SEQAN_SIMD_INIT_FILL_VALUE_16_ SEQAN_SIMD_INIT_FILL_VALUE_8_, SEQAN_SIMD_INIT_FILL_VALUE_8_
+#define SEQAN_SIMD_INIT_FILL_VALUE_32_ SEQAN_SIMD_INIT_FILL_VALUE_16_, SEQAN_SIMD_INIT_FILL_VALUE_16_
+
+#define SEQAN_SIMD_TRACE_SETUP_2_(SIZE, ...)                                                        \
+template <typename TVector, __uint8 FILL_VALUE>                                                     \
+struct InitSimdTrace_<TVector, FILL_VALUE, SIZE>                                                    \
+{                                                                                                   \
+    static const TVector VALUE;                                                                     \
+};                                                                                                  \
+                                                                                                    \
+template <typename TVector, __uint8 FILL_VALUE>                                                     \
+const TVector InitSimdTrace_<TVector, FILL_VALUE, SIZE>::VALUE = TVector{__VA_ARGS__};
+
+#define SEQAN_SIMD_TRACE_SETUP_1_(SIZE, MACRO) SEQAN_SIMD_TRACE_SETUP_2_(SIZE, MACRO)
+#define SEQAN_SIMD_TRACE_SETUP_(SIZE) SEQAN_SIMD_TRACE_SETUP_1_(SIZE, SEQAN_SIMD_INIT_FILL_VALUE_ ## SIZE ## _)
+
+SEQAN_SIMD_TRACE_SETUP_(2)
+SEQAN_SIMD_TRACE_SETUP_(4)
+SEQAN_SIMD_TRACE_SETUP_(8)
+SEQAN_SIMD_TRACE_SETUP_(16)
+SEQAN_SIMD_TRACE_SETUP_(32)
+
+// Scalar version.
+template <typename TValue, typename TIsSimdVector>
+struct TraceValue_
 {
-    typedef uint8_t TTraceValue;
-    static const TTraceValue NONE = 0u;                         //0000000
-    static const TTraceValue DIAGONAL = 1u;                     //0000001
-    static const TTraceValue HORIZONTAL = 2u;                   //0000010
-    static const TTraceValue VERTICAL = 4u;                     //0000100
-    static const TTraceValue HORIZONTAL_OPEN = 8u;              //0001000
-    static const TTraceValue VERTICAL_OPEN = 16u;               //0010000
-    static const TTraceValue MAX_FROM_HORIZONTAL_MATRIX = 32u;  //0100000
-    static const TTraceValue MAX_FROM_VERTICAL_MATRIX = 64u;    //1000000
-    static const TTraceValue NO_VERTICAL_TRACEBACK = ~(VERTICAL | VERTICAL_OPEN);
-    static const TTraceValue NO_HORIZONTAL_TRACEBACK = ~(HORIZONTAL | HORIZONTAL_OPEN);
+    typedef uint8_t Type;
+    static const Type NONE = 0u;                         //0000000
+    static const Type DIAGONAL = 1u;                     //0000001
+    static const Type HORIZONTAL = 2u;                   //0000010
+    static const Type VERTICAL = 4u;                     //0000100
+    static const Type HORIZONTAL_OPEN = 8u;              //0001000
+    static const Type VERTICAL_OPEN = 16u;               //0010000
+    static const Type MAX_FROM_HORIZONTAL_MATRIX = 32u;  //0100000
+    static const Type MAX_FROM_VERTICAL_MATRIX = 64u;    //1000000
+    static const Type NO_VERTICAL_TRACEBACK = ~(VERTICAL | VERTICAL_OPEN);
+    static const Type NO_HORIZONTAL_TRACEBACK = ~(HORIZONTAL | HORIZONTAL_OPEN);
 };
+
+// SIMD Vector version.
+template <typename TVector>
+struct TraceValue_<TVector, True>
+{
+    typedef TVector Type;
+    static const Type NONE;
+    static const Type DIAGONAL;
+    static const Type HORIZONTAL;
+    static const Type VERTICAL;
+    static const Type HORIZONTAL_OPEN;
+    static const Type VERTICAL_OPEN;
+    static const Type MAX_FROM_HORIZONTAL_MATRIX;
+    static const Type MAX_FROM_VERTICAL_MATRIX;
+    static const Type NO_HORIZONTAL_TRACEBACK;
+    static const Type NO_VERTICAL_TRACEBACK;
+};
+
+// Macro expansion to define out-of-class initialization of static members.
+
+#define SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(TRACE_VALUE)                             \
+    template <typename TVector>                                                      \
+    const TVector TraceValue_<TVector, True>::TRACE_VALUE = InitSimdTrace_<TVector, TraceValue_<__uint8, False>::TRACE_VALUE, LENGTH<TVector>::VALUE>::VALUE;
+
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(NONE)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(DIAGONAL)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(HORIZONTAL)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(VERTICAL)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(HORIZONTAL_OPEN)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(VERTICAL_OPEN)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(MAX_FROM_HORIZONTAL_MATRIX)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(MAX_FROM_VERTICAL_MATRIX)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(NO_HORIZONTAL_TRACEBACK)
+SEQAN_SIMD_TRACE_OUT_OF_CLASS_INIT_(NO_VERTICAL_TRACEBACK)
+
+// Type alias to choose between scalar and simd version of trace value.
+template <typename TValue = __uint8>
+using TraceBitMap_ = TraceValue_<TValue, typename Is<SimdVectorConcept<TValue> >::Type >;
 
 // ----------------------------------------------------------------------------
 // Tag GapsLeft
@@ -179,6 +247,14 @@ typedef Tag<TracebackOff_> TracebackOff;
 // Tag LinearGaps
 // ----------------------------------------------------------------------------
 
+/*!
+ * @tag AlignmentAlgorithmTags#LinearGaps
+ * @headerfile <seqan/align.h>
+ * @brief Tag for selecting linear gap cost model. This tag can be used for all standard DP algorithms.
+ *
+ * @signature struct LinearGaps_;
+ * @signature typedef Tag<LinearGaps_> LinearGaps;
+ */
 struct LinearGaps_;
 typedef Tag<LinearGaps_> LinearGaps;
 
@@ -186,8 +262,32 @@ typedef Tag<LinearGaps_> LinearGaps;
 // Tag AffineGaps
 // ----------------------------------------------------------------------------
 
+/*!
+ * @tag AlignmentAlgorithmTags#AffineGaps
+ * @headerfile <seqan/align.h>
+ * @brief Tag for selecting affine gap cost model. This tag can be used for all standard DP algorithms.
+ *
+ * @signature struct AffineGaps_;
+ * @signature typedef Tag<AffineGaps_> AffineGaps;
+ */
 struct AffineGaps_;
 typedef Tag<AffineGaps_> AffineGaps;
+
+// ----------------------------------------------------------------------------
+// Tag DynamicGaps
+// ----------------------------------------------------------------------------
+
+/*!
+ * @tag AlignmentAlgorithmTags#DynamicGaps
+ * @headerfile <seqan/align.h>
+ * @brief Tag for selecting dynamic gap cost model. This tag can be used for all standard DP algorithms.
+ *
+ * @signature struct DynamicGaps_;
+ * @signature typedef Tag<DynamicGaps_> DynamicGaps;
+ */
+
+struct DynamicGaps_;
+typedef Tag<DynamicGaps_> DynamicGaps;
 
 // ----------------------------------------------------------------------------
 // Class DPProfile
@@ -232,6 +332,21 @@ typedef Tag<DPLastRow_> DPLastRow;
 struct DPLastColumn_;
 typedef Tag<DPLastColumn_> DPLastColumn;
 
+template <typename TDPType, typename TBand, typename TFreeEndGaps = FreeEndGaps_<False, False, False, False>,
+          typename TTraceConfig = TracebackOn<TracebackConfig_<SingleTrace, GapsLeft> > >
+class AlignConfig2
+{
+public:
+    TBand _band;
+
+    AlignConfig2() : _band()
+    {}
+
+    template <typename TPosition>
+    AlignConfig2(TPosition const & lDiag, TPosition const & uDiag) : _band(lDiag, uDiag)
+    {}
+};
+
 // ============================================================================
 // Metafunctions
 // ============================================================================
@@ -260,6 +375,35 @@ struct IsGlobalAlignment_<DPProfile_<TAlgoSpec, TGapCosts, TTraceFlag> >:
 template <typename TAlgoSpec, typename TGapCosts, typename TTraceFlag>
 struct IsGlobalAlignment_<DPProfile_<TAlgoSpec, TGapCosts, TTraceFlag> const>:
     IsGlobalAlignment_<TAlgoSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction TraceTail_
+// ----------------------------------------------------------------------------
+
+// define whether to include the 'tail' of an alignment in the trace
+template <typename TSpec>
+struct TraceTail_ :
+    IsGlobalAlignment_<TSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction TraceHead_
+// ----------------------------------------------------------------------------
+
+// define whether to include the 'head' of an alignment in the trace
+template <typename TSpec>
+struct TraceHead_ :
+    IsGlobalAlignment_<TSpec>{};
+
+// ----------------------------------------------------------------------------
+// Metafunction HasTerminationCriterium_
+// ----------------------------------------------------------------------------
+
+// check whether an algorithm has an early termination criterium
+// if an algorithm has this, it will get a DPscout that can be terminated
+// see dp_scout.h for more info
+template <typename TSpec>
+struct HasTerminationCriterium_ :
+    False {};
 
 // ----------------------------------------------------------------------------
 // Metafunction IsLocalAlignment_
@@ -424,4 +568,4 @@ struct IsFreeEndGap_<FreeEndGaps_<TFirstRow, TFirstColumn, TLastRow, True> const
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_ALIGN_DP_PROFILE_H_

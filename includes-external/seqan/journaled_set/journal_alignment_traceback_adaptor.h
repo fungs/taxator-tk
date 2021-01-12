@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Adapts traceback to a journaled string using SortedArray specialization.
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_
 
 namespace seqan {
 
@@ -95,7 +95,7 @@ _adaptTraceSegmentsTo(String<TValue, Journaled<THostSpec, SortedArray, TBuffSpec
     {
         switch (value(traceSegIter)._traceValue)
         {
-        case TraceBitMap_::DIAGONAL: //matching area
+        case TraceBitMap_<>::DIAGONAL: //matching area
         {
             appendValue(targetJournal._journalEntries._journalNodes, TJournalEntry(SOURCE_ORIGINAL, value(traceSegIter)._horizontalBeginPos,
                                                                                    virtualPos, value(traceSegIter)._horizontalBeginPos, value(traceSegIter)._length));
@@ -103,7 +103,7 @@ _adaptTraceSegmentsTo(String<TValue, Journaled<THostSpec, SortedArray, TBuffSpec
             break;
         }
 
-        case TraceBitMap_::VERTICAL: //insertion
+        case TraceBitMap_<>::VERTICAL: //insertion
         {
             appendValue(targetJournal._journalEntries._journalNodes, TJournalEntry(SOURCE_PATCH, length(targetJournal._insertionBuffer),
                                                                                    virtualPos, 0, value(traceSegIter)._length));
@@ -118,8 +118,9 @@ _adaptTraceSegmentsTo(String<TValue, Journaled<THostSpec, SortedArray, TBuffSpec
             break;  // Otherwise we are in a deletion and do nothing.
         }
     }
+    _setLength(targetJournal, virtualPos);
 }
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNAL_ALIGNMENT_TRACEBACK_ADAPTOR_H_

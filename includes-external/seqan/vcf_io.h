@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Facade header for module vcf_io.
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_H_
-#define SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_H_
+#ifndef SEQAN_INCLUDE_SEQAN_VCF_IO_H_
+#define SEQAN_INCLUDE_SEQAN_VCF_IO_H_
 
 // ===========================================================================
 // Prerequisites.
@@ -44,7 +44,8 @@
 #include <seqan/basic.h>
 #include <seqan/file.h>
 #include <seqan/sequence.h>
-#include <seqan/store.h>  // For NameStoreCache.
+#include <seqan/misc/name_store_cache.h>
+#include <seqan/stream.h>
 
 // ===========================================================================
 // First Header Group.
@@ -58,6 +59,6 @@
 #include <seqan/vcf_io/read_vcf.h>
 #include <seqan/vcf_io/write_vcf.h>
 
-#include <seqan/vcf_io/vcf_stream.h>
+#include <seqan/vcf_io/vcf_file.h>
 
-#endif  // SEQAN_EXTRAS_INCLUDE_SEQAN_VCF_IO_H_
+#endif  // SEQAN_INCLUDE_SEQAN_VCF_IO_H_

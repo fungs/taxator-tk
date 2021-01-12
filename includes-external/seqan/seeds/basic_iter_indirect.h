@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -55,17 +55,15 @@ class Iter<TContainer, Indirect<TWrappedIter> >
 {
 public:
     TWrappedIter _wrappedIter;
-    
+
     Iter() : _wrappedIter(0)
-    { SEQAN_CHECKPOINT; }
+    {}
 
-    Iter(Iter const & other)
-            : _wrappedIter(other._wrappedIter)
-    { SEQAN_CHECKPOINT; }
+    Iter(Iter const & other) : _wrappedIter(other._wrappedIter)
+    {}
 
-    Iter(TWrappedIter const & wrappedIter)
-            : _wrappedIter(wrappedIter)
-    { SEQAN_CHECKPOINT; }
+    Iter(TWrappedIter const & wrappedIter) : _wrappedIter(wrappedIter)
+    {}
 };
 
 // ===========================================================================
@@ -86,7 +84,6 @@ template <typename TContainer, typename TWrappedIter>
 inline bool
 operator==(Iter<TContainer, Indirect<TWrappedIter> > const & a, Iter<TContainer, Indirect<TWrappedIter> > const & b)
 {
-    SEQAN_CHECKPOINT;
     return a._wrappedIter == b._wrappedIter;
 }
 
@@ -95,7 +92,6 @@ template <typename TContainer, typename TWrappedIter>
 inline bool
 operator!=(Iter<TContainer, Indirect<TWrappedIter> > const & a, Iter<TContainer, Indirect<TWrappedIter> > const & b)
 {
-    SEQAN_CHECKPOINT;
     return a._wrappedIter != b._wrappedIter;
 }
 
@@ -103,7 +99,6 @@ template <typename TContainer, typename TWrappedIter, typename TDiff>
 Iter<TContainer, Indirect<TWrappedIter> >
 operator+(Iter<TContainer, Indirect<TWrappedIter> > const & it, TDiff const diff)
 {
-    SEQAN_CHECKPOINT;
     typedef Iter<TContainer, Indirect<TWrappedIter> > TIter;
     return TIter(it._wrappedIter + diff);
 }
@@ -113,7 +108,6 @@ template <typename TContainer, typename TWrappedIter>
 inline Iter<TContainer, Indirect<TWrappedIter> > &
 operator++(Iter<TContainer, Indirect<TWrappedIter> > & iter)
 {
-    SEQAN_CHECKPOINT;
     ++iter._wrappedIter;
     return iter;
 }
@@ -123,7 +117,6 @@ template <typename TContainer, typename TWrappedIter>
 inline Iter<TContainer, Indirect<TWrappedIter> >
 operator++(Iter<TContainer, Indirect<TWrappedIter> > & iter, int /*postfix*/)
 {
-    SEQAN_CHECKPOINT;
     typedef Iter<TContainer, Indirect<TWrappedIter> > TIter;
     TIter tmp(iter);
     ++iter;
@@ -135,7 +128,6 @@ template <typename TContainer, typename TWrappedIter>
 inline Iter<TContainer, Indirect<TWrappedIter> > &
 operator--(Iter<TContainer, Indirect<TWrappedIter> > & iter)
 {
-    SEQAN_CHECKPOINT;
     --iter._wrappedIter;
     return iter;
 }
@@ -145,7 +137,6 @@ template <typename TContainer, typename TWrappedIter>
 inline Iter<TContainer, Indirect<TWrappedIter> >
 operator--(Iter<TContainer, Indirect<TWrappedIter> > & iter, int /*postfix*/)
 {
-    SEQAN_CHECKPOINT;
     typedef Iter<TContainer, Indirect<TWrappedIter> > TIter;
     TIter tmp(iter);
     --iter;
@@ -157,7 +148,6 @@ template <typename TContainer, typename TWrappedIter>
 inline typename Value<TWrappedIter>::Type &
 operator*(Iter<TContainer, Indirect<TWrappedIter> > & iter)
 {
-    SEQAN_CHECKPOINT;
     return **iter._wrappedIter;
 }
 
@@ -166,7 +156,6 @@ template <typename TContainer, typename TWrappedIter>
 inline typename Value<TWrappedIter>::Type &
 operator*(Iter<TContainer, Indirect<TWrappedIter> > const & iter)
 {
-    SEQAN_CHECKPOINT;
     return **iter._wrappedIter;
 }
 
@@ -175,7 +164,6 @@ template <typename TContainer, typename TWrappedIter>
 inline typename Reference<Iter<TContainer, Indirect<TWrappedIter> > >::Type
 value(Iter<TContainer, Indirect<TWrappedIter> > & iter)
 {
-    SEQAN_CHECKPOINT;
     return **iter._wrappedIter;
 }
 
@@ -184,7 +172,6 @@ template <typename TContainer, typename TWrappedIter>
 inline typename Reference<Iter<TContainer, Indirect<TWrappedIter> > >::Type
 value(Iter<TContainer, Indirect<TWrappedIter> > const & iter)
 {
-    SEQAN_CHECKPOINT;
     return **iter._wrappedIter;
 }
 

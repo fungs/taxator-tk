@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,8 @@
 // Author: Rene Rahn <rene.rahn@fu-berlin.de>
 // ==========================================================================
 
-#ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_
-#define EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_
+#ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_
+#define INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_
 
 namespace seqan {
 
@@ -102,7 +102,7 @@ struct Host<StringSet<TString, Owner<JournaledSet> > >
 template <typename TString>
 struct Host<StringSet<TString, Owner<JournaledSet> > const >
 {
-    typedef typename Host<TString const>::Type Type;
+    typedef typename Host<TString>::Type const Type;
 };
 
 // ============================================================================
@@ -133,40 +133,14 @@ value(StringSet<TString, Owner<JournaledSet> > const & me,
 // Function appendValue()
 // ----------------------------------------------------------------------------
 
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TExpand>
-void appendValue(StringSet<String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> >, Owner<JournaledSet> > & journalSet,
-                 String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > const & newElement,
-                 Tag<TExpand> tag)
-{
-    if (_validStringSetLimits(journalSet))
-        appendValue(journalSet.limits, lengthSum(journalSet) + length(newElement), tag);
-    appendValue(journalSet.strings, newElement, tag);
-}
-
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TExpand>
-void
-appendValue(StringSet<String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> >, Owner<JournaledSet> > & journalSet,
-        String<TValue, THostSpec> & newElement,
-        Tag<TExpand> tag)
-{
-    typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
-
-    TJournalString jrn(newElement);
-
-    if (_validStringSetLimits(journalSet))
-            appendValue(journalSet.limits, lengthSum(journalSet) + length(jrn), tag);
-    appendValue(journalSet.strings, jrn, tag);
-}
-
 template <typename TString, typename TString2, typename TExpand>
 void
 appendValue(StringSet<TString, Owner<JournaledSet> > & journalSet,
             TString2 const & newElement,
             Tag<TExpand> tag)
 {
-    if (_validStringSetLimits(journalSet))
-        appendValue(journalSet.limits, lengthSum(journalSet) + length(newElement), tag);
-    appendValue(journalSet.strings, newElement, tag);
+    resize(journalSet, length(journalSet) + 1, tag);
+    assignValue(journalSet, length(journalSet) - 1 , newElement);
 }
 
 // ----------------------------------------------------------------------------
@@ -205,162 +179,102 @@ erase(StringSet<TString, Owner<JournaledSet> > & journalSet, TPos pos, TPosEnd p
     return length(journalSet);
 }
 
+// ----------------------------------------------------------------------------
+// Function resize()
+// ----------------------------------------------------------------------------
+
+template <typename TString, typename TSize, typename TValue, typename TExpandTag>
+inline typename Size<StringSet<TString, Owner<JournaledSet> > >::Type
+resize(StringSet<TString, Owner<JournaledSet> > & journalSet,
+       TSize const & newSize,
+       TValue const & fillValue,
+       Tag<TExpandTag> const & expansionTag)
+{
+    resize(journalSet.strings, newSize, fillValue, expansionTag);
+    resize(journalSet.limits, newSize + 1);
+    journalSet.limitsValid = true;
+    return length(journalSet);
+}
+
 // --------------------------------------------------------------------------
 // Function assignValue()
 // --------------------------------------------------------------------------
 
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TPos>
-inline void assignValue(
-    StringSet<String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> >, Owner<JournaledSet> > & journalSet,
-    TPos pos,
-    String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > const & newElement)
-{
-    typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
-    typedef StringSet<TJournalString, Owner<JournaledSet> > TJournaledSet;
-    typedef typename Size<TJournaledSet>::Type TSize;
-    typedef typename StringSetLimits<TJournaledSet>::Type TLimits;
-    typedef typename Value<TLimits>::Type TLimitValue;
-    typedef typename MakeSigned<TLimitValue>::Type TSignedLimitValue;
-
-    TSignedLimitValue oldSize = length(journalSet[pos]);
-    set(journalSet[pos], newElement);
-    if (_validStringSetLimits(journalSet))
-    {
-        TSignedLimitValue delta = (TSignedLimitValue)length(newElement) - oldSize;
-        TSize size = length(journalSet);
-        while (pos < size)
-            journalSet.limits[++pos] += delta;
-    }
-}
-
-template <typename TValue, typename THostSpec, typename TJournalSpec, typename TBuffSpec, typename TPos>
-inline void assignValue(
-    StringSet<String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> >, Owner<JournaledSet> > & journalSet,
-    TPos pos,
-    String<TValue, THostSpec> & newElement)
-{
-    typedef String<TValue, Journaled<THostSpec, TJournalSpec, TBuffSpec> > TJournalString;
-    typedef StringSet<TJournalString, Owner<JournaledSet> > TJournaledSet;
-    typedef typename Size<TJournaledSet>::Type TSize;
-    typedef typename StringSetLimits<TJournaledSet>::Type TLimits;
-    typedef typename Value<TLimits>::Type TLimitValue;
-    typedef typename MakeSigned<TLimitValue>::Type TSignedLimitValue;
-
-    TSignedLimitValue oldSize = length(journalSet[pos]);
-    TJournalString newJrn(newElement);
-    set(journalSet[pos], newJrn);
-    if (_validStringSetLimits(journalSet))
-    {
-        TSignedLimitValue delta = (TSignedLimitValue)length(newJrn) - oldSize;
-        TSize size = length(journalSet);
-        while (pos < size)
-            journalSet.limits[++pos] += delta;
-    }
-}
-
+// No journaled strings as values.
 template <typename TString, typename TPos,  typename TString2>
 inline void assignValue(
     StringSet<TString, Owner<JournaledSet> > & journalSet,
     TPos pos,
     TString2 const & newElement)
 {
-    typedef StringSet<TString, Owner<JournaledSet> > TJournaledSet;
-    typedef typename Size<TJournaledSet>::Type TSize;
-    typedef typename StringSetLimits<TJournaledSet>::Type TLimits;
-    typedef typename Value<TLimits>::Type TLimitValue;
-    typedef typename MakeSigned<TLimitValue>::Type TSignedLimitValue;
+    SEQAN_ASSERT_GEQ(pos, static_cast<TPos>(0));
+    SEQAN_ASSERT_LT(pos, static_cast<TPos>(length(journalSet)));
 
-    TSignedLimitValue oldSize = length(journalSet[pos]);
     assign(journalSet[pos], newElement);
-    if (_validStringSetLimits(journalSet))
-    {
-        TSignedLimitValue delta = (TSignedLimitValue)length(newElement) - oldSize;
-        TSize size = length(journalSet);
-        while (pos < size)
-            journalSet.limits[++pos] += delta;
-    }
 }
 
 // ----------------------------------------------------------------------------
-// Function globalReference()
+// Function host()
 // ----------------------------------------------------------------------------
-
-/**
-.Function.globalReference:
-..summary:Returns the global reference sequence of a @Spec.Journaled Set@.
-..class:Spec.Journaled Set
-..cat:Sequences
-..signature:globalReference(stringSet)
-..param.stringSet: The string set that stores the sequences.
-...type:Spec.Journaled Set
-..returns:The global reference sequence of the @Spec.Journaled Set@.
-...metafunction:Metafunction.Host
-..see:Function.setGlobalReference
-..see:Function.createGlobalReference
-..include:seqan/journal_set.h
-*/
 
 template <typename TString>
-inline typename Host<StringSet<TString, Owner<JournaledSet> > >::Type &
-globalReference(StringSet<TString, Owner<JournaledSet> > const & journalSet)
+inline Holder<typename Host<StringSet<TString, Owner<JournaledSet> > >::Type> const &
+_dataHost(StringSet<TString, Owner<JournaledSet> > const & set)
 {
-    return value(journalSet._globalRefHolder);
+    return set._globalRefHolder;
 }
 
-// ----------------------------------------------------------------------------
-// Function setGlobalReference()
-// ----------------------------------------------------------------------------
-
-/**
-.Function.setGlobalReference:
-..summary:Sets the global reference of a @Spec.Journaled Set@.
-..class:Spec.Journaled Set
-..cat:Sequences
-..signature:setGlobalReference(stringSet, reference)
-..param.stringSet: The string set that stores the sequences.
-...type:Spec.Journaled Set
-..param.reference: The new reference sequence of the Journaled Set.
-...type:nolink:$Host<StringSet<TString, Owner<JournaledSet> > >::Type$
-..remarks:Uses an @Class.Holder@ to store a reference to the new global reference sequence instead of copying it.
-..see:Function.createGlobalReference
-..see:Function.globalReference
-..include:seqan/journal_set.h
-*/
 template <typename TString>
-inline void
-setGlobalReference(StringSet<TString, Owner<JournaledSet> > & journalSet,
-                   typename Host<TString>::Type & newGlobalRef)
+inline Holder<typename Host<StringSet<TString, Owner<JournaledSet> > >::Type>  &
+_dataHost(StringSet<TString, Owner<JournaledSet> > & set)
 {
-    setValue(journalSet._globalRefHolder, newGlobalRef);
+    return set._globalRefHolder;
 }
 
+/*!
+ * @fn JournaledSet#host
+ * @brief Returns the global reference sequence of a @link JournaledSet @endlink.
+ *
+ * @signature THost host(stringSet);
+ *
+ * @param[in] stringSet The JournaledStringSet that stores the sequences. Types: @link  JournaledSet  @endlink
+ *
+ * @return THost Reference to the host.
+ */
+
 // ----------------------------------------------------------------------------
-// Function createGlobalReference()
+// Function setHost()
 // ----------------------------------------------------------------------------
 
-/**
-.Function.createGlobalReference:
-..summary:Creates the global reference of a @Spec.Journaled Set@.
-..class:Spec.Journaled Set
-..cat:Sequences
-..signature:createGlobalReference(stringSet, reference)
-..param.stringSet: The string set that stores the sequences.
-...type:Spec.Journaled Set
-..param.reference: The new reference sequence of the Journaled Set.
-...type:nolink:$Host<StringSet<TString, Owner<JournaledSet> > >::Type$
-..remarks:Stores a copy of the passed global reference sequence.
-..see:Function.setGlobalReference
-..see:Function.globalReference
-..include:seqan/journal_set.h
-*/
-template <typename TString>
-inline void
-createGlobalReference(StringSet<TString, Owner<JournaledSet> > & journalSet,
-                   typename Host<TString>::Type const & newGlobalRef)
-{
-    create(journalSet._globalRefHolder, newGlobalRef);
-}
+/*!
+ * @fn JournaledSet#setHost
+ * @brief Sets the global reference of a @link JournaledSet @endlink.
+ *
+ * @signature void setHost(stringSet, ref);
+ *
+ * @param[in,out] stringSet The string set that stores the sequences. Types: @link JournaledSet @endlink
+ * @param[in]     ref       The new reference sequence of the @link JournaledSet  @endlink.
+ *
+ * @section Remarks
+ *
+ * Uses an @link Holder @endlink to store a reference to the new global reference sequence instead of copying it.
+ */
+
+// ----------------------------------------------------------------------------
+// Function createHost()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn JournaledSet#createHost
+ * @brief Creates the global reference of a @link JournaledSet @endlink.
+ *
+ * @signature void createHost(stringSet, ref);
+ *
+ * @param[in,out] stringSet The JournaledStringSet that stores the sequences.
+ * @param[in]     ref       The new reference sequence of the JournaledSet.  Stores a copy of the passed global
+ *                          reference sequence.
+ */
 
 }  // namespace seqan
 
-#endif  // #ifndef EXTRAS_INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_
+#endif  // #ifndef INCLUDE_SEQAN_JOURNALED_SET_JOURNALED_SET_IMPL_H_

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -37,15 +37,36 @@
 #ifndef SEQAN_PARALLEL_H_
 #define SEQAN_PARALLEL_H_
 
-//____________________________________________________________________________
+// ============================================================================
 // Prerequisites
+// ============================================================================
 
 #include <seqan/platform.h>
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
 
-//____________________________________________________________________________
+// ----------------------------------------------------------------------------
+// STL
+// ----------------------------------------------------------------------------
+// Use MCSTL which is part of the GCC since version 4.3
+
+#if defined(_OPENMP) && defined(STDLIB_GNU)
+#include <parallel/algorithm>
+#include <parallel/numeric>
+#else
+#include <algorithm>
+#include <numeric>
+#endif // COMPILER_GCC
+
+#include <atomic>
+#include <thread>
+#include <future>
+#include <mutex>
+#include <condition_variable>
+
+// ============================================================================
 // Module Headers
+// ============================================================================
 
 // Misc.
 #include <seqan/parallel/parallel_tags.h>
@@ -54,6 +75,7 @@
 // Atomic operations.
 #include <seqan/parallel/parallel_atomic_primitives.h>
 #include <seqan/parallel/parallel_atomic_misc.h>
+#include <seqan/parallel/parallel_lock.h>
 
 // Splitting.
 #include <seqan/parallel/parallel_splitting.h>
@@ -61,6 +83,11 @@
 // Parallel variants of basic algorithms
 #include <seqan/parallel/parallel_algorithms.h>
 
-//____________________________________________________________________________
+// Thread-safe / lock-free container operations.
+#include <seqan/parallel/parallel_sequence.h>
+#include <seqan/parallel/parallel_queue.h>
+#include <seqan/parallel/parallel_queue_suspendable.h>
+#include <seqan/parallel/parallel_resource_pool.h>
+#include <seqan/parallel/parallel_serializer.h>
 
 #endif  // SEQAN_PARALLEL_H_

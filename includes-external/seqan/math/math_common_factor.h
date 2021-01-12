@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 // ==========================================================================
 // Author: David Weese <david.weese@fu-berlin.de>
 // ==========================================================================
-// A data type to represent rational numbers. 
+// A data type to represent rational numbers.
 // Taken from the Rational Number Library in Boost version 1.47 adapted
 // to SeqAn's code conventions.
 // ==========================================================================
@@ -46,7 +46,7 @@ namespace seqan {
 // ============================================================================
 
 template < typename IntegerType >
-inline IntegerType 
+inline IntegerType
 greatestCommonDivisor( IntegerType const &a, IntegerType const &b );
 
 template < typename IntegerType >
@@ -282,7 +282,7 @@ namespace detail
     {
         T  operator ()( T const &a, T const &b )
         {
-            typedef ::std::numeric_limits<T>  limitsType;
+            typedef std::numeric_limits<T>  limitsType;
 
             typedef GcdOptimalEvaluatorHelper<T,
              limitsType::is_specialized, limitsType::is_signed>  helperType;
@@ -316,7 +316,7 @@ namespace detail
 #ifdef BOOST_HAS_LONG_LONG
     BOOST_PRIVATE_GCD_UF( boost::ulong_longType );
 #elif defined(BOOST_HAS_MS_INT64)
-    BOOST_PRIVATE_GCD_UF( unsigned __int64 );
+    BOOST_PRIVATE_GCD_UF( unsigned int64_t );
 #endif
 
 #if CHAR_MIN == 0
@@ -344,7 +344,7 @@ namespace detail
 #ifdef BOOST_HAS_LONG_LONG
     BOOST_PRIVATE_GCD_SF( boost::long_longType, boost::ulong_longType );
 #elif defined(BOOST_HAS_MS_INT64)
-    BOOST_PRIVATE_GCD_SF( __int64, unsigned __int64 );
+    BOOST_PRIVATE_GCD_SF( int64_t, unsigned int64_t );
 #endif
 
 #undef BOOST_PRIVATE_GCD_SF
@@ -408,7 +408,7 @@ namespace detail
     {
         T  operator ()( T const &a, T const &b )
         {
-            typedef ::std::numeric_limits<T>  limitsType;
+            typedef std::numeric_limits<T>  limitsType;
 
             typedef LcmOptimalEvaluatorHelper<T,
              limitsType::is_specialized, limitsType::is_signed>  helperType;

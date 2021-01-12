@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,23 +34,24 @@
 // Edit distance score class and supporting code.
 // ==========================================================================
 
-#ifndef SEQAN_SCORE_SCORE_EDIT_H_
-#define SEQAN_SCORE_SCORE_EDIT_H_
+#ifndef SEQAN_SSCORE_EDIT_H_
+#define SEQAN_SSCORE_EDIT_H_
 
-namespace SEQAN_NAMESPACE_MAIN {
+namespace seqan {
 
-/**
-.Spec.EditDistance
-..cat:Scoring
-..summary:Edit distance scoring scheme.
-..signature:Score<TValue, EditDistance>
-..param.TValue:The value type.
-...default:int
-..general:Class.Score
-..remarks:Semantically equivalent to a default contructed @Spec.Simple Score.Score<int, Simple>@.
-..remarks:$EditDistance$ is a synonym for @Tag.LevenshteinDistance@.
-..include:seqan/score.h
-*/
+/*!
+ * @class EditDistanceScore
+ * @extends Score
+ * @headerfile <seqan/score.h>
+ * @brief Edit distance scoring scheme.
+ *
+ * <tt>EditDistance</tt> is a synonym for <tt>LevenshteinDistance</tt>.
+ *
+ * @signature template <typename TValue>
+ *            class Score<TValue, EditDistance>;
+ *
+ * @tparam TValue The score value type to use.
+ */
 
 // TODO(holtgrew): Should EditDistance better live here instead of basic_tag.h?
 // EditDistance is defined in basic_tag.h
@@ -60,24 +61,21 @@ public:
     Score() {}
 };
 
+// TODO(holtgrew): Remove this?
 
-/**
-.Shortcut.EditDistanceScore:
-..cat:Scoring
-..summary:Edit distance scoring scheme.
-..signature:EditDistanceScore
-..shortcutfor:Spec.EditDistance
-...signature:Score<int, EditDistance>
-..see:Spec.EditDistance
-..include:seqan/score.h
-*/
+/*!
+ * @typedef EditDistanceScoreTypedef EditDistance
+ * @headerfile <seqan/score.h>
+ * @brief Edit distance scoring scheme shortcut.
+ *
+ * @signature typedef Score<int, EditDistance> EditDistanceScore;
+ */
 
 typedef Score<int, EditDistance> EditDistanceScore;
 
 template <typename TValue>
 inline TValue
 scoreMatch(Score<TValue, EditDistance> &) {
-    SEQAN_CHECKPOINT;
     return 0;
 }
 
@@ -85,7 +83,6 @@ scoreMatch(Score<TValue, EditDistance> &) {
 template <typename TValue>
 inline TValue
 scoreMatch(Score<TValue, EditDistance> const &) {
-    SEQAN_CHECKPOINT;
     return 0;
 }
 
@@ -93,7 +90,6 @@ scoreMatch(Score<TValue, EditDistance> const &) {
 template <typename TValue>
 inline TValue
 scoreMismatch(Score<TValue, EditDistance> &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
@@ -101,7 +97,6 @@ scoreMismatch(Score<TValue, EditDistance> &) {
 template <typename TValue>
 inline TValue
 scoreMismatch(Score<TValue, EditDistance> const &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
@@ -109,7 +104,6 @@ scoreMismatch(Score<TValue, EditDistance> const &) {
 template <typename TValue>
 inline TValue
 scoreGapExtend(Score<TValue, EditDistance> &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
@@ -117,7 +111,6 @@ scoreGapExtend(Score<TValue, EditDistance> &) {
 template <typename TValue>
 inline TValue
 scoreGapExtend(Score<TValue, EditDistance> const &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
@@ -125,7 +118,6 @@ scoreGapExtend(Score<TValue, EditDistance> const &) {
 template <typename TValue>
 inline TValue
 scoreGapOpen(Score<TValue, EditDistance> &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
@@ -133,10 +125,9 @@ scoreGapOpen(Score<TValue, EditDistance> &) {
 template <typename TValue>
 inline TValue
 scoreGapOpen(Score<TValue, EditDistance> const &) {
-    SEQAN_CHECKPOINT;
     return -1;
 }
 
-}  // namespace SEQAN_NAMESPACE_MAIN
+}  // namespace seqan
 
-#endif  // SEQAN_SCORE_SCORE_EDIT_H_
+#endif  // SEQAN_SSCORE_EDIT_H_

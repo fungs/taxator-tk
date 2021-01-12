@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -37,238 +37,221 @@
 #ifndef SEQAN_HEADER_SEQUENCE_SHORTCUTS_H
 #define SEQAN_HEADER_SEQUENCE_SHORTCUTS_H
 
-namespace SEQAN_NAMESPACE_MAIN
+namespace seqan
 {
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.CharString:
-..cat:Strings
-..summary:A string of $char$.
-..signature:CharString
-..description:
-This is a useful replacement of $std::string$.
-If you want a C-style $char *$ string, use @Function.toCString@.
-..shortcutfor:Spec.Alloc String
-...signature:String<char, Alloc<> >
-*/
+
+/*!
+ * @typedef CharString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with char alphabet.
+ *
+ * You can efficiently cast a CharString to <tt>char *</tt> using <tt>toCString</tt>.
+ *
+ * @signature typedef String<char> CharString;
+ */
 
 typedef String<char, Alloc<void> > CharString;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.CharIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.CharString@.
-..signature:CharIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<CharString, Rooted>::Type
-..see:Shortcut.CharString
-*/
+/*!
+ * @typedef CharIterator
+ * @headerfile <seqan/sequence.h>
+ * @brief An iterator overa a @link CharString @endlink.
+ *
+ * @signature typedef Iterator<CharString, Rooted>::Type CharIterator;
+ */
 
 typedef Iterator<CharString, Rooted>::Type CharIterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.UnicodeString:
-..cat:Strings
-..summary:A string of $wchar_t$.
-..signature:UnicodeString
-..shortcutfor:Spec.Alloc String
-...signature:String<wchar_t, Alloc<> >
-*/
+
+/*!
+ * @typedef UnicodeString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with wchar_t alphabet.
+ *
+ * @signature typedef String<wchar_t> CharString;
+ */
 
 typedef String<wchar_t, Alloc<void> > UnicodeString;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.UnicodeIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.UnicodeString@.
-..signature:UnicodeIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<UnicodeString, Rooted>::Type
-..see:Shortcut.UnicodeString
-*/
-
 typedef Iterator<UnicodeString, Rooted>::Type UnicodeIterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.DnaString:
-..cat:Strings
-..summary:A string of @Spec.Dna@.
-..signature:DnaString
-..shortcutfor:Spec.Alloc String
-...signature:String<Dna, Alloc<> >
-..see:Spec.Dna
-*/
+
+/*!
+ * @typedef DnaString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Dna alphabet.
+ *
+ * @signature typedef String<Dna> CharString;
+ */
 
 typedef String<Dna, Alloc<void> > DnaString;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.DnaIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.DnaString@.
-..signature:DnaIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<DnaString, Rooted>::Type
-..see:Spec.Dna
-..see:Shortcut.DnaString
-*/
+/*!
+ * @typedef DnaIterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Dna.
+ *
+ * @signature typedef Iterator<DnaString, Rooted>::Type DnaIterator;
+ */
 
 typedef Iterator<DnaString, Rooted>::Type DnaIterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.Dna5String:
-..cat:Strings
-..summary:A string of @Spec.Dna5@.
-..signature:Dna5String
-..shortcutfor:Spec.Alloc String
-...signature:String<Dna5, Alloc<> >
-..see:Spec.Dna5
-..see:Shortcut.DnaString
-*/
+
+/*!
+ * @typedef Dna5String
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Dna5 alphabet.
+ *
+ * @signature typedef String<Dna5> CharString;
+ */
 
 typedef String<Dna5, Alloc<void> > Dna5String;
 
+//////////////////////////////////////////////////////////////////////////////
+
+/*!
+ * @typedef DnaQString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with DnaQ alphabet.
+ *
+ * @signature typedef String<DnaQ> CharString;
+ */
+
+typedef String<DnaQ, Alloc<void> > DnaQString;
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*!
+ * @typedef Dna5QString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Dna5Q alphabet.
+ *
+ * @signature typedef String<Dna5Q> CharString;
+ */
+
+typedef String<Dna5Q, Alloc<void> > Dna5QString;
+
 //____________________________________________________________________________
 
-/**
-.Shortcut.Dna5Iterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.Dna5String@.
-..signature:Dna5Iterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<Dna5String, Rooted>::Type
-..see:Spec.Dna5
-..see:Shortcut.Dna5String
-..see:Shortcut.DnaIterator
-*/
+/*!
+ * @typedef Dna5Iterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Dna5.
+ *
+ * @signature typedef Iterator<Dna5String, Rooted>::Type Dna5Iterator;
+ */
 
 typedef Iterator<Dna5String, Rooted>::Type Dna5Iterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.RnaString:
-..cat:Strings
-..summary:A string of @Spec.Rna@.
-..signature:RnaString
-..shortcutfor:Spec.Alloc String
-...signature:String<Rna, Alloc<> >
-..see:Spec.Rna
-*/
+
+/*!
+ * @typedef RnaString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Rna alphabet.
+ *
+ * @signature typedef String<Rna> CharString;
+ */
 
 typedef String<Rna, Alloc<void> > RnaString;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.RnaIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.RnaString@.
-..signature:RnaIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<RnaString, Rooted>::Type
-..see:Spec.Rna
-..see:Shortcut.RnaString
-*/
+/*!
+ * @typedef RnaIterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Rna.
+ *
+ * @signature typedef Iterator<RnaString, Rooted>::Type RnaIterator;
+ */
 
 typedef Iterator<RnaString, Rooted>::Type RnaIterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.Rna5String:
-..cat:Strings
-..summary:A string of @Spec.Rna5@.
-..signature:Rna5String
-..shortcutfor:Spec.Alloc String
-...signature:String<Rna5, Alloc<> >
-..see:Spec.Rna5
-..see:Shortcut.RnaString
-*/
+
+/*!
+ * @typedef Rna5String
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Rna5 alphabet.
+ *
+ * @signature typedef String<Rna5> CharString;
+ */
 
 typedef String<Rna5, Alloc<void> > Rna5String;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.Rna5Iterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.Rna5String@.
-..signature:Rna5Iterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<Rna5String, Rooted>::Type
-..see:Spec.Rna5
-..see:Shortcut.Rna5String
-..see:Shortcut.RnaIterator
-*/
+/*!
+ * @typedef Rna5Iterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Rna5.
+ *
+ * @signature typedef Iterator<Rna5String, Rooted>::Type Rna5Iterator;
+ */
 
 typedef Iterator<Rna5String, Rooted>::Type Rna5Iterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.IupacString:
-..cat:Strings
-..summary:A string of @Spec.Iupac@.
-..signature:IupacString
-..shortcutfor:Spec.Alloc String
-...signature:String<Iupac, Alloc<> >
-..see:Spec.Iupac
-*/
+
+/*!
+ * @typedef IupacString
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with Iupac alphabet.
+ *
+ * @signature typedef String<Iupac> CharString;
+ */
 
 typedef String<Iupac, Alloc<void> > IupacString;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.IupacIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.IupacString@.
-..signature:IupacIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<IupacString, Rooted>::Type
-..see:Spec.Iupac
-..see:Shortcut.IupacString
-*/
+/*!
+ * @typedef IupacIterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Iupac.
+ *
+ * @signature typedef Iterator<IupacString, Rooted>::Type IupacIterator;
+ */
 
 typedef Iterator<IupacString, Rooted>::Type IupacIterator;
 
 //////////////////////////////////////////////////////////////////////////////
-/**
-.Shortcut.Peptide:
-..cat:Strings
-..summary:A string of @Spec.AminoAcid@.
-..signature:Peptide
-..shortcutfor:Spec.Alloc String
-...signature:String<AminoAcid, Alloc<> >
-..see:Spec.AminoAcid
-*/
+
+/*!
+ * @typedef Peptide
+ * @headerfile <seqan/sequence.h>
+ * @brief An AllocString with AminoAcid alphabet.
+ *
+ * @signature typedef String<AminoAcid> Peptide;
+ */
 
 typedef String<AminoAcid, Alloc<void> > Peptide;
 
 //____________________________________________________________________________
 
-/**
-.Shortcut.PeptideIterator:
-..cat:Iterators
-..summary:Iterator for @Shortcut.Peptide@.
-..signature:PeptideIterator
-..shortcutfor:Concept.RootedIteratorConcept
-...signature:Iterator<Peptide, Rooted>::Type
-..see:Spec.AminoAcid
-..see:Shortcut.Peptide
-*/
+/*!
+ * @typedef PeptideIterator
+ * @headerfile <seqan/sequence.h>
+ * @brief A rooted iterator over a Peptide.
+ *
+ * @signature typedef Iterator<Peptide, Rooted>::Type PeptideIterator;
+ */
 
 typedef Iterator<Peptide, Rooted>::Type PeptideIterator;
 
 //////////////////////////////////////////////////////////////////////////////
 
-} //namespace SEQAN_NAMESPACE_MAIN
+} //namespace seqan
 
 #endif //#ifndef SEQAN_HEADER_...

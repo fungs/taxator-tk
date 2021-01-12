@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
 // Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_
 
 namespace seqan {
 
@@ -238,9 +238,31 @@ position(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
 // Function countGaps()
 // ----------------------------------------------------------------------------
 
+// Count left.
 template <typename TGaps>
 inline typename Size<TGaps>::Type
-countGaps(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
+countGaps(Iter<TGaps, GapsIterator<ArrayGaps> > const & it, LeftOfViewPos const & /*tag*/)
+{
+    typedef typename Size<TGaps>::Type TSize;
+    TSize result = 0;
+
+    // Get number of gaps left of current position ignoring any clipping.
+    if (isGap(it) && it._bucketOffset)
+        result = it._bucketOffset;
+    else if (!isGap(it) && !it._bucketOffset && it._bucketIndex)
+        result = it._container->_array[it._bucketIndex - 1];
+
+    // Limit to the clipping begin position.
+    if (it._unclippedViewPosition - result < (TSize)it._container->_clippingBeginPos)
+            result = it._unclippedViewPosition - it._container->_clippingBeginPos;
+
+    return result;
+}
+
+// Count right.
+template <typename TGaps>
+inline typename Size<TGaps>::Type
+countGaps(Iter<TGaps, GapsIterator<ArrayGaps> > const & it, RightOfViewPos const & /*tag*/)
 {
     if (!isGap(it) || atEnd(it))
         return 0;  // Not on a gap or at end, no gap here.
@@ -259,7 +281,27 @@ countGaps(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
 
 template <typename TGaps>
 inline typename Size<TGaps>::Type
-countCharacters(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
+countCharacters(Iter<TGaps, GapsIterator<ArrayGaps> > const & it, LeftOfViewPos const & /*dir*/)
+{
+    typedef typename Size<TGaps>::Type TSize;
+    TSize result = 0;
+
+    // Get number of characters left of current position ignoring any clipping.
+    if (!isGap(it) && it._bucketOffset)
+        result = it._bucketOffset;
+    else if (isGap(it) && !it._bucketOffset && it._bucketIndex)
+        result = it._container->_array[it._bucketIndex - 1];
+
+    // Limit to the clipping begin position.
+    if (it._unclippedViewPosition - result < (TSize)it._container->_clippingBeginPos)
+        result = it._unclippedViewPosition - it._container->_clippingBeginPos;
+    
+    return result;
+}
+
+template <typename TGaps>
+inline typename Size<TGaps>::Type
+countCharacters(Iter<TGaps, GapsIterator<ArrayGaps> > const & it, RightOfViewPos const & /*dir*/)
 {
     if (isGap(it) || atEnd(it))
         return 0;  // On a gap or at end, no characters here.
@@ -281,7 +323,7 @@ inline bool
 goPrevious(Iter<TGaps, GapsIterator<ArrayGaps> > & it)
 {
     typedef typename Position<TGaps>::Type TGapsPos;
-    
+
     if (atBegin(it))  // Handle case of being at the beginning of the gaps.
         return false;
 
@@ -303,7 +345,7 @@ goPrevious(Iter<TGaps, GapsIterator<ArrayGaps> > & it)
         it._sourcePosition -= 1;
     // Adjust clipped view position.
     it._unclippedViewPosition -= 1;
-    
+
     return true;
 }
 
@@ -366,7 +408,7 @@ goFurther(Iter<TGaps, GapsIterator<ArrayGaps> > & it,
     // TODO(holtgrew): Handle going backwards more efficiently.
     if (delta == TDifference(0))
         return;
-    if ((int)delta < 0)
+    if (isNegative(delta))
     {
         typedef typename MakeSigned<TDifference>::Type TSignedDifference;
         for (; -static_cast<TSignedDifference>(delta); ++delta)
@@ -487,7 +529,7 @@ insertGaps(Iter<TGaps, GapsIterator<ArrayGaps> > const & it,
 {
     if (count == TCount(0))
         return;  // Do nothing!
-    
+
     typedef typename TGaps::TArray_          TArray;
     typedef typename Position<TArray>::Type  TArrayPos;
 
@@ -738,4 +780,4 @@ operator+(Iter<TGaps, GapsIterator<ArrayGaps> > const & lhs, TDifference d)
 
 }  // namespace seqan
 
-#endif  // SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_
+#endif  // SEQAN_INCLUDE_SEQAN_ALIGN_GAPS_ITERATOR_ARRAY_H_

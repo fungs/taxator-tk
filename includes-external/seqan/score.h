@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // This is the facade header for the score module.
 // ==========================================================================
 
-#ifndef SEQAN_SCORE_H_
-#define SEQAN_SCORE_H_
+#ifndef SEQAN_SH_
+#define SEQAN_SH_
 
 #include <seqan/basic.h>
 
@@ -46,6 +46,11 @@
 #include <seqan/score/score_matrix.h>
 #include <seqan/score/score_matrix_io.h>
 #include <seqan/score/score_matrix_data.h>
+#include <seqan/score/score_matrix_dyn.h>
 #include <seqan/score/score_simple.h>
 
-#endif  // SEQAN_SCORE_H_
+#if SEQAN_SIMD_ENABLED
+#include <seqan/score/score_simd_wrapper.h>
+#endif  // SEQAN_SIMD_ENABLED
+
+#endif  // SEQAN_SH_

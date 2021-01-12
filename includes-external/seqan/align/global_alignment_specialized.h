@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,8 @@
 // MyersBitVector, MyersHirschberg.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_
 
 namespace seqan {
 
@@ -60,25 +60,27 @@ namespace seqan {
 // Function globalAlignment()                                      [Hirschberg]
 // ----------------------------------------------------------------------------
 
-template <typename TSequence, typename TAlignSpec,
-          typename TScoreValue, typename TScoreSpec>
-TScoreValue globalAlignment(Align<TSequence, TAlignSpec> & align,
-                            Score<TScoreValue, TScoreSpec> const & scoringScheme,
-                            Hirschberg const & algorithmTag)
-{
-    SEQAN_ASSERT_EQ(length(rows(align)), 2u);
-    return _globalAlignment(row(align, 0), row(align, 1), scoringScheme, algorithmTag);
-}
-
 template <typename TSequenceH, typename TGapsSpecH,
           typename TSequenceV, typename TGapsSpecV,
-          typename TScoreValue, typename TScoreSpec>
+          typename TScoreValue>
 TScoreValue globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
                             Gaps<TSequenceV, TGapsSpecV> & gapsV,
-                            Score<TScoreValue, TScoreSpec> const & scoringScheme,
-                            Hirschberg const & algorithmTag)
+                            Score<TScoreValue, Simple> const & scoringScheme,
+                            Hirschberg const & /*algorithmTag*/)
 {
-    return _globalAlignment(gapsH, gapsV, scoringScheme, algorithmTag);
+    SEQAN_ASSERT_EQ(scoreGapOpen(scoringScheme), scoreGapExtend(scoringScheme));
+    return _globalAlignment(gapsH, gapsV, scoringScheme, Hirschberg());
+}
+
+template <typename TSequence, typename TAlignSpec,
+typename TScoreValue>
+TScoreValue globalAlignment(Align<TSequence, TAlignSpec> & align,
+                            Score<TScoreValue, Simple> const & scoringScheme,
+                            Hirschberg const & /*algorithmTag*/)
+{
+    SEQAN_ASSERT_EQ(length(rows(align)), 2u);
+
+    return globalAlignment(row(align, 0), row(align, 1), scoringScheme, Hirschberg());
 }
 
 // ----------------------------------------------------------------------------
@@ -129,10 +131,10 @@ int globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
 
 template <typename TAlphabetH, typename TSpecH,
           typename TAlphabetV, typename TSpecV,
-          typename TScoreValue, typename TScoreSpec>
+          typename TScoreValue>
 TScoreValue globalAlignmentScore(String<TAlphabetH, TSpecH> const & seqH,
                                  String<TAlphabetV, TSpecV> const & seqV,
-                                 Score<TScoreValue, TScoreSpec> const & scoringScheme,
+                                 Score<TScoreValue, Simple> const & scoringScheme,
                                  Hirschberg const & algorithmTag)
 {
     Gaps<String<TAlphabetH, TSpecH> const, ArrayGaps> gapsH(seqH);
@@ -196,4 +198,4 @@ int globalAlignmentScore(StringSet<TString, TSpec> const & strings,
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_ALIGN_GLOBAL_ALIGNMENT_SPECIALIZED_H_

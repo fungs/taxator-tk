@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -37,25 +37,32 @@
 // It mainly defines the macro SEQAN_ENABLE_PARALLELISM.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_
 
-/**
-.Macro.SEQAN_ENABLE_PARALLELISM
-..summary:Indicates whether parallelism is enabled with value 0/1.
-..cat:Parallelism
-..signature:SEQAN_ENABLE_PARALLELISM
-..remarks:By default, set to 1 if $_OPENMP$ is defined and set to 0 otherwise.
-..example:If you want to change this value, you have to define this value before including any SeqAn header.
-...code:#define SEQAN_ENABLE_PARALLELISM 0  // ALWAYS switch off parallelism!
-
-#include <seqan/basic.h>
-
-int main(int argc, char ** argv)
-{
-  return 0;
-}
-..include:seqan/basic.h
+/*!
+ * @macro SEQAN_ENABLE_PARALLELISM
+ * @headerfile <seqan/basic.h>
+ * @brief Indicates whether parallelism is enabled with value 0/1.
+ *
+ * @signature SEQAN_ENABLE_PARALLELISM
+ *
+ * By default, set to 1 if <tt>_OPENMP</tt> is defined and set to 0 otherwise.
+ *
+ * @section Examples
+ *
+ * If you want to change tihs value then you have to define this value before include any SeqAn header.
+ *
+ * @code{.cpp}
+ * #define SEQAN_ENABLE_PARALLELISM 0  // ALWAYS switch off parallelism!
+ *
+ * #include <seqan/basic.h>
+ *
+ * int main(int argc, char ** argv)
+ * {
+ *     return 0;
+ * }
+ * @endcode
  */
 
 #if !defined(SEQAN_ENABLE_PARALLELISM)
@@ -66,4 +73,4 @@ int main(int argc, char ** argv)
 #endif  // defined(_OPENMP)
 #endif  // !defined(SEQAN_ENABLE_PARALLELISM)
 
-#endif  // SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_
+#endif  // SEQAN_INCLUDE_SEQAN_BASIC_BASIC_PARALLELISM_H_

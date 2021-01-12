@@ -106,7 +106,7 @@ public:
     }
 
     virtual void parse( const std::vector< std::string >& fields ) {
-        if ( fields.size() >= 12 ) {
+        if ( fields.size() >= 11 ) {
             try {
                 query_start_ = boost::lexical_cast< large_unsigned_int >( fields[1] );
                 query_stop_ = boost::lexical_cast< large_unsigned_int >( fields[2] );
@@ -123,7 +123,7 @@ public:
             }
 
             try {
-                score_ = boost::lexical_cast< float >( fields[7] );
+                score_ = boost::lexical_cast< float >( std::stof(fields[7]) );
             } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad score"});
             }
@@ -146,7 +146,9 @@ public:
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad alignment length"});
             }
 
-            alignment_code_ = fields[11];
+	    if(fields.size() >= 12){
+            	alignment_code_ = fields[11];
+	    }
 
             // easy things that cannot go wrong
             query_identifier_ = fields[0];

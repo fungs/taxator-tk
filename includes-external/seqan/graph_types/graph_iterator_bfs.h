@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -33,99 +33,95 @@
 #ifndef SEQAN_HEADER_GRAPH_ITERATOR_BFS_H
 #define SEQAN_HEADER_GRAPH_ITERATOR_BFS_H
 
-namespace SEQAN_NAMESPACE_MAIN
+namespace seqan
 {
 
 //////////////////////////////////////////////////////////////////////////////
 // Graph BfsIterator
 //////////////////////////////////////////////////////////////////////////////
 
-/**
-.Spec.Bfs Iterator:
-..cat:Graph
-..summary:Breath-first search iterator for @Class.Graph@.
-..signature:Iterator<TGraph, BfsIterator>
-..param.TGraph:A graph.
-...type:Class.Graph
-..general:Class.Iter
-..see:Spec.Vertex Iterator
-..see:Spec.Out-Edge Iterator
-..see:Spec.Edge Iterator
-..see:Spec.Adjacency Iterator
-..see:Spec.Dfs Preorder Iterator
-..include:seqan/graph_types.h
+/*!
+ * @class BfsIterator
+ * @extends Iter
+ * @headerfile <seqan/graph_types.h>
+ * @brief Iterate vertices of a graph in breadth-first fashion.
+ *
+ * @signature Iterator<TGraph, BfsIterator>::Type;
+ * @signature template <typename TGraph, typename TSpec>
+ *            class Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> >;
+ *
+ * @tparam TGraph The graph to iterate the vertices of.
+ *
+ * The first signature is the signature of the corresponding @link ContainerConcept#Iterator graph's Iterator @endlink
+ * metafunction call.  The second call is the internal definition of the type.  You should always get this type using
+ * the metafunction call from the first signature.
+ *
+ *
+ * @fn BfsIterator::BfsIterator
+ * @brief Constructor.
+ *
+ * @signature Iter::Iter();
+ * @signature Iter::Iter(iter);
+ * @signature Iter::Iter(graph, v);
+ *
+ * @param[in] iter  Other BfsIterator to copy from.
+ * @param[in] graph The @link Graph @endlink to iterate vertices in BFS fashion.
+ * @param[in] v     The descriptor of the vertex to start BFS iteration.
+ */
 
-.Memfunc.Bfs Iterator#Iter
-..summary:Constructor
-..class:Spec.Bfs Iterator
-..signature:Iter()
-..signature:Iter(graph, v)
-..signature:Iter(iter)
-..param.graph:The graph to iterate edges of.
-...type:Class.Graph
-..param.v:Vertex descriptor of vertex to start BFS from.
-...type:Metafunction.VertexDescriptor
-..param.iter:Other iterator to copy-construct from.
-...type:Spec.Bfs Iterator
-*/
 template<typename TGraph, typename TSpec>
-class Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > 
+class Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >
 {
 public:
-	typedef typename VertexDescriptor<TGraph>::Type TVertexDescriptor_;
-	TGraph const* data_host;
-	TVertexDescriptor_ data_source;
-	String<bool> data_tokenMap;
-	std::deque<TVertexDescriptor_> data_queue;
+    typedef typename VertexDescriptor<TGraph>::Type TVertexDescriptor_;
+    TGraph const* data_host;
+    TVertexDescriptor_ data_source;
+    String<bool> data_tokenMap;
+    std::deque<TVertexDescriptor_> data_queue;
 
-	void _init() {
-		resizeVertexMap(*data_host,data_tokenMap);
-		typedef typename Iterator<String<bool>, Rooted>::Type TIter;
-		TIter it = begin(data_tokenMap);
-		for(;!atEnd(it);goNext(it)) {
-			assignValue(it,false);
-		}
-		assignProperty(data_tokenMap, data_source, true);
-		data_queue.clear();
-		data_queue.push_back(data_source);
-	}
+    void _init() {
+        resizeVertexMap(data_tokenMap, *data_host);
+        typedef typename Iterator<String<bool>, Rooted>::Type TIter;
+        TIter it = begin(data_tokenMap);
+        for(;!atEnd(it);goNext(it)) {
+            assignValue(it,false);
+        }
+        assignProperty(data_tokenMap, data_source, true);
+        data_queue.clear();
+        data_queue.push_back(data_source);
+    }
 
-	Iter()
-	{
-		SEQAN_CHECKPOINT
-	}
-	
-	Iter(TGraph const& _graph, TVertexDescriptor_ v) : 
-		data_host(&_graph),
-		data_source(v)
-	{
-		SEQAN_CHECKPOINT
-		_init();
-	}
-	
-	
-	~Iter() {
-		SEQAN_CHECKPOINT
-	}
+    Iter()
+    {
+    }
 
-	Iter(Iter const& _iter) :
-		data_host(_iter.data_host),
-		data_source(_iter.data_source),
-		data_tokenMap(_iter.data_tokenMap),
-		data_queue(_iter.data_queue)
-	{
-		SEQAN_CHECKPOINT
-	}
+    Iter(TGraph const& _graph, TVertexDescriptor_ v) :
+        data_host(&_graph),
+        data_source(v)
+    {
+        _init();
+    }
 
-	Iter const&	operator = (Iter const & _other) {
-		SEQAN_CHECKPOINT
-		if (this == &_other) return *this;
-		data_host=_other.data_host;
-		data_source=_other.data_source;
-		data_tokenMap=_other.data_tokenMap;
-		data_queue=_other.data_queue;
-		return *this;
-	}
+
+    ~Iter() {
+    }
+
+    Iter(Iter const& _iter) :
+        data_host(_iter.data_host),
+        data_source(_iter.data_source),
+        data_tokenMap(_iter.data_tokenMap),
+        data_queue(_iter.data_queue)
+    {
+    }
+
+    Iter const&    operator = (Iter const & _other) {
+        if (this == &_other) return *this;
+        data_host=_other.data_host;
+        data_source=_other.data_source;
+        data_tokenMap=_other.data_tokenMap;
+        data_queue=_other.data_queue;
+        return *this;
+    }
 //____________________________________________________________________________
 };
 
@@ -135,50 +131,50 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 template<typename TGraph>
 struct Iterator<TGraph, BfsIterator>
-{	
-	typedef Iter<TGraph, GraphIterator<InternalBfsIterator<BfsIterator> > > Type;
+{
+    typedef Iter<TGraph, GraphIterator<InternalBfsIterator<BfsIterator> > > Type;
 };
 
 template<typename TGraph>
 struct Iterator<TGraph const, BfsIterator>
-{	
-	typedef Iter<TGraph const, GraphIterator<InternalBfsIterator<BfsIterator> > > Type;
+{
+    typedef Iter<TGraph const, GraphIterator<InternalBfsIterator<BfsIterator> > > Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct Value<Iter<TGraph, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename Value<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename Value<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct Value<Iter<TGraph const, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename Value<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename Value<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct Reference<Iter<TGraph, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename Reference<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename Reference<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct Reference<Iter<TGraph const, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename Reference<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename Reference<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct GetValue<Iter<TGraph, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename GetValue<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename GetValue<Iter<TGraph, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 template<typename TGraph, typename TIteratorSpec>
 struct GetValue<Iter<TGraph const, GraphIterator<InternalBfsIterator<TIteratorSpec> > > >
 {
-	typedef typename GetValue<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
+    typedef typename GetValue<Iter<TGraph const, GraphIterator<InternalVertexIterator<TIteratorSpec> > > >::Type Type;
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -188,128 +184,115 @@ template<typename TGraph, typename TSpec>
 inline typename GetValue<Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > >::Type
 getValue(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	return it.data_queue.front();
+    return it.data_queue.front();
 }
 
 template<typename TGraph, typename TSpec>
 inline typename GetValue<Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > >::Type
 value(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	return getValue(it);
+    return getValue(it);
 }
 
 template<typename TGraph, typename TSpec>
 inline typename GetValue<Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > >::Type
 operator * (Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	return value(it);
+    return value(it);
 }
 
 template<typename TGraph, typename TSpec>
 inline typename Host<Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > >::Type const&
 hostGraph(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	return *it.data_host;
+    return *it.data_host;
 }
 
 template<typename TGraph, typename TSpec>
 inline bool
 atBegin(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	if (it.data_queue.empty()) return false;
-	else return (it.data_queue.front() == it.data_source);
+    if (it.data_queue.empty()) return false;
+    else return (it.data_queue.front() == it.data_source);
 }
 
 template<typename TGraph, typename TSpec>
 inline void
 goBegin(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	it._init();
+    it._init();
 }
 
 template<typename TGraph, typename TSpec>
 inline bool
 atEnd(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	return (it.data_queue.empty());
+    return (it.data_queue.empty());
 }
 
 template<typename TGraph, typename TSpec>
 inline void
 goEnd(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	it.data_queue.clear();
+    it.data_queue.clear();
 }
 
 template<typename TGraph, typename TSpec>
 inline void
 goNext(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-	SEQAN_CHECKPOINT
-	if (it.data_queue.empty()) return;
-	typedef typename VertexDescriptor<TGraph>::Type TVertexDescriptor;
-	TVertexDescriptor u = it.data_queue.front();
-	it.data_queue.pop_front();
-	typedef typename Iterator<TGraph, AdjacencyIterator>::Type TAdjacencyIterator;
-	TAdjacencyIterator itad(*it.data_host,u);
-	for(;!atEnd(itad);goNext(itad)) {
-		TVertexDescriptor v = getValue(itad);
-		if (getProperty(it.data_tokenMap, v) == false) {
-			assignProperty(it.data_tokenMap, v, true);
-			it.data_queue.push_back(v);
-		}
-	}
+    if (it.data_queue.empty()) return;
+    typedef typename VertexDescriptor<TGraph>::Type TVertexDescriptor;
+    TVertexDescriptor u = it.data_queue.front();
+    it.data_queue.pop_front();
+    typedef typename Iterator<TGraph, AdjacencyIterator>::Type TAdjacencyIterator;
+    TAdjacencyIterator itad(*it.data_host,u);
+    for(;!atEnd(itad);goNext(itad)) {
+        TVertexDescriptor v = getValue(itad);
+        if (getProperty(it.data_tokenMap, v) == false) {
+            assignProperty(it.data_tokenMap, v, true);
+            it.data_queue.push_back(v);
+        }
+    }
 }
 
 template<typename TGraph, typename TSpec>
 inline Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >&
 operator ++(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it)
 {
-SEQAN_CHECKPOINT
-	goNext(it);
-	return it;
+    goNext(it);
+    return it;
 }
 
 template<typename TGraph, typename TSpec>
 inline Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >
 operator ++(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it, int)
 {
-	SEQAN_CHECKPOINT
-	Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > ret = it;
-	goNext(it);
-	return ret;
+    Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > > ret = it;
+    goNext(it);
+    return ret;
 }
 
 template<typename TGraph, typename TSpec>
 inline bool
 operator ==(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it1,
-			Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it2)
+            Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it2)
 {
-	SEQAN_CHECKPOINT
-	return ((it1.data_source==it2.data_source) &&
-			(it1.data_tokenMap==it2.data_tokenMap) &&
-			(it1.data_queue==it2.data_queue));
+    return ((it1.data_source==it2.data_source) &&
+            (it1.data_tokenMap==it2.data_tokenMap) &&
+            (it1.data_queue==it2.data_queue));
 }
 
 template<typename TGraph, typename TSpec>
 inline bool
 operator !=(Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it1,
-			Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it2)
+            Iter<TGraph, GraphIterator<InternalBfsIterator<TSpec> > >& it2)
 {
-	SEQAN_CHECKPOINT
-	return ((it1.data_source!=it2.data_source) ||
-			(it1.data_tokenMap!=it2.data_tokenMap) ||
-			(it1.data_queue!=it2.data_queue));
+    return ((it1.data_source!=it2.data_source) ||
+            (it1.data_tokenMap!=it2.data_tokenMap) ||
+            (it1.data_queue!=it2.data_queue));
 }
 
-}// namespace SEQAN_NAMESPACE_MAIN
+}// namespace seqan
 
 #endif //#ifndef SEQAN_HEADER_...

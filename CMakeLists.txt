@@ -26,7 +26,7 @@ else()
 endif()
 
 include_directories( "includes-external" )
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
+set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
 
 # apply filtering to alignments file
 add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp src/accessconv.cpp )

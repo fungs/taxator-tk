@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -32,16 +32,12 @@
 // Author: Enrico Siragusa <enrico.siragusa@fu-berlin.de>
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INDEX_QGRAM_BUCKETREFINEMENT_H_
-#define SEQAN_EXTRAS_INDEX_QGRAM_BUCKETREFINEMENT_H_
+#ifndef SEQAN_INDEX_QGRAM_BUCKETREFINEMENT_H_
+#define SEQAN_INDEX_QGRAM_BUCKETREFINEMENT_H_
 
 //#define SEQAN_DEBUG
 
 namespace seqan {
-
-// ============================================================================
-// Forwards
-// ============================================================================
 
 // ============================================================================
 // Tags, Classes, Enums
@@ -51,8 +47,8 @@ template <typename TText>
 class Index<TText, IndexSa<InfixSegment> >
 {
 public:
-    Holder<typename Fibre<Index, EsaText>::Type>    text;
-    Holder<typename Fibre<Index, EsaSA>::Type>      sa;
+    typename Member<Index, FibreText>::Type       text;
+    Holder<typename Fibre<Index, FibreSA>::Type>  sa;
 
     Index() {}
 
@@ -76,20 +72,6 @@ public:
         text(_text)
     {}
 };
-
-/**
-.Spec.BucketRefinement
-..summary:An index based on a refined array of sorted q-grams.
-..cat:Index
-..general:Spec.IndexQGram
-..signature:Index<TText, IndexQGram<TShapeSpec, BucketRefinement> >
-..param.TText:The text type.
-...type:Class.String
-..param.TShapeSpec:The @Class.Shape@ specialization type.
-...note:This can be either a $TSpec$ argument (e.g. $SimpleShape$) or a complete @Class.Shape@ class (e.g. Shape<Dna, SimpleShape>).
-..remarks:This index refines q-gram buckets by sorting and uses binary search to locate them.
-..include:seqan/index.h
-*/
 
 struct BucketRefinement_;
 typedef Tag<BucketRefinement_> BucketRefinement;
@@ -175,8 +157,6 @@ public:
     TTopIterator    _topIterator;
     TBottomIterator _bottomIterator;
 
-// ============================================================================
-
     Iter() {}
 
     Iter(TIndex & _index) :
@@ -198,8 +178,6 @@ public:
         _topIterator(_origin._topIterator),
         _bottomIterator(_origin._bottomIterator)
     {}
-
-// ============================================================================
 
     inline Iter const &
     operator=(Iter const & _origin)
@@ -228,8 +206,6 @@ public:
     TTopIterator    _topIterator;
     TBottomIterator _bottomIterator;
 
-// ============================================================================
-
     Iter() {}
 
     Iter(TIndex & _index) :
@@ -246,8 +222,6 @@ public:
         _topIterator(_origin._topIterator),
         _bottomIterator(_origin._bottomIterator)
     {}
-
-// ============================================================================
 
     inline Iter const &
     operator=(Iter const & _origin)
@@ -351,8 +325,7 @@ getFibre(Index<TText, IndexSa<InfixSegment> > const & index, FibreSA)
     return value(index.sa);
 }
 
-// ============================================================================
-
+// Works by creating the full SA and removing the suffixes of length < q.
 template <typename TText, typename TShapeSpec>
 inline bool indexCreate(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > & index, FibreSADir, Default const)
 {
@@ -372,6 +345,7 @@ inline bool indexCreate(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > 
     return true;
 }
 
+// Works by creating the q-gram directory and quick-sorting the SA bucket-wise.
 //template <typename TText, typename TShapeSpec>
 //inline bool indexCreate(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > & index, FibreSADir, Default const)
 //{
@@ -388,8 +362,6 @@ inline bool indexCreate(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > 
 //
 //    return true;
 //}
-
-// ============================================================================
 
 template <typename TText, typename TShapeSpec>
 void _setHost(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > & index)
@@ -456,8 +428,6 @@ inline bool _atTop(Iter<Index<TText, IndexQGram<TShapeSpec, BucketRefinement> >,
     return isRoot(it._bottomIterator);
 }
 
-// ============================================================================
-
 template <typename TText, typename TShapeSpec, typename TSpec>
 inline bool isRoot(Iter<Index<TText, IndexQGram<TShapeSpec, BucketRefinement> >, VSTree<TSpec> > const & it)
 {
@@ -492,7 +462,7 @@ inline bool goDown(Iter<Index<TText, IndexQGram<TShapeSpec, BucketRefinement> >,
         if (!_implantSa(it))
             return false;
     }
-    
+
     return goDown(it._bottomIterator);
 }
 
@@ -643,6 +613,7 @@ inline bool open(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > & index
 
     if (open(static_cast<TBaseIndex &>(index), fileName))
     {
+        setHost(index._indexSa, indexText(index));
         _setHost(index);
         return true;
     }
@@ -660,4 +631,4 @@ inline bool save(Index<TText, IndexQGram<TShapeSpec, BucketRefinement> > & index
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_EXTRAS_INDEX_QGRAM_BUCKETREFINEMENT_H_
+#endif  // #ifndef SEQAN_INDEX_QGRAM_BUCKETREFINEMENT_H_

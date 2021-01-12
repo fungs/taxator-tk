@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Facade header for module align_split.
 // ==========================================================================
 
-#ifndef SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGN_SPLIT_H_
-#define SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGN_SPLIT_H_
+#ifndef SEQAN_INCLUDE_SEQAN_ALIGN_SPLIT_H_
+#define SEQAN_INCLUDE_SEQAN_ALIGN_SPLIT_H_
 
 // ===========================================================================
 // Prerequisites.
@@ -52,4 +52,4 @@
 #include <seqan/align_split/dp_scout_split.h>
 #include <seqan/align_split/align_split_interface.h>
 
-#endif  // SEQAN_EXTRAS_INCLUDE_SEQAN_ALIGN_SPLIT_H_
+#endif  // SEQAN_INCLUDE_SEQAN_ALIGN_SPLIT_H_

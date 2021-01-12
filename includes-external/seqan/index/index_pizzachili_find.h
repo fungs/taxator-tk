@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,18 +35,9 @@
 #ifndef SEQAN_HEADER_INDEX_PIZZACHILI_FIND_H
 #define SEQAN_HEADER_INDEX_PIZZACHILI_FIND_H
 
-namespace SEQAN_NAMESPACE_MAIN {
+namespace seqan {
 
 struct PizzaChiliFinder_;
-
-/**
-.Tag.Index Find Algorithm
-..cat:Searching
-..tag.PizzaChiliFinder:Finds an occurrence in a @Spec.Pizza & Chili Index@ index.
-...remarks:The actual algorithm used for searching depends on the @Tag.Pizza & Chili Index Tags@ used.
-..see:Spec.Pizza & Chili Index
-..include:seqan/index.h
-*/
 
 typedef Tag<PizzaChiliFinder_> const PizzaChiliFinder;
 
@@ -94,9 +85,8 @@ public:
     Finder(TIndex const& index) : TBase(index) { }
 
     ~Finder() {
-SEQAN_CHECKPOINT
         if (range.i1 != 0)
-            ::std::free(range.i1);
+            std::free(range.i1);
     }
 };
 
@@ -105,7 +95,6 @@ SEQAN_CHECKPOINT
 namespace impl {
     template <typename TPattern>
     inline uchar_t* getPizzaChiliString(TPattern const& pattern) {
-SEQAN_CHECKPOINT
         typedef
             typename RemoveConst_<
                 typename Value<TPattern>::Type
@@ -123,7 +112,6 @@ SEQAN_CHECKPOINT
     }
 
     inline uchar_t* getPizzaChiliString(char const* pattern) {
-SEQAN_CHECKPOINT
         return reinterpret_cast<uchar_t*>(const_cast<char*>(pattern));
     }
 } // namespace impl
@@ -136,12 +124,11 @@ inline void _findFirstIndex(
     TPattern const& pattern,
     PizzaChiliFinder const
 ) {
-SEQAN_CHECKPOINT
     typedef Index<TText, PizzaChili<TSpec> > TIndex;
     typedef typename PizzaChiliCodeProvider<TSpec>::Type TCodeProvider;
 
     if (finder.range.i1 != 0)
-        ::std::free(finder.range.i1);
+        std::free(finder.range.i1);
 
     TIndex& index = haystack(finder);
     indexRequire(index, PizzaChiliCompressed());
@@ -169,6 +156,6 @@ SEQAN_CHECKPOINT
     finder.range.i2 = occ + numocc;
 }
 
-} // namespace SEQAN_NAMESPACE_MAIN
+} // namespace seqan
 
 #endif // SEQAN_HEADER_INDEX_PIZZACHILI_FIND_H

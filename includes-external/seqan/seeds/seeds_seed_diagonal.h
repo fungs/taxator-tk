@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -48,27 +48,41 @@ namespace seqan {
 // Class SeedDiagonal
 // ---------------------------------------------------------------------------
 
-/**
-.Class.SeedDiagonal
-..summary:Store the information about a seed segment.
-..signature:SeedDiagonal<TPosition, TSize>
-..cat:Seed Handling
-..param.TPosition:The type to use for positions.
-..param.TSize:The type to use for the seed length.
-..include:seqan/seeds.h
+/*!
+ * @class SeedDiagonal
+ * @headerfile <seqan/seeds.h>
+ * @brief Store the information about a seed segment.
+ *
+ * @signature template <typename TPosition, typename TSize>
+ *            class SeedDiagonal;
+ *
+ * @tparam TSize The type to use for the seed length.
+ * @tparam TPosition The type to use for positions.
+ */
 
-.Memvar.SeedDiagonal#beginPositionH
-..summary:The position in the database sequence (horizontal).
-..class:Class.SeedDiagonal
+/*!
+ * @fn SeedDiagonal::SeedDiagonal
+ * @brief Constructor
+ *
+ * @signature SeedDiagonal::SeedDiagonal();
+ * @signature SeedDiagonal::SeedDiagonal(beginPosH, beginPosV, length);
+ *
+ * @param[in] beginPosH The begin position in the horizontal orientation.
+ * @param[in] beginPosV The begin position in the vertical orientation.
+ * @param[in] length    The length of the seed diagonal.
+ */
 
-.Memvar.SeedDiagonal#beginPositionV:
-..summary:The position in the query sequence (vertical).
-..class:Class.SeedDiagonal
+/*!
+ * @var TPosition SeedDiagonal::beginPositionH
+ * @brief The position in the database sequence (horizontal).
+ *
+ * @var TPosition SeedDiagonal::beginPositionV
+ * @brief The position in the query sequence (vertical).
+ *
+ * @var TSize SeedDiagonal::length
+ * @brief The length of the diagonal.
+ */
 
-.Memvar.SeedDiagonal#length:
-..summary:The length of the diagonal.
-..class:Class.SeedDiagonal
-*/
 template <typename TPosition, typename TSize>
 class SeedDiagonal
 {
@@ -76,7 +90,7 @@ public:
     TPosition beginPositionH;
     TPosition beginPositionV;
     TSize length;
-    
+
     SeedDiagonal() : beginPositionH(0), beginPositionV(0), length(0)
     {}
 
@@ -88,21 +102,21 @@ public:
 // ===========================================================================
 // Metafunctions
 // ===========================================================================
-  
+
 // ---------------------------------------------------------------------------
 // Metafunction Position
 // ---------------------------------------------------------------------------
 
-/**
-.Metafunction.SeedDiagonal#Position
-..cat:Seed Handling
-..class:Class.SeedDiagonal
-..summary:The position type of a @Class.SeedDiagonal@.
-..signature:Position<TSeed>::Type
-..param.TSeed:The seed diagonal to query for its position type.
-...type:Class.Seed
-..include:seqan/seeds.h
-*/
+/*!
+ * @mfn SeedDiagonal#Position
+ * @brief The position type of a @link SeedDiagonal @endlink.
+ *
+ * @signature Position<TDiagonal>::Type;
+ *
+ * @tparam TDiagonal A @link SeedDiagonal @endlink.
+ *
+ * @return Type The position type of <tt>TDiagonal</tt>.
+ */
 
 template <typename TPosition, typename TSize>
 struct Position<SeedDiagonal<TPosition, TSize> >
@@ -113,21 +127,21 @@ struct Position<SeedDiagonal<TPosition, TSize> >
 template <typename TPosition, typename TSize>
 struct Position<SeedDiagonal<TPosition, TSize> const> : Position<SeedDiagonal<TPosition, TSize> >
 {};
-  
+
 // ---------------------------------------------------------------------------
 // Metafunction Size
 // ---------------------------------------------------------------------------
 
-/**
-.Metafunction.SeedDiagonal#Size
-..cat:Seed Handling
-..class:Class.SeedDiagonal
-..summary:The position type of a @Class.SeedDiagonal@.
-..signature:Size<TSeed>::Type
-..param.TSeed:The seed diagonal to query for its position type.
-...type:Class.Seed
-..include:seqan/seeds.h
-*/
+/*!
+ * @mfn SeedDiagonal#Size
+ * @brief The size type of a @link SeedDiagonal @endlink.
+ *
+ * @signature Size<TDiagonal>::Type;
+ *
+ * @tparam TDiagonal A @link SeedDiagonal @endlink.
+ *
+ * @return Type The size type of <tt>TDiagonal</tt>.
+ */
 
 template <typename TPosition, typename TSize>
 struct Size<SeedDiagonal<TPosition, TSize> >
@@ -138,7 +152,7 @@ struct Size<SeedDiagonal<TPosition, TSize> >
 template <typename TPosition, typename TSize>
 struct Size<SeedDiagonal<TPosition, TSize> const> : Size<SeedDiagonal<TPosition, TSize> >
 {};
-  
+
 // ===========================================================================
 // Functions
 // ===========================================================================

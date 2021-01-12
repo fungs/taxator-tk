@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -36,8 +36,8 @@
 // construction type (simple, non-simple) and storage size.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_
 
 #include <float.h>
 
@@ -53,11 +53,6 @@ class SimpleType;
 // ============================================================================
 // Tags, Classes, Enums
 // ============================================================================
-
-// TODO(holtgrew): Remove Ascii and Unicode alias. Also see #849.
-typedef char Ascii;
-//typedef unsigned char Byte;  // TODO(holtgrew): Disabling, remove together with Ascii and Unicode with #849
-typedef wchar_t Unicode;
 
 // ============================================================================
 // Metafunctions
@@ -90,50 +85,50 @@ struct BitsPerValue<TValue const> : public BitsPerValue<TValue>
 template <typename T>
 struct ValueSize
 {
-    typedef __uint64  Type;
-    static const Type VALUE = ((__uint64(1) << (BitsPerValue<T>::VALUE - 1)) << 1);
+    typedef uint64_t  Type;
+    static const Type VALUE = (BitsPerValue<T>::VALUE < 64)? 1ull << (BitsPerValue<T>::VALUE & 63) : 0ull;
 };
 
 template <typename T>
 struct ValueSize<T const> : ValueSize<T>
 {};
 
-// TODO(holtgrew): Use static assertion to make sure that ValueSize is never called on floating point numbers? Include assertion for __int64 and __uint64?
+// TODO(holtgrew): Use static assertion to make sure that ValueSize is never called on floating point numbers? Include assertion for int64_t and uint64_t?
 
 template <>
-struct ValueSize<__int64>
+struct ValueSize<int64_t>
 {
-    typedef __uint64  Type;
+    typedef uint64_t  Type;
     static const Type VALUE = 0;
 };
 
 template <>
-struct ValueSize<__uint64>
+struct ValueSize<uint64_t>
 {
-    typedef __uint64  Type;
+    typedef uint64_t  Type;
     static const Type VALUE = 0;
 };
 
 template <>
 struct ValueSize<double>
 {
-    typedef __uint64  Type;
+    typedef uint64_t  Type;
     static const Type VALUE = 0;
 };
 
 template <>
 struct ValueSize<float>
 {
-    typedef __uint64  Type;
+    typedef uint64_t  Type;
     static const Type VALUE = 0;
 };
 
 
 // The internal value size is used for alphabets with piggyback qualities,
 // for example Dna5Q.  Here, the public value size is 5 but the internal
-// value size is 256.  
+// value size is 256.
 
-template <typename TValue> 
+template <typename TValue>
 struct InternalValueSize_
         : public ValueSize<TValue>
 {};
@@ -142,18 +137,24 @@ struct InternalValueSize_
 // Metafunction BytesPerValue
 // ----------------------------------------------------------------------------
 
-/**
-.Metafunction.BytesPerValue:
-..cat:Basic
-..summary:Number of bytes needed to store a value.
-..signature:BytesPerValue<T>::VALUE
-..param.T:A class.
-..returns.param.VALUE:Number of bytes needed to store $T$.
-...default:$BitsPerValue / 8$, rounded up. For built-in types, this is the same as $sizeof(T)$.
-..see:Metafunction.ValueSize
-..see:Metafunction.BitsPerValue
-..include:seqan/basic.h
-*/
+/*!
+ * @mfn BytesPerValue
+ * @headerfile <seqan/basic.h>
+ * @brief Number of bytes needed to store a value.
+ *
+ * @signature BytesPerValue<T>::VALUE
+ *
+ * @tparam T The type to query.
+ *
+ * @return VALUE The number of bytes to store on T object.
+ *
+ * By default, this function returns <tt>ceil(BitsPerValue&lt;T&gt;::VALUE)</tt>.  For built-in types, this is the same
+ * as <tt>sizeof(T)</tt>.
+ *
+ * @see FiniteOrderedAlphabetConcept#ValueSize
+ * @see AlphabetConcept#BitsPerValue
+ * @see IntegralForValue
+ */
 
 template <typename TValue>
 struct BytesPerValue
@@ -165,35 +166,61 @@ struct BytesPerValue
 // Metafunction IntegralForValue
 // ----------------------------------------------------------------------------
 
-/**
-.Metafunction.IntegralForValue:
-..cat:Basic
-..summary:Returns an itegral type that provides sufficient space to store a value.
-..signature:IntegralForValue<T>::Type
-..param.T:A class.
-..returns.param.Type:An integral type that can store $T$ values.
-..remarks:The type is the smallest unsigned integral type that has a size of at least @Metafunction.BytesPerValue@ bytes.
-...tableheader:bytes|integral type
-...table:1|$unsigned char$
-...table:2|$unsigned short$
-...table:3|$unsigned int$
-...table:4|$unsigned int$
-...table:5 and above|$__int64$
-..remarks:Note that the returned integral type cannot store $T$ values, if $T$ takes more than 8 bytes, 
-    since there exists no integral type that provides sufficient space to store types of this size.
-..see:Metafunction.ValueSize
-..see:Metafunction.BitsPerValue
-..see:Metafunction.BytesPerValue
-..include:seqan/basic.h
-*/
+/*!
+ * @mfn IntegralForValue
+ * @headerfile <seqan/basic.h>
+ * @brief Returns an itegral type that provides sufficient space to store a value.
+ *
+ * @signature IntegralForValue<T>::Type;
+ *
+ * @tparam T The type to query.
+ *
+ * @return Type An integral type.
+ *
+ * The type is the smallest unsigned integral type that has a size of at least BytesPerValue bytes.
+ *
+ * <table>
+ *   <tr>
+ *     <th>sizeof(T) in bytes</th>
+ *     <th>integral types</th>
+ *   </tr>
+ *   <tr>
+ *     <td>1</td>
+ *     <td><tt>unsigned char</tt></td>
+ *   </tr>
+ *   <tr>
+ *     <td>2</td>
+ *     <td><tt>unsigned short</tt></td>
+ *   </tr>
+ *   <tr>
+ *     <td>3</td>
+ *     <td><tt>unsigned int</tt></td>
+ *   </tr>
+ *   <tr>
+ *     <td>4</td>
+ *     <td><tt>unsigned int</tt></td>
+ *   </tr>
+ *   <tr>
+ *     <td>&gt; 4</td>
+ *     <td><tt>int64_t</tt></td>
+ *   </tr>
+ * </table>
+ *
+ * Note that the returned integral type cannot store <tt>T</tt> values, if <tt>T</tt> takes more than 8 bytes, since
+ * there exists no integral type that provides sufficient space to store types of this size.
+ *
+ * @see FiniteOrderedAlphabetConcept#ValueSize
+ * @see AlphabetConcept#BitsPerValue
+ * @see BytesPerValue
+ */
 
 template <int SIZE>
 struct IntegralForValueImpl_
 {
-    typedef __int64 Type;
+    typedef int64_t Type;
 };
 
-// TODO(holtgrew): Switch to __uint8, __uint16, __uint32?
+// TODO(holtgrew): Switch to uint8_t, uint16_t, uint32_t?
 template <>
 struct IntegralForValueImpl_<1>
 {
@@ -236,7 +263,7 @@ template <typename TValue>
 inline typename ValueSize<TValue>::Type
 ordValue(TValue const & c)
 {
-	return convert<unsigned>(static_cast<typename MakeUnsigned_<TValue>::Type const &>(c));
+    return convert<unsigned>(static_cast<typename MakeUnsigned_<TValue>::Type const &>(c));
 }
 
 // The internal ord value is used for alphabets with piggyback qualities.
@@ -245,7 +272,7 @@ template <typename TValue>
 inline typename ValueSize<TValue>::Type
 _internalOrdValue(TValue const & c)
 {
-	return ordValue(c);
+    return ordValue(c);
 }
 
 // ----------------------------------------------------------------------------
@@ -261,4 +288,4 @@ valueSize()
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_ALPHABET_STORAGE_H_

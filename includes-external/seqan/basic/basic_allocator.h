@@ -1,7 +1,7 @@
 // ==========================================================================
 //                             basic_allocator.h
 // ==========================================================================
-// Copyright (c) 2006-2013, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@
 // Facade header for basic/allocator submodule.
 // ==========================================================================
 
-#ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
-#define SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
+#ifndef SEQAN_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
+#define SEQAN_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
 
 // --------------------------------------------------------------------------
 // Dependencies
@@ -44,6 +44,7 @@
 #include <seqan/platform.h>
 #include <seqan/basic/basic_fundamental.h>
 #include <seqan/basic/basic_smart_pointer.h>
+#include <seqan/basic/basic_simd_vector.h>
 
 // --------------------------------------------------------------------------
 // Sub Module Headers
@@ -61,4 +62,4 @@
 // Adaption from SeqAn allocator to STL allocator.
 #include <seqan/basic/allocator_to_std.h>
 
-#endif  // #ifndef SEQAN_CORE_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
+#endif  // #ifndef SEQAN_INCLUDE_SEQAN_BASIC_BASIC_ALLOCATOR_H_
