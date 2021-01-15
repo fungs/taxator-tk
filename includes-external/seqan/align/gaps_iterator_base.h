@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -449,7 +449,7 @@ container(Iter<TGaps, GapsIterator<TSpec> > const & me)
 
 // Returns host iterator.
 
-// TODO(holtgrew): Non-const version is superflous.
+// TODO(holtgrew): Non-const version is superfluous.
 template <typename TGaps, typename TSpec>
 inline typename Source<Iter<TGaps, GapsIterator<TSpec> > >::Type /*returns copy*/
 source(Iter<TGaps, GapsIterator<TSpec> > & it)

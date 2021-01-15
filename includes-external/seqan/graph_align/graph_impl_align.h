@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -662,6 +662,18 @@ getAdjacencyMatrix(Graph<Alignment<TStringSet, TCargo, TSpec> > const& g,
                    TMatrix& mat)
 {
     getAdjacencyMatrix(g.data_align, mat);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename TVector, typename TStringSet, typename TCargo, typename TSpec, typename TVertex>
+inline void
+getVertexAdjacencyVector(TVector & vectIn,
+                         TVector & vectOut,
+                         Graph<Alignment<TStringSet, TCargo, TSpec> > const & g,
+                         TVertex const & vertex)
+{
+    getVertexAdjacencyVector(vectIn, vectOut, g.data_align, vertex);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1935,7 +1947,7 @@ heaviestCommonSubsequence(Graph<Alignment<TStringSet, TCargo, TSpec> > const& g,
     // Remember for each vertex descriptor the position in the sequence
     typedef String<TSize> TMapVertexPos;
     TMapVertexPos map;
-    resize(map, getIdUpperBound(_getVertexIdManager(g)), MaxValue<TSize>::VALUE);
+    resize(map, getIdUpperBound(_getVertexIdManager(g)), std::numeric_limits<TSize>::max());
     typedef typename Iterator<TString const, Standard>::Type TStringIterConst;
     typedef typename Iterator<TVertexSet const, Standard>::Type TVertexSetIterConst;
     TStringIterConst itStr1 = begin(str1, Standard());
@@ -1966,7 +1978,7 @@ heaviestCommonSubsequence(Graph<Alignment<TStringSet, TCargo, TSpec> > const& g,
             for(;!atEnd(itOut); ++itOut) {
                 // Target vertex must be in the map
                 pPos = map[targetVertex(itOut)];
-                if (pPos != MaxValue<TSize>::VALUE)
+                if (pPos != std::numeric_limits<TSize>::max())
                     appendValue(occupiedPositions, pPos * n + (TSize) (n - posItStr2 - 1), Generous());
             }
         }
@@ -1977,7 +1989,7 @@ heaviestCommonSubsequence(Graph<Alignment<TStringSet, TCargo, TSpec> > const& g,
     typedef typename Iterator<TSlotToPos, Standard>::Type TSlotToPosIter;
     TSlotToPos slotToPos;
     TSize counter = 0;
-    TSize oldVal = MaxValue<TSize>::VALUE;
+    TSize oldVal = std::numeric_limits<TSize>::max();
     TOccIter occIt = begin(occupiedPositions, Standard());
     TOccIter occItEnd = end(occupiedPositions, Standard());
     for(;occIt != occItEnd; ++occIt) {
@@ -2003,7 +2015,7 @@ heaviestCommonSubsequence(Graph<Alignment<TStringSet, TCargo, TSpec> > const& g,
             for(;!atEnd(itOut); ++itOut) {
                 // Target vertex must be in the map
                 pPos = map[targetVertex(itOut)];
-                if ( pPos != MaxValue<TSize>::VALUE)
+                if ( pPos != std::numeric_limits<TSize>::max())
                     weights[std::distance(begin(slotToPos, Standard()), std::lower_bound(begin(slotToPos, Standard()), end(slotToPos, Standard()), pPos * n + (TSize) (n - posItStr2 - 1)))] += (TCargo) cargo(*itOut);
             }
         }

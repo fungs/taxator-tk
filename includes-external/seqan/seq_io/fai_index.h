@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -104,7 +104,7 @@ clear(FaiIndexEntry_ &entry)
  * FAI indices allow the rast random access to sequences or parts of sequences in a FASTA file.  Originally, they were
  * introduced in the <a href="http://samtools.sourceforge.net/samtools.shtml">samtools</a> program.
  *
- * Also see the <a href="http://seqan.readthedocs.io/en/develop/Tutorial/IndexedFastaIO.html">Indexed FASTA I/O
+ * Also see the <a href="http://seqan.readthedocs.io/en/develop/Tutorial/InputOutput/IndexedFastaIO.html">Indexed FASTA I/O
  * Tutorial</a>.
  *
  * @section Example

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,7 @@ typedef Tag<ZipIterator_> ZipIterator;
  * @tparam TIteratorTypes A template parameter pack with one or more @link ContainerConcept#Iterator @endlink types.
  *
  * This iterator ties together different iterator types for different containers of the same size.
- * It allows to operate on a single iterator, if multiple containers need to be traversed simultaneously.
+ * It allows one to operate on a single iterator, if multiple containers need to be traversed simultaneously.
  * Note, that all operations are still executed in a serial fashion.
  * If the zip iterator is dereferenced it returns a <a href="http://en.cppreference.com/w/cpp/utility/tuple">std::tuple</a>
  * containing the dereferenced values of all embedded iterators. 

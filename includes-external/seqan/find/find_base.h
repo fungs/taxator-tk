@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -187,9 +187,9 @@ struct Needle<Segment<THost, TSpec> const>
  * @param[in]     k       Desired minimal score (for approximate matching).  <tt>k</tt> is a number <tt>&lt;= 0</tt>.
  *                        Differences are deletions, insertions, and substitutions.
  *
- * @return bool <tt>true</tt> if an occurence was found and <tt>false</tt> if not.
+ * @return bool <tt>true</tt> if an occurrence was found and <tt>false</tt> if not.
  *
- * Repeated calls of this function iterate through all occurences of <tt>pattern</tt>.
+ * Repeated calls of this function iterate through all occurrences of <tt>pattern</tt>.
  *
  * @section Examples
  *

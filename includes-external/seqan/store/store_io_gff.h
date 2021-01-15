@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -146,14 +146,16 @@ _readOneAnnotation(
         if (ctx._key == "Parent" || ctx._key == "ParentID")
         {
             ctx.parentKey = ctx._key;
-            ctx.parentName = ctx._value;
+            auto it = begin(ctx._value);
+            readUntil(ctx.parentName, it, EqualsChar<','>());
         }
         else if (ctx._key == "transcript_id")
         {
             if (isEqual(format, Gtf()))
             {
                 ctx.parentKey = ctx._key;
-                ctx.parentName = ctx._value;
+                auto it = begin(ctx._value);
+                readUntil(ctx.parentName, it, EqualsChar<','>());
             }
             else
             {

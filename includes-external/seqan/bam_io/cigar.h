@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -145,18 +145,19 @@ inline bool operator==(CigarElement<TOperation, TCount> const & lhs,
 // ----------------------------------------------------------------------------
 
 template <typename TOperation, typename TCount>
+[[deprecated("The behavior is not clear. This function should not be used anymore.")]]
 uint32_t toBamCigarElement(CigarElement<TOperation, TCount> const & cigarElement)
 {
     char operation = 0;
     switch (cigarElement.operation) {
-        case 'X': operation += 1;
-        case '=': operation += 1;
-        case 'P': operation += 1;
-        case 'H': operation += 1;
-        case 'S': operation += 1;
-        case 'N': operation += 1;
-        case 'D': operation += 1;
-        case 'I': operation += 1;
+        case 'X': operation += 1; SEQAN_FALLTHROUGH
+        case '=': operation += 1; SEQAN_FALLTHROUGH
+        case 'P': operation += 1; SEQAN_FALLTHROUGH
+        case 'H': operation += 1; SEQAN_FALLTHROUGH
+        case 'S': operation += 1; SEQAN_FALLTHROUGH
+        case 'N': operation += 1; SEQAN_FALLTHROUGH
+        case 'D': operation += 1; SEQAN_FALLTHROUGH
+        case 'I': operation += 1; SEQAN_FALLTHROUGH
         case 'M': break;
     }
     return (cigarElement.count << 4) | operation;
@@ -648,6 +649,7 @@ unsigned cigarToGapAnchorRead(TGaps & gaps, TCigarString const & cigar)
                 if (atBegin)
                     beginGaps += cigar[i].count;
                 insertGaps(it, cigar[i].count);
+                SEQAN_FALLTHROUGH
             case 'I':
             case 'M':
             case 'S':
@@ -677,6 +679,7 @@ unsigned cigarToGapAnchorContig(TGaps & gaps, TCigarString const & cigar)
                 if (atBegin)
                     beginGaps += cigar[i].count;
                 insertGaps(it, cigar[i].count);
+                SEQAN_FALLTHROUGH
             case 'D':
             case 'M':
             case 'N':

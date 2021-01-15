@@ -1,7 +1,7 @@
 // ==========================================================================
 //                             basic_allocator.h
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,6 @@
 #include <seqan/platform.h>
 #include <seqan/basic/basic_fundamental.h>
 #include <seqan/basic/basic_smart_pointer.h>
-#include <seqan/basic/basic_simd_vector.h>
 
 // --------------------------------------------------------------------------
 // Sub Module Headers

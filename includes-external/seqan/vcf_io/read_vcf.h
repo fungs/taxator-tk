@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -64,21 +64,38 @@ typedef Tag<Vcf_> Vcf;
 // Function readRecord()                                            [VcfHeader]
 // ----------------------------------------------------------------------------
 
+template <typename TNameStore, typename TNameStoreCache, typename TStorageSpec, typename TString>
 inline void
-_parseVcfContig(CharString & chromName, CharString const & headerValue)
+_readVcfContig(VcfIOContext<TNameStore, TNameStoreCache, TStorageSpec> & context, TString const & headerValue)
 {
-    if (length(headerValue) < 3u)
-        return;
+    typedef OrFunctor<EqualsChar<','>, EqualsChar<'>'> >            IsCommaOrGt;
+    typedef typename DirectionIterator<TString const, Input>::Type  TIter;
 
-    CharString tmp = infix(headerValue, 1, length(headerValue) - 2);
-    StringSet<CharString> tmp2;
-    strSplit(tmp2, tmp, EqualsChar<','>());
-    for (unsigned i = 0; i < length(tmp2); ++i)
+    TIter headerIter = directionIterator(headerValue, Input());
+    CharString &buffer = context.buffer;
+
+    skipOne(headerIter, EqualsChar<'<'>());
+
+    // Seek contig ID key.
+    while (!atEnd(headerIter))
     {
-        if (!startsWith(tmp2[i], "ID="))
-            continue;
-        chromName = suffix(tmp2[i], 3);
+        clear(buffer);
+        readUntil(buffer, headerIter, EqualsChar<'='>());
+        if (buffer == "ID") break;
+        skipUntil(headerIter, IsCommaOrGt());
+        skipOne(headerIter);
     }
+
+    if (atEnd(headerIter))
+        SEQAN_THROW(ParseError("Contig ID key not found in header."));
+
+    // Read contig ID value.
+    clear(buffer);
+    skipOne(headerIter, EqualsChar<'='>());
+    readUntil(buffer, headerIter, IsCommaOrGt());
+    if (empty(buffer))
+        SEQAN_THROW(ParseError("Contig ID value not found in header."));
+    appendName(contigNamesCache(context), buffer);
 }
 
 template <typename TForwardIter, typename TNameStore, typename TNameStoreCache, typename TStorageSpec>
@@ -89,7 +106,7 @@ readHeader(VcfHeader & header,
            Vcf const & /*tag*/)
 {
     clear(header);
-    CharString buffer;
+    CharString &buffer = context.buffer;
     VcfHeaderRecord record;
 
     while (!atEnd(iter) && value(iter) == '#')
@@ -115,27 +132,28 @@ readHeader(VcfHeader & header,
 
             // Parse out name if headerRecord is a contig field.
             if (record.key == "contig")
-            {
-                _parseVcfContig(buffer, record.value);
-                appendName(contigNamesCache(context), buffer);
-            }
+                _readVcfContig(context, record.value);
         }
         else
         {
             // Is line "#CHROM\t...".
             readLine(buffer, iter);
             if (!startsWith(buffer, "CHROM"))
-                ParseError("Invalid line with samples.");
+                SEQAN_THROW(ParseError("Invalid line with samples."));
 
             // Split line, get sample names.
             StringSet<CharString> fields;
             strSplit(fields, buffer, IsTab());
-            if (length(fields) < 9u)
-                ParseError("Not enough fields.");
+            if (length(fields) < 8u)
+                SEQAN_THROW(ParseError("Not enough fields."));
 
             // Get sample names.
-            for (unsigned i = 9; i < length(fields); ++i)
+            for (unsigned i = 8; i < length(fields); ++i)
+            {
+                if(i == 8 && fields[i] == "FORMAT")
+                    continue;
                 appendName(sampleNamesCache(context), fields[i]);
+            }
         }
     }
 }
@@ -152,109 +170,51 @@ readRecord(VcfRecord & record,
            TForwardIter & iter,
            Vcf const & /*tag*/)
 {
-    typedef OrFunctor<IsTab, AssertFunctor<NotFunctor<IsNewline>, ParseError, Vcf> > NextEntry;
-
     clear(record);
     CharString &buffer = context.buffer;
 
-    // CHROM
+    // get the next line on the buffer.
     clear(buffer);
-    readUntil(buffer, iter, NextEntry());
-    if (empty(buffer))
-        SEQAN_THROW(EmptyFieldError("CHROM"));
-    record.rID = nameToId(contigNamesCache(context), buffer);
-    skipOne(iter);
 
-    // POS
-    clear(buffer);
-    readUntil(buffer, iter, NextEntry());
-    if (empty(buffer))
-        SEQAN_THROW(EmptyFieldError("POS"));
-    record.beginPos = lexicalCast<int32_t>(buffer) - 1; // Translate from 1-based to 0-based.
-    skipOne(iter);
+    readLine(buffer, iter);
+    // Split line, get field and sample values.
+    // The first 8(9) columns are fields and the rest are values for samples
+    //"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT")
+    StringSet<CharString> field_values;
+    strSplit(field_values, buffer, IsTab(), false);
 
-    // ID
-    readUntil(record.id, iter, NextEntry());
-    if (empty(record.id))
-        SEQAN_THROW(EmptyFieldError("ID"));
-    skipOne(iter);
+    unsigned numSamples = length(sampleNames(context));
 
-    // REF
-    readUntil(record.ref, iter, NextEntry());
-    if (empty(record.id))
-        SEQAN_THROW(EmptyFieldError("REF"));
-    skipOne(iter);
+    if (length(field_values) < 8u + numSamples)
+        SEQAN_THROW(ParseError("Not enough values in a line."));
 
-    // ALT
-    readUntil(record.alt, iter, NextEntry());
-    if (empty(record.id))
-        SEQAN_THROW(EmptyFieldError("ALT"));
-    skipOne(iter);
+    record.rID      = nameToId(contigNamesCache(context), field_values[0]);
+    record.beginPos = lexicalCast<int32_t>(field_values[1]) - 1; // Translate from 1-based to 0-based.
+    record.id       = field_values[2];
+    record.ref      = field_values[3];
+    record.alt      = field_values[4];
 
-    // QUAL
-    clear(buffer);
-    readUntil(buffer, iter, NextEntry());
-    if (empty(buffer))
-        SEQAN_THROW(EmptyFieldError("QUAL"));
-
-    if (buffer == ".")
+    if (field_values[5] == ".")
         record.qual = VcfRecord::MISSING_QUAL();
     else
-        lexicalCastWithException(record.qual, buffer);
+        lexicalCastWithException(record.qual, field_values[5]);
 
-    skipOne(iter);
+    record.filter   = field_values[6];
+    record.info     = field_values[7];
 
-    // FILTER
-    readUntil(record.filter, iter, NextEntry());
-    if (empty(record.filter))
-        SEQAN_THROW(EmptyFieldError("FILTER"));
-    skipOne(iter);
-
-    // INFO
-    readUntil(record.info, iter, OrFunctor<IsTab, IsNewline>());
-    if (empty(record.info))
-        SEQAN_THROW(EmptyFieldError("INFO"));
-
-    // the following columns are optional
-    if (atEnd(iter) || IsNewline()(value(iter)))
+    //check if we have a spare column for FORMAT
+    unsigned samplesColStart = 8;
+    if (length(field_values) > 8u + numSamples) // we have extara column for FORMAT
     {
-        skipLine(iter);
-        return;
-    }
-    skipOne(iter);
-
-    // FORMAT
-    readUntil(record.format, iter, NextEntry());
-    if (empty(record.format))
-        SEQAN_THROW(EmptyFieldError("FORMAT"));
-    skipOne(iter);
-
-    // The samples.
-    unsigned numSamples = length(sampleNames(context));
-    for (unsigned i = 0; i < numSamples; ++i)
-    {
-        clear(buffer);
-        if (i + 1 != numSamples)
-        {
-            readUntil(buffer, iter, NextEntry());
-            skipOne(iter);
-        }
-        else
-        {
-            readUntil(buffer, iter, OrFunctor<IsTab, IsNewline>());
-        }
-
-        if (empty(buffer))
-        {
-            char buffer[30];    // == 9 (GENOTYPE_) + 20 (#digits in MIN_INT64) + 1 (trailing zero)
-            snprintf(buffer, 30, "GENOTYPE_%u", i + 1);
-            SEQAN_THROW(EmptyFieldError(buffer));
-        }
-        appendValue(record.genotypeInfos, buffer);
+        record.format = field_values[8];
+        samplesColStart = 9;
     }
 
-    // skip line break and optional additional columns
-    skipLine(iter);
+    // Get sample name values .
+    for (unsigned i = samplesColStart; i < length(field_values); ++i)
+    {
+        appendValue(record.genotypeInfos, field_values[i]);
+    }
 }
 
 }  // namespace seqan

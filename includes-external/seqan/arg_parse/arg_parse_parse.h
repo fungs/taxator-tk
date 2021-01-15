@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include <seqan/arg_parse/arg_parse_option.h>
 #include <seqan/arg_parse/argument_parser.h>
 #include <seqan/arg_parse/arg_parse_ctd_support.h>
+#include <seqan/arg_parse/arg_parse_version_check.h>
 
 namespace seqan {
 
@@ -190,9 +191,9 @@ private:
             // If everything is fine then we can assign the value to the option.
             _assignArgumentValue(opt, val);
         }
-        else if (isBooleanOption(opt))
+        else if (isFlagOption(opt))
         {
-            // Handling boolean options is simple.
+            // Handling flag options is simple.
             _assignArgumentValue(opt, "true");
         }
         else
@@ -228,8 +229,8 @@ private:
                     ArgParseOption & opt = getOption(parser, arg.substr(s, e - s));
                     s = --e;  // advance in squished options;  s > e if at end
 
-                    // Boolean options are easy to handle.
-                    if (isBooleanOption(opt))
+                    // Flag options are easy to handle.
+                    if (isFlagOption(opt))
                     {
                         _assignArgumentValue(opt, "true");
                         continue;
@@ -306,6 +307,22 @@ ArgumentParser::ParseResult parse(ArgumentParser & me,
         errorStream << getAppName(me) << ": " << ex.what() << std::endl;
         return ArgumentParser::PARSE_ERROR;
     }
+
+#ifndef SEQAN_DISABLE_VERSION_CHECK
+    // do version check if not turned off by the user
+    bool check_version = false;
+    getOptionValue(check_version, me, "version-check");
+
+    if (check_version)
+    {
+        VersionCheck app_version(toCString(me._toolDoc._name),
+                                 toCString(me._toolDoc._version),
+                                 errorStream);
+        std::promise<bool> appVersionProm;
+        me.appVersionCheckFuture = appVersionProm.get_future();
+        app_version(std::move(appVersionProm));
+    }
+#endif  // !SEQAN_DISABLE_VERSION_CHECK
 
     // Handle the special options.
     if (hasOption(me, "version") && isSet(me, "version"))

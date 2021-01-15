@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -685,6 +685,56 @@ getAdjacencyMatrix(Graph<Undirected<TCargo, TSpec> > const& g,
             }
         }
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename TVector, typename TCargo, typename TSpec, typename TVertex>
+inline void
+getVertexAdjacencyVector(TVector & vectOut,
+                         Graph<Undirected<TCargo, TSpec> > const & g,
+                         TVertex const & vertex)
+{
+    typedef Graph<Undirected<TCargo, TSpec> > TGraph;
+    typedef typename Size<TGraph>::Type TGraphSize;
+    typedef typename VertexDescriptor<TGraph>::Type TVertexDescriptor;
+    typedef typename EdgeType<TGraph>::Type TEdgeStump;
+    typedef typename Size<TVector>::Type TSize;
+    typedef typename Value<TVector>::Type TMatValue;
+
+    TSize lenVectOut = outDegree(g, vertex);
+    clear(vectOut);
+    resize(vectOut, lenVectOut, 0);
+    TSize count=0;
+    TEdgeStump * currentOut = g.data_vertex[vertex];
+    while(currentOut!=0)
+    {
+        TVertexDescriptor target = targetVertex(g, currentOut);
+        if (target == vertex)
+        {
+            currentOut = getNextT(currentOut);
+        } else
+        {
+            vectOut[count] = static_cast<TMatValue>(static_cast<TGraphSize>(vectOut[count]) + target);
+            currentOut = getNextS(currentOut);
+        }
+        ++count;
+    }
+}
+
+template<typename TVector, typename TCargo, typename TSpec, typename TVertex>
+inline void
+getVertexAdjacencyVector(TVector & vectIn,
+                         TVector & vectOut,
+                         Graph<Undirected<TCargo, TSpec> > const & g,
+                         TVertex const & vertex)
+{
+    // vectIn and vectOut are equal for undirected graphs
+    getVertexAdjacencyVector(vectOut, g, vertex);
+    clear(vectIn);
+    resize(vectIn, length(vectOut), 0);
+    for(unsigned i = 0; i < length(vectOut); ++i)
+        vectIn[i] = vectOut[i];
 }
 
 //////////////////////////////////////////////////////////////////////////////

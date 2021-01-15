@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -269,6 +269,7 @@ namespace seqan
         Finder<Index<TText, TSpec>, TSpecFinder> &finder,
         TPattern const &pattern)
     {
+        static_assert(Is<ContainerConcept<TPattern> >::VALUE || Is<ContainerConcept<typename Container<TPattern>::Type > >::VALUE, "find(): needle has to implement ContainerConcept (e.g. use DnaString instead of Dna).");
         if (empty(finder))
         {
             _findFirstIndex(finder, needle(pattern), TSpecFinder());

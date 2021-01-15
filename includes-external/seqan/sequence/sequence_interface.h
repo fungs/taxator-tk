@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -1101,7 +1101,7 @@ _capacityReturned(T const &,
  * @return TSize The amount of the requested capacity that was available.  That is the function returns the minimum of
  *               <tt>newCapacity</tt> and <tt>capacity(me)</tt>.
  *
- * This function allows to increase the capacity but not the length of a container.
+ * This function allows one to increase the capacity but not the length of a container.
  *
  * Use @link StringConcept#resize @endlink if you want to change the size of a container.
  *

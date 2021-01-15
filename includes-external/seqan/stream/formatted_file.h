@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -365,6 +365,30 @@ struct FormattedFile
 // ============================================================================
 
 // ----------------------------------------------------------------------------
+// Metafunction IsInputFile
+// ----------------------------------------------------------------------------
+
+template <typename T>
+struct IsInputFile : False
+{};
+
+template <typename TFormat, typename TSpec>
+struct IsInputFile<FormattedFile<TFormat, Input, TSpec> > : True
+{};
+
+// ----------------------------------------------------------------------------
+// Metafunction IsOutputFile
+// ----------------------------------------------------------------------------
+
+template <typename T>
+struct IsOutputFile : False
+{};
+
+template <typename TFormat, typename TSpec>
+struct IsOutputFile<FormattedFile<TFormat, Output, TSpec> > : True
+{};
+
+// ----------------------------------------------------------------------------
 // Metafunction DirectionIterator
 // ----------------------------------------------------------------------------
 
@@ -713,6 +737,26 @@ inline bool open(FormattedFile<TFileFormat, TDirection, TSpec> & file,
                  int openMode = DefaultOpenMode<FormattedFile<TFileFormat, TDirection, TSpec> >::VALUE)
 {
     return _open(file, fileName, openMode, False());
+}
+
+// ----------------------------------------------------------------------------
+// Function isOpen()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn FormattedFile#isOpen
+ * @brief Determines whether a FormattedFile is currently open.
+ *
+ * @signature bool isOpen(file);
+ *
+ * @param[in]     file The FormattedFile to check.
+ * @return bool <tt>true</tt> if file is currently open, <tt>false</tt> otherwise.
+ */
+
+template <typename TFileFormat, typename TDirection, typename TSpec>
+inline bool isOpen(FormattedFile<TFileFormat, TDirection, TSpec> const & file)
+{
+    return file.stream.file.is_open();
 }
 
 // ----------------------------------------------------------------------------

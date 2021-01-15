@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 // ==========================================================================
 // (Read-only) Tabix index support.
 //
-// A Tabix index (Heng Li) allows to randomly seek in a tab-seperated genome
+// A Tabix index (Heng Li) allows one to randomly seek in a tab-seperated genome
 // related file, e.g. VCF, GFF, SAM, BED, etc. The corresponding file only
 // needs to be sorted by chromosomal position in advance and optionally
 // compressed with 'bgzip'. The resulting file must be indexed with 'tabix'.
@@ -134,7 +134,7 @@ public:
         colEnd(3),
         meta('#'),
         skip(0),
-        unalignedCount(maxValue<uint64_t>()),
+        unalignedCount(std::numeric_limits<uint64_t>::max()),
         _nameStoreCache(_nameStore)
     {}
 
@@ -145,7 +145,7 @@ public:
         colEnd(3),
         meta('#'),
         skip(0),
-        unalignedCount(maxValue<uint64_t>()),
+        unalignedCount(std::numeric_limits<uint64_t>::max()),
         _nameStoreCache(_nameStore)
     {
         if (!open(*this, fileName))
@@ -281,7 +281,7 @@ jumpToRegion(FormattedFile<TFileFormat, Input, TSpec> & fileIn,
     // ------------------------------------------------------------------------
     // Compute offset in BGZF file.
     // ------------------------------------------------------------------------
-    uint64_t offset = MaxValue<uint64_t>::VALUE;
+    uint64_t offset = std::numeric_limits<uint64_t>::max();
 
     // Retrieve the candidate bin identifiers for [posBeg, posEnd).
     String<uint16_t> candidateBins;
@@ -377,7 +377,7 @@ jumpToRegion(FormattedFile<TFileFormat, Input, TSpec> & fileIn,
             break;  // Cannot find overlapping any more.
     }
 
-    if (offset != MaxValue<uint64_t>::VALUE)
+    if (offset != std::numeric_limits<uint64_t>::max())
     {
         setPosition(fileIn, offset);
         
@@ -469,6 +469,9 @@ open(TabixIndex & index, char const * filename)
     CharString tmp;
     readRawPod(lNm, iter);
     read(tmp, iter, lNm);
+    // Trim last terminating '\0's as they confuse strSplit() below
+    while (!empty(tmp) && back(tmp) == '\0')
+        resize(tmp, length(tmp) - 1);
 
     // Split concatenated names at \0's.
     clear(index._nameStore);
@@ -519,7 +522,7 @@ open(TabixIndex & index, char const * filename)
     if (!atEnd(iter))
         readRawPod(index.unalignedCount, iter);
     else
-        index.unalignedCount = maxValue<uint64_t>();
+        index.unalignedCount = std::numeric_limits<uint64_t>::max();
 
     return true;
 }

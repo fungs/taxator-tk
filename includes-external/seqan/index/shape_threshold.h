@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
@@ -699,6 +699,7 @@ void initPatterns(
 
                 case SEQAN_DELETE:
                     ++del;
+                    SEQAN_FALLTHROUGH
 
                 case SEQAN_INSERT:
                     ++err;
@@ -719,6 +720,7 @@ void initPatterns(
 
                 case SEQAN_DELETE:
                     ++del;
+                    SEQAN_FALLTHROUGH
 
                 case SEQAN_INSERT:
                     ++err;
@@ -839,7 +841,7 @@ void computeExactQGramThreshold(
     // columns n-1 and n for recursion
     TMatrixCol col0;    // addressing is colx[errors * statesCount + state]
     TMatrixCol col1;
-    const TThresh infty = MaxValue<TThresh>::VALUE >> 1;
+    const TThresh infty = std::numeric_limits<TThresh>::max() >> 1;
 
     resize(col0, maxErrors * statesCount, infty);
     resize(col1, maxErrors * statesCount);

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@
 #include <seqan/seq_io/fasta_fastq.h>
 #include <seqan/seq_io/read_embl.h>
 #include <seqan/seq_io/read_genbank.h>
+#include <seqan/seq_io/bam_sam.h>
 
 // ===========================================================================
 // Sequence File

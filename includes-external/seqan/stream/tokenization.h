@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -397,9 +397,29 @@ inline void readOne(TTarget & target, TFwdIterator &iter)
 
 //TODO(singer) to be revised
 template <typename TValue, typename TFwdIterator>
-inline void readRawPod(TValue & value, TFwdIterator &srcIter)
+inline void readRawPodImpl(TValue & value, TFwdIterator &srcIter)
 {
     write((char*)&value, srcIter, sizeof(TValue));
+}
+
+template <typename TValue, typename TFwdIterator>
+inline std::enable_if_t<std::is_arithmetic<TValue>::value>
+readRawPod(TValue & value, TFwdIterator &srcIter)
+{
+    readRawPodImpl(value, srcIter);
+    enforceLittleEndian(value);
+}
+
+template <typename TValue, typename TFwdIterator>
+inline std::enable_if_t<!std::is_arithmetic<TValue>::value>
+readRawPod(SEQAN_UNUSED TValue & value, SEQAN_UNUSED TFwdIterator &srcIter)
+{
+#if SEQAN_BIG_ENDIAN
+    static_assert(std::is_arithmetic<TValue>::value,
+                  "You are deserialising a data structure on big endian architecture that needs a custom reader. THIS IS A BUG!");
+#else
+    readRawPodImpl(value, srcIter);
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -469,7 +489,7 @@ inline void writeWrappedString(TTarget & target, TSequence const & seq, TSize li
     TIter iter = begin(seq, Rooted());
     TSeqSize charsLeft = length(seq);
     TSeqSize charsPerLine;
-    TSeqSize lineLength_ = (lineLength == 0)? maxValue<TSeqSize>() : lineLength;
+    TSeqSize lineLength_ = (lineLength == 0)? std::numeric_limits<TSeqSize>::max() : lineLength;
 
     do
     {
@@ -594,11 +614,11 @@ cropOuter(TContainer &cont, TFunctor const &func)
 
 /*!
  * @fn StringSet#strSplit
- * @brief Append a list of the words in the string, using sep as the delimiter string @link StringSet @endlink.
+ * @brief Split a sequence using a delimiter and append the results to a target string set
  *
  * @signature void strSplit(result, sequence[, sep[, allowEmptyStrings[, maxSplit]]]);
  *
- * @param[out] result           The resulting string set.
+ * @param[out] result           The resulting string set (can be any ContainerOfContainer, also STL)
  * @param[in]  sequence         The sequence to split.
  * @param[in]  sep              The splitter to use (default <tt>' '</tt>).
  * @param[in]  allowEmptyString Whether or not to allow empty strings (<tt>bool</tt>, defaults to <tt>true</tt> iff
@@ -606,11 +626,19 @@ cropOuter(TContainer &cont, TFunctor const &func)
  * @param[in]  maxSplit         The maximal number of split operations to do if given.
  */
 
-template <typename TString, typename TSpec, typename TSequence, typename TFunctor, typename TSize>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TFunctor const &sep, bool allowEmptyStrings, TSize maxSplit)
+template <typename TResult, typename TSequence, typename TFunctor, typename TSize>
+inline SEQAN_FUNC_ENABLE_IF(And<Is<ContainerConcept<TResult> >,
+                                Is<ContainerConcept<typename Value<TResult>::Type > > >, void)
+strSplit(TResult & result,
+         TSequence const & sequence,
+         TFunctor const & sep,
+         bool const allowEmptyStrings,
+         TSize maxSplit)
 {
     typedef typename Iterator<TSequence const, Standard>::Type TIter;
+    typedef std::conditional_t<Is<StlContainerConcept<TResult>>::VALUE,
+                               TSequence,
+                               decltype(infix(sequence, 0, 1))> TResultValue;
 
     TIter itBeg = begin(sequence, Standard());
     TIter itEnd = end(sequence, Standard());
@@ -623,23 +651,23 @@ strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TFunctor
     }
 
     for (TIter it = itBeg; it != itEnd; ++it)
-        if (sep(getValue(it)))
+        if (sep(*it))
         {
             if (allowEmptyStrings || itFrom != it)
             {
-                appendValue(result, infix(sequence, itFrom - itBeg, it - itBeg));
+                appendValue(result, static_cast<TResultValue>(infix(sequence, itFrom - itBeg, it - itBeg)));
                 if (--maxSplit == 0)
                 {
                     if (!allowEmptyStrings)
                     {
-                        while (it != itEnd && sep(getValue(it)))
+                        while (it != itEnd && sep(*it))
                             ++it;
                     }
                     else
                         ++it;
 
                     if (it != itEnd)
-                        appendValue(result, infix(sequence, it - itBeg, itEnd - itBeg));
+                        appendValue(result, static_cast<TResultValue>(infix(sequence, itFrom - itBeg, it - itBeg)));
 
                     return;
                 }
@@ -648,26 +676,29 @@ strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TFunctor
         }
 
     if (allowEmptyStrings || itFrom != itEnd)
-        appendValue(result, infix(sequence, itFrom - itBeg, itEnd - itBeg));
+        appendValue(result, static_cast<TResultValue>(infix(sequence, itFrom - itBeg, itEnd - itBeg)));
 }
 
-template <typename TString, typename TSpec, typename TSequence, typename TFunctor>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TFunctor const &sep, bool allowEmptyStrings)
+template <typename TResult, typename TSequence, typename TFunctor>
+inline SEQAN_FUNC_ENABLE_IF(And<Is<ContainerConcept<TResult> >,
+                                Is<ContainerConcept<typename Value<TResult>::Type > > >, void)
+strSplit(TResult & result, TSequence const & sequence, TFunctor const & sep, bool const allowEmptyStrings)
 {
-    strSplit(result, sequence, sep, allowEmptyStrings, maxValue<typename Size<TSequence>::Type>());
+    strSplit(result, sequence, sep, allowEmptyStrings, std::numeric_limits<typename Size<TSequence>::Type>::max());
 }
 
-template <typename TString, typename TSpec, typename TSequence, typename TFunctor>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence, TFunctor const &sep)
+template <typename TResult, typename TSequence, typename TFunctor>
+inline SEQAN_FUNC_ENABLE_IF(And<Is<ContainerConcept<TResult> >,
+                                Is<ContainerConcept<typename Value<TResult>::Type > > >, void)
+strSplit(TResult & result, TSequence const & sequence, TFunctor const & sep)
 {
     strSplit(result, sequence, sep, true);
 }
 
-template <typename TString, typename TSpec, typename TSequence>
-inline void
-strSplit(StringSet<TString, TSpec> & result, TSequence const &sequence)
+template <typename TResult, typename TSequence>
+inline SEQAN_FUNC_ENABLE_IF(And<Is<ContainerConcept<TResult> >,
+                                Is<ContainerConcept<typename Value<TResult>::Type > > >, void)
+strSplit(TResult & result, TSequence const & sequence)
 {
     strSplit(result, sequence, EqualsChar<' '>(), false);
 }

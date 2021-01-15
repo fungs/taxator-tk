@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -484,7 +484,7 @@ goFurther(Iter<TGaps, GapsIterator<ArrayGaps> > & it,
 // Function atBegin()
 // ----------------------------------------------------------------------------
 
-// TODO(holtgrew): Non-const version is superflous :(
+// TODO(holtgrew): Non-const version is superfluous :(
 template <typename TGaps>
 inline bool
 atBegin(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
@@ -503,7 +503,7 @@ atBegin(Iter<TGaps, GapsIterator<ArrayGaps> > & it)
 // Function atEnd()
 // ----------------------------------------------------------------------------
 
-// TODO(holtgrew): Non-const version is superflous :(
+// TODO(holtgrew): Non-const version is superfluous :(
 template <typename TGaps>
 inline bool
 atEnd(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)

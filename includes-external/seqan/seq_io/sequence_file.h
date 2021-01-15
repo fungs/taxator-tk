@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -88,21 +88,29 @@ typedef
     TagList<Fasta,
     TagList<Embl,
     TagList<GenBank,
-    TagList<Raw
-    > > > > >
+    TagList<Raw,
+    TagList<Sam
+#if SEQAN_HAS_ZLIB
+    , TagList<Bam>
+#endif
+    > > > > > >
     SeqInFormats;
 
 typedef
     TagList<Fastq,
     TagList<Fasta,
-    TagList<Raw
-    > > >
+    TagList<Raw,
+    TagList<Sam
+#if SEQAN_HAS_ZLIB
+    , TagList<Bam>
+#endif
+    > > > >
     SeqOutFormats;
 
 typedef TagSelector<SeqInFormats>   SeqInFormat;
 typedef TagSelector<SeqOutFormats>  SeqOutFormat;
 
-// deprecated
+[[deprecated]]
 typedef SeqInFormat AutoSeqFormat;
 
 // ============================================================================
@@ -132,14 +140,19 @@ struct SeqFileContext_;
 template <>
 struct SeqFileContext_<Input>
 {
-    Tuple<CharString, 3>    buffer;
-    Dna5QString             hybrid;
+    Tuple<CharString, 3>                    buffer;
+    Dna5QString                             hybrid;
+    CharString                              prevId;
+    bool                                    headerWasRead = false;
+    BamIOContext<StringSet<CharString> >    bamIOContext;
 };
 
 template <>
 struct SeqFileContext_<Output>
 {
-    SequenceOutputOptions   options;
+    SequenceOutputOptions                   options;
+    bool                                    headerWasWriten = false;
+    BamIOContext<StringSet<CharString> >    bamIOContext;
 };
 
 // ----------------------------------------------------------------------------
@@ -171,16 +184,87 @@ struct FileFormat<FormattedFile<Fastq, Output, TSpec> >
 // ============================================================================
 // Functions
 // ============================================================================
+// ----------------------------------------------------------------------------
+// Functions readRecord adapters (file -> file.iter)
+// ----------------------------------------------------------------------------
+template <typename TIdString, typename TSeqString, typename TQualString, typename TSpec, typename TagSpec>
+inline void
+readRecord(TIdString & meta,
+           TSeqString & seq,
+           TQualString & qual,
+           FormattedFile<Fastq, Input, TSpec> & file,
+           Tag<TagSpec>  const & /**/)
+{
+    readRecord(meta, seq, qual, file.iter, Tag<TagSpec>());
+}
+
+template <typename TIdString, typename TSeqString, typename TSpec, typename TagSpec>
+inline void
+readRecord(TIdString & meta, TSeqString & seq, FormattedFile<Fastq, Input, TSpec> & file, Tag<TagSpec> const & /**/)
+{
+    readRecord(meta, seq, file.iter, Tag<TagSpec>());
+}
 
 // ----------------------------------------------------------------------------
-// Function readRecord(); Qualities in seq string
+// Function readRecord(TagSelector); Without qualities
 // ----------------------------------------------------------------------------
+template <typename TIdString, typename TSeqString, typename TFile>
+inline void
+readRecord(TIdString & /* meta */,
+           TSeqString & /* seq */,
+           TFile & /* file */,
+           TagSelector<> const & /* format */)
+{}
+
+template <typename TIdString, typename TSeqString, typename TFile, typename TTagList>
+inline void
+readRecord(TIdString & meta,
+           TSeqString & seq,
+           TFile & file,
+           TagSelector<TTagList> const & format)
+{
+    typedef typename TTagList::Type TFormat;
+
+    if (isEqual(format, TFormat()))
+        readRecord(meta, seq, file, TFormat());
+    else
+        readRecord(meta, seq, file, static_cast<typename TagSelector<TTagList>::Base const & >(format));
+}
+
+// ----------------------------------------------------------------------------
+// Function readRecord(TagSelector); With qualities
+// ----------------------------------------------------------------------------
+
+template <typename TIdString, typename TSeqString, typename TQualString, typename TFile>
+inline void
+readRecord(TIdString & /* meta */,
+           TSeqString & /* seq */,
+           TQualString & /* qual */,
+           TFile & /* file */,
+           TagSelector<> const & /* format */)
+{}
+
+template <typename TIdString, typename TSeqString, typename TQualString, typename TFile, typename TTagList>
+inline void
+readRecord(TIdString & meta,
+           TSeqString & seq,
+           TQualString & qual,
+           TFile & file,
+           TagSelector<TTagList> const & format)
+{
+    typedef typename TTagList::Type TFormat;
+
+    if (isEqual(format, TFormat()))
+        readRecord(meta, seq, qual, file, TFormat());
+    else
+        readRecord(meta, seq, qual, file, static_cast<typename TagSelector<TTagList>::Base const & >(format));
+}
 
 /*!
  * @fn SeqFileIn#readRecord
  * @brief Read one @link FormattedFileRecordConcept @endlink from a @link SeqFileIn @endlink object.
  *
- * @signature void readRecord(meta, seq, qual, fileIn);
+ * @signature void readRecord(meta, seq[, qual], fileIn);
  *
  * @param[out] meta         The @link StringConcept @endlink object where to read the meta information into.
  * @param[out] seq          The @link StringConcept @endlink object where to read the sequence information into.
@@ -191,36 +275,25 @@ struct FileFormat<FormattedFile<Fastq, Output, TSpec> >
  * @throw ParseError On high-level file format errors.
  */
 
-template <typename TSpec, typename TIdString, typename TSeqString>
-inline SEQAN_FUNC_ENABLE_IF(And<Is<InputStreamConcept<typename FormattedFile<Fastq, Input, TSpec>::TStream> >,
-                                Not<HasQualities<typename Value<TSeqString>::Type> > >, void)
-readRecord(TIdString & meta, TSeqString & seq, FormattedFile<Fastq, Input, TSpec> & file)
-{
-    readRecord(meta, seq, file.iter, file.format);
-}
-
-// ----------------------------------------------------------------------------
-// Function readRecord(); No qualities in seq string
-// ----------------------------------------------------------------------------
-
-template <typename TSpec, typename TIdString, typename TSeqString>
-inline SEQAN_FUNC_ENABLE_IF(And<Is<InputStreamConcept<typename FormattedFile<Fastq, Input, TSpec>::TStream> >,
-                                HasQualities<typename Value<TSeqString>::Type> >, void)
-readRecord(TIdString & meta, TSeqString & seq, FormattedFile<Fastq, Input, TSpec> & file)
-{
-    readRecord(meta, seq, context(file).buffer[2], file.iter, file.format);
-    assignQualities(seq, context(file).buffer[2]);
-}
-
 // ----------------------------------------------------------------------------
 // Function readRecord(); With separate qualities
 // ----------------------------------------------------------------------------
-
 template <typename TSpec, typename TIdString, typename TSeqString, typename TQualString>
 inline SEQAN_FUNC_ENABLE_IF(Is<InputStreamConcept<typename FormattedFile<Fastq, Input, TSpec>::TStream> >, void)
 readRecord(TIdString & meta, TSeqString & seq, TQualString & qual, FormattedFile<Fastq, Input, TSpec> & file)
 {
-    readRecord(meta, seq, qual, file.iter, file.format);
+    readRecord(meta, seq, qual, file, file.format);
+}
+
+
+// ----------------------------------------------------------------------------
+// Function readRecord(); Without separate qualities or No qualities
+// ----------------------------------------------------------------------------
+template <typename TSpec, typename TIdString, typename TSeqString>
+inline SEQAN_FUNC_ENABLE_IF(Is<InputStreamConcept<typename FormattedFile<Fastq, Input, TSpec>::TStream> > , void)
+readRecord(TIdString & meta, TSeqString & seq, FormattedFile<Fastq, Input, TSpec> & file)
+{
+    readRecord(meta, seq, file, file.format);
 }
 
 // ----------------------------------------------------------------------------
@@ -236,9 +309,10 @@ readRecord(TIdString & meta, TSeqString & seq, TQualString & qual, FormattedFile
 
 template <typename TPtrA, typename TPtrB>
 inline void
-swapPtr(TPtrA &a, TPtrB &b)
+swapPtr(TPtrA & a, TPtrB & b)
 {
-    union {
+    union
+    {
         TPtrA a;
         TPtrB b;
     } tmp1, tmp2;
@@ -285,7 +359,7 @@ inline void readRecords(TIdStringSet & meta,
                         TSeqStringSet & seq,
                         FormattedFile<Fastq, Input, TSpec> & file)
 {
-    readRecords(meta, seq, file, MaxValue<uint64_t>::VALUE);
+    readRecords(meta, seq, file, std::numeric_limits<uint64_t>::max());
 }
 
 // ----------------------------------------------------------------------------
@@ -332,13 +406,36 @@ inline void readRecords(TIdStringSet & meta,
                         TQualStringSet & qual,
                         FormattedFile<Fastq, Input, TSpec> & file)
 {
-    readRecords(meta, seq, qual, file, MaxValue<uint64_t>::VALUE);
+    readRecords(meta, seq, qual, file, std::numeric_limits<uint64_t>::max());
 }
 
 // ----------------------------------------------------------------------------
-// Function writeRecord()
+// Function writeRecord adapters (file -> file.iter)
 // ----------------------------------------------------------------------------
+template <typename TSpec, typename TIdString, typename TSeqString, typename TQualString, typename TagSpec>
+inline void
+writeRecord(FormattedFile<Fastq, Output, TSpec> & file,
+            TIdString const & meta,
+            TSeqString const & seq,
+            TQualString const & qual,
+            Tag<TagSpec> const & /**/)
+{
+    writeRecord(file.iter, meta, seq, qual, Tag<TagSpec>(), context(file).options);
+}
 
+template <typename TSpec, typename TIdString, typename TSeqString, typename TagSpec>
+inline void
+writeRecord(FormattedFile<Fastq, Output, TSpec> & file,
+            TIdString const & meta,
+            TSeqString const & seq,
+            Tag<TagSpec> const & /**/)
+{
+    writeRecord(file.iter, meta, seq, Tag<TagSpec>(), context(file).options);
+}
+
+// ----------------------------------------------------------------------------
+// Function writeRecord(TagSelector); Without separate qualities
+// ----------------------------------------------------------------------------
 /*!
  * @fn SeqFileOut#writeRecord
  * @brief Write one @link FormattedFileRecordConcept @endlink into a @link SeqFileOut @endlink object.
@@ -354,27 +451,72 @@ inline void readRecords(TIdStringSet & meta,
  * @throw ParseError On high-level file format errors.
  */
 
+template <typename TFile, typename TIdString, typename TSeqString>
+inline void
+writeRecord(TFile & /* file */,
+            TIdString const & /* meta */,
+            TSeqString const & /* seq */,
+            TagSelector<> const & /* format */)
+{}
+
+template <typename TFile, typename TIdString, typename TSeqString, typename TTagList>
+inline void writeRecord(TFile & file,
+            TIdString const & meta,
+            TSeqString const & seq,
+            TagSelector<TTagList> const & format)
+{
+    typedef typename TTagList::Type TFormat;
+
+    if (isEqual(format, TFormat()))
+        writeRecord(file, meta, seq, TFormat());
+    else
+        writeRecord(file, meta, seq, static_cast<typename TagSelector<TTagList>::Base const & >(format));
+}
 template <typename TSpec, typename TIdString, typename TSeqString>
 inline SEQAN_FUNC_ENABLE_IF(Is<OutputStreamConcept<typename FormattedFile<Fastq, Output, TSpec>::TStream> >, void)
+writeRecord(FormattedFile<Fastq, Output, TSpec> & file, TIdString const & meta, TSeqString const & seq)
+{
+    writeRecord(file, meta, seq, file.format);
+}
+
+// ----------------------------------------------------------------------------
+// Function writeRecord(TagSelector); With separate qualities
+// ----------------------------------------------------------------------------
+
+template <typename TSpec, typename TIdString, typename TSeqString, typename TQualString>
+inline void
+writeRecord(FormattedFile<Fastq, Output, TSpec> & /* file */,
+            TIdString const & /* meta */,
+            TSeqString const & /* seq */,
+            TQualString const & /* qual */,
+            TagSelector<> const & /* format */)
+{}
+
+template <typename TSpec, typename TIdString, typename TSeqString, typename TQualString, typename TTagList>
+inline void
 writeRecord(FormattedFile<Fastq, Output, TSpec> & file,
             TIdString const & meta,
-            TSeqString const & seq)
+            TSeqString const & seq,
+            TQualString const & qual,
+            TagSelector<TTagList> const & format)
 {
-    writeRecord(file.iter, meta, seq, file.format, context(file).options);
+    typedef typename TTagList::Type TFormat;
+
+    if (isEqual(format, TFormat()))
+        writeRecord(file, meta, seq, qual, TFormat());
+    else
+        writeRecord(file, meta, seq, qual, static_cast<typename TagSelector<TTagList>::Base const & >(format));
 }
 
 // ----------------------------------------------------------------------------
 // Function writeRecord(); With separate qualities
 // ----------------------------------------------------------------------------
 
-template <typename TSpec, typename TIdString, typename TSeqString, typename TQualString>
-inline SEQAN_FUNC_ENABLE_IF(Is<OutputStreamConcept<typename FormattedFile<Fastq, Output, TSpec>::TStream> >, void)
-writeRecord(FormattedFile<Fastq, Output, TSpec> & file,
-            TIdString const & meta,
-            TSeqString const & seq,
-            TQualString const & qual)
+template <typename TFile, typename TIdString, typename TSeqString, typename TQualString>
+inline SEQAN_FUNC_ENABLE_IF(And<Is<OutputStreamConcept<typename TFile::TStream> >, IsSequence<TQualString> >, void)
+writeRecord(TFile & file, TIdString const & meta, TSeqString const & seq, TQualString const & qual)
 {
-    writeRecord(file.iter, meta, seq, qual, file.format, context(file).options);
+    writeRecord(file, meta, seq, qual, file.format);
 }
 
 // ----------------------------------------------------------------------------
@@ -387,30 +529,26 @@ writeRecord(FormattedFile<Fastq, Output, TSpec> & file,
  * @signature void writeRecords(fileOut, metas, seqs, quals);
  * @see SeqFileOut#writeRecord
  */
-
-template <typename TSpec, typename TIdStringSet, typename TSeqStringSet>
-inline void
-writeRecords(FormattedFile<Fastq, Output, TSpec> & file,
-             TIdStringSet const & meta,
-             TSeqStringSet const & seq)
+template <typename TFile, typename TIdStringSet, typename TSeqStringSet>
+inline void writeRecords(TFile & file, TIdStringSet const & meta, TSeqStringSet const & seq)
 {
+    // TODO(dadi:) change the function in a way that the tag despatching will be done only once.
+
     for (typename Size<TIdStringSet>::Type i = 0; i != length(seq); ++i)
-        writeRecord(file, meta[i], seq[i]);
+        writeRecord(file, meta[i], seq[i], file.format);
 }
 
 // ----------------------------------------------------------------------------
 // Function writeRecords(); With separate qualities
 // ----------------------------------------------------------------------------
-
-template <typename TSpec, typename TIdStringSet, typename TSeqStringSet, typename TQualStringSet>
+template <typename TFile, typename TIdStringSet, typename TSeqStringSet, typename TQualStringSet>
 inline void
-writeRecords(FormattedFile<Fastq, Output, TSpec> & file,
-             TIdStringSet const & meta,
-             TSeqStringSet const & seq,
-             TQualStringSet const & qual)
+writeRecords(TFile & file, TIdStringSet const & meta, TSeqStringSet const & seq, TQualStringSet const & qual)
 {
+    // TODO(dadi:) change the function in a way that the tag despatching will be done only once.
+
     for (typename Size<TIdStringSet>::Type i = 0; i != length(seq); ++i)
-        writeRecord(file, meta[i], seq[i], qual[i]);
+        writeRecord(file, meta[i], seq[i], qual[i], file.format);
 }
 
 }  // namespace seqan

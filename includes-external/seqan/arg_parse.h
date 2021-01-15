@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,10 @@
 #include <unistd.h>
 #endif
 
+#include <regex>
+#include <vector>
+#include <algorithm>
+
 // ===========================================================================
 // The ArgParse Headers.
 // ===========================================================================
@@ -70,5 +74,6 @@
 #include <seqan/arg_parse/arg_parse_ctd_support.h>
 #include <seqan/arg_parse/arg_parse_parse.h>
 
+#include <seqan/arg_parse/arg_parse_version_check.h>
 
 #endif  // SEQAN_INCLUDE_SEQAN_ARG_PARSE_H_
