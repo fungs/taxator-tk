@@ -249,7 +249,8 @@ void execute(string db_filename,string db_index_filename,string query_filename, 
     }
     measure_db_loading.stop();
     std::cerr << "db loaded\n";
-    doPredictions( &RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent ), *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
+    auto rpa = RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent );
+    doPredictions( &rpa, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
 }
 
 int main( int argc, char** argv ) {
