@@ -1,0 +1,126 @@
+#!/bin/sh
+#   lastmaf2alignments-parallel -
+#             a simple wrapper around lastmaf2alignments
+#             using GNU parallel  (www.gnu.org/software/parallel)
+#             to convert alignments using multiple threads/processes
+#
+#   Written in 2015 by Johannes Dröge johannes.droege@uni-duesseldorf.de
+#
+#   To the extent possible under law, the author(s) have dedicated all copyright
+#   and related and neighboring rights to this software to the public domain
+#   worldwide. This software is distributed without any warranty.
+#
+#   You should have received a copy of the CC0 Public Domain Dedication along
+#   with this software. If not, see
+#   http://creativecommons.org/publicdomain/zero/1.0/
+
+exec 6<&0
+
+set -o errexit
+set -o nounset
+
+# Functions
+checkexecutables() {
+	for cmd in $@; do
+		if [ -z "$(which "$cmd")" ]; then
+			echo "'$cmd' not found in PATH." 1>&2
+			return 1
+		fi
+	done
+	return 0
+}
+
+maketempdir() { mktemp -d 2>/dev/null || mktemp -d -t tmp; };  # works on Linux and Mac
+
+detectlinuxcores() {
+	if checkexecutables nproc 2>/dev/null; then
+		nproc
+	else
+		[ -f /proc/self/status ] || return 1
+		checkexecutables grep cut tr bc wc || return 2
+		grep -m 1 '^Cpus_allowed:' /proc/self/status | cut -f 2 | tr -d ',' | tr '[:lower:]' '[:upper:]' | xargs echo "obase=2; ibase=16;" | LANG='C' bc | tr -d -c '1' | wc -c
+	fi
+}
+
+cleanup() {
+	[ -n "$verbose" ] && echo "$scriptname: cleaning up temporary files." 1>&2
+	[ -n "$tmpdir" -a -d "$tmpdir" ] && rm -r "$tmpdir"
+}
+
+# Constants
+required_programs='parallel lastmaf2alignments basename sort'
+[ -z "${verbose-}" ] && verbose=''
+
+
+# Check for required programs
+checkexecutables $required_programs || exit 1
+
+
+# Parse command line options
+scriptname="$(basename "$0")"
+passargs='--dont-parse-header --dont-print-header '
+sortcmd=''
+while [ "$#" -gt 0 ]; do
+	arg="$1"
+	case "$arg" in
+		-h)  # arguments which must be directly passed to lastmaf2alignments
+			lastmaf2alignments "$arg"
+			exit $?
+			;;
+		-s|--sort)  # sort by query identifier and query start position
+			sortcmd='| sort -k1,1 -k2,2n'
+			;;
+		-P)  # set number of threads
+			if [ "$2" -gt 0 ]; then
+				cores="$2"
+			else
+				echo "$scriptname: number of threads must be integer > 0." 1>&2
+				exit 1
+			fi
+			shift
+			;;
+		-v)  # be verbose
+			verbose=yes
+			;;
+		*)  # pass arguments to lastmaf2alignments later
+			passargs="${passargs}${arg} "
+	esac
+	shift
+done
+
+
+# Check version of GNU parallel
+if ! parallel --gnu --version > /dev/null; then
+	echo 'Version of GNU parallel is too old' 1>&2
+	exit 1
+fi
+
+if ! parallel --gnu --minversion 20130222 > /dev/null; then
+	echo "$scriptname: warning: old version of parallel, might be slow" 1>&2
+fi
+
+
+# Detect available CPU cores on Linux (to limit set $cores or use taskset/cpusets)
+[ -z "${cores-}" ] && cores="$(detectlinuxcores)"
+
+
+# Don't leave anything behind
+trap 'cleanup; trap - TERM && kill 0' INT TERM EXIT
+
+
+# Temporary folder (GNU parallel sometimes doesn't clean up /tmp properly)
+tmpdir="$(maketempdir)"
+[ -n "$verbose" ] && echo "$scriptname: tmpdir='$tmpdir'" 1>&2
+
+
+# Convert using $cores processes with GNU parallel
+[ -n "$verbose" ] && echo "$scriptname: converting alignments using $cores processes" 1>&2
+echo | lastmaf2alignments --dont-parse-header  # just print the header
+parallel --no-notice --halt 1 --gnu --pipe -j "$cores" --tmpdir "$tmpdir" --recstart '# batch ' --recend '\n\n' "lastmaf2alignments $passargs $sortcmd" <&6  # TODO: nucleotide/protein type detection
+
+
+# Wait until all sub-processes are finished, if any
+wait
+trap - EXIT
+cleanup
+

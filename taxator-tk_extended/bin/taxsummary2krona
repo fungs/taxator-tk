@@ -1,0 +1,15 @@
+#!/bin/bash
+exec 6<&0
+LC_COLLATE=C && export LC_COLLATE
+tmpdir="$(mktemp -d)"
+fifo1="$tmpdir/1.fifo" && mkfifo "$fifo1"
+fifo2="$tmpdir/2.fifo" && mkfifo "$fifo2"
+
+awk -F '\t' '{if($1!="") print $2 "\t" $3 "\t" $1}' <&6 | tee -a >(cut -f 1,3 | tr ';' '\t' | sort -k1,1nr >> "$fifo1") | cut -f 2,3 | tr ';' '\t' | sort -k1,1nr >> "$fifo2" &
+
+ktImportText -o >(cat) \
+"$fifo1",'Support (bp)' \
+"$fifo2",'Data (bp)' \
+>/dev/null
+
+test -d "$tmpdir" && rm -r "$tmpdir"

@@ -1,0 +1,196 @@
+#!/bin/sh
+#   lastal-parallel -
+#             a simple wrapper around LAST (http://last.cbrc.jp/)
+#             using GNU parallel  (www.gnu.org/software/parallel)
+#             to align to multi-volume indices using multiple
+#             threads/processes
+#
+#   Written in 2014 by Johannes Dröge johannes.droege@uni-duesseldorf.de
+#
+#   To the extent possible under law, the author(s) have dedicated all copyright
+#   and related and neighboring rights to this software to the public domain
+#   worldwide. This software is distributed without any warranty.
+#
+#   You should have received a copy of the CC0 Public Domain Dedication along
+#   with this software. If not, see
+#   http://creativecommons.org/publicdomain/zero/1.0/
+
+exec 6<&0
+
+set -o errexit
+set -o nounset
+
+# Functions
+checkexecutables() {
+	for cmd in $@; do
+		if [ -z "$(which "$cmd")" ]; then
+			echo "'$cmd' not found in PATH." 1>&2
+			return 1
+		fi
+	done
+	return 0
+}
+
+maketempdir() { mktemp -d 2>/dev/null || mktemp -d -t tmp; };  # works on Linux and Mac
+
+detectlinuxcores() {
+	if checkexecutables nproc 2>/dev/null; then
+		nproc
+	else
+		[ -f /proc/self/status ] || return 1
+		checkexecutables grep cut tr bc wc || return 2
+		grep -m 1 '^Cpus_allowed:' /proc/self/status | cut -f 2 | tr -d ',' | tr '[:lower:]' '[:upper:]' | xargs echo "obase=2; ibase=16;" | LANG='C' bc | tr -d -c '1' | wc -c
+	fi
+}
+
+cleanup() {
+	[ -n "$verbose" ] && echo "$scriptname: cleaning up temporary files." 1>&2
+	[ -n "$tmpdir" -a -d "$tmpdir" ] && rm -r "$tmpdir"
+}
+
+# Constants
+required_programs='parallel lastal last-merge-batches find sort dirname basename mktemp grep cut tr bc wc'
+
+
+# Check for required programs
+checkexecutables $required_programs || exit 1
+
+
+# Map command line options  TODO: consider index and query not given
+scriptname="$(basename "$0")"
+passargs=''  # parse and pass option
+[ -z "${verbose-}" ] && verbose=''
+
+while [ "$#" -gt 2 ]; do
+	arg="$1"
+	case "$arg" in
+		-h*)  # arguments which must be directly passed to lastal
+			lastal "$arg"
+			exit 0
+			;;
+		-P*)  # set number of threads
+			if [ "$2" -gt 0 ]; then
+				cores="$2"
+			else
+				echo "$scriptname: number of threads must be integer > 0." 1>&2
+				exit 1
+			fi
+			shift
+			;;
+		-v*)  # set lastal-parallel to be verbose as well
+			verbose=yes
+			passargs="${passargs}${arg} "
+			;;
+		*)  # pass arguments to lastal later
+			passargs="${passargs}${arg} "
+	esac
+	shift
+done
+
+index="${1-}"
+query="${2--}"
+
+[ -n "$verbose" ] && echo "$scriptname: passargs='$passargs'" 1>&2
+
+
+# Syntax check
+if [ -z "$index" ]; then  #TODO: call lastal and substitute name
+	echo "$scriptname: please give me a database name and sequence file(s)\n\nUsage: $scriptname [options] lastdb-name fasta-sequence-file(s)" 1>&2
+	exit 1
+elif [ ! -r "$index.prj" ]; then
+	echo "$scriptname: could not find index $index."
+	exit 1
+fi
+
+# Check version of GNU parallel
+if ! parallel --gnu --version > /dev/null; then
+	echo 'Version of GNU parallel is too old' 1>&2
+	exit 1
+fi
+
+if ! parallel --gnu --minversion 20130222 > /dev/null; then
+	echo "$scriptname: warning: old version of parallel, might be slow" 1>&2
+fi
+
+
+# Setup temporary data compression
+if [ -n "${compression_cmd-}" ]; then
+	echo "$scriptname: compressing temporary files using '$compression_cmd'".
+	compression_cmd="| $compression_cmd"
+	compression_file_suffix='.compressed'
+	if [ -z "${decompression_cmd-}" ]; then
+		echo "$scriptname: variable 'compression_cmd' is set but not 'decompression_cmd'" 1>&2
+		exit 1
+	fi
+fi
+
+
+# Detect volumes of index
+voldir="$(dirname "$index")"
+indexname="$(basename "$index")"
+volumes="$(find -L "$voldir" -maxdepth 1 -type f -regex "$voldir/$indexname[0-9]*\.tis" -exec basename {} .tis \;)"
+if [ -z "$volumes" ]; then
+	echo 'No volumes found.'
+	exit 1
+fi
+
+
+# Detect available CPU cores (to limit set $cores)
+if [ -z "${cores-}" ]; then
+	cores="$(getlinuxcores)" || cores='100%'
+fi
+
+
+# Don't leave anything behind when terminating
+trap 'cleanup; trap - TERM && kill 0' INT TERM EXIT
+
+
+# Temporary folder to store partial input and alignments (GNU parallel sometimes doesn't clean up /tmp properly)
+tmpdir="$(maketempdir)"
+[ -n "$verbose" ] && echo "$scriptname: tmpdir='$tmpdir'" 1>&2
+mkdir "$tmpdir"/tmp
+mafdir="$tmpdir/maf.d"
+mkdir "$mafdir"
+logdir="$tmpdir/log"
+mkdir "$logdir"
+
+
+# Test if query exists, buffer stdin, if needed
+if [ "$query" = '-' ]; then
+	querytmp="$tmpdir/stdin"
+	cat <&6 > "$querytmp"
+	query="$querytmp"
+elif ! [ -f "$query" ]; then
+	echo "$scriptname: query file '$query' does not exist." 1>&2
+	exit 1
+fi
+
+
+# Align against each volume and write results to temporary output files
+echo "$volumes" | while read vol; do
+	[ -n "$verbose" ] && echo "$scriptname: aligning query against volume '$vol' using $cores processes." 1>&2
+	parallel --no-notice --halt 1 --gnu --pipepart --joblog "$logdir/$vol.parallel.log" --tmpdir "$tmpdir/tmp" -a "$query" --recstart '>' -j $cores "test ! -e '$mafdir'/\$PARALLEL_SEQ && mkdir '$mafdir'/\$PARALLEL_SEQ; lastal $passargs '$voldir/$vol' - ${compression_cmd-} > '$mafdir'/\$PARALLEL_SEQ/'$vol'.maf'${compression_file_suffix-}'"
+done
+
+# Merge the batches of different volumes
+find "$mafdir" -maxdepth 1 -type d -regex "$mafdir/[0-9][0-9]*" -exec basename {} \; | sort -n | while read d; do  # original order with sort -n
+	# Setup decompression via named pipes
+	if [ -n "${compression_cmd-}" ]; then
+		for f in "$mafdir/$d"/*.maf"$compression_file_suffix"; do
+			fifofile="$mafdir/$d/$(basename "$f" "$compression_file_suffix")"
+			mkfifo "$fifofile"
+			$decompression_cmd < "$f" >> "$fifofile"&
+		done
+	fi
+
+	[ -n "$verbose" ] && echo "$scriptname: merging query package $d." 1>&2
+	last-merge-batches "$mafdir/$d"/*.maf
+	rm -r "$mafdir/$d"
+done
+
+
+# Wait until all sub-processes are finished, if any
+wait
+trap - EXIT
+cleanup
+

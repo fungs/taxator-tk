@@ -1,0 +1,152 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+# Conversion tool for LAST MAF files
+# Copyright (C) 2010 Johannes Dröge
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from last_maf_convert import Maf, dieUnlessPairwise, quantify, mafInput, isMatch
+from sys import argv, stdin, stderr, stdout, exit
+from taxatortk import *
+
+
+def usage():
+    stderr.write('Program reads from standard input and writes to standard output.\n')
+    stderr.write('Usage: %s [--help | --dont-parse-header | --encode-alignment | --dont-print-header ]\n' % argv[0])
+
+
+def set_positions_dna(maf):
+    assert maf.strands[0] == "+"
+    if maf.strands[1] == "+":
+        return maf.alnStarts[1] + 1, maf.alnStarts[1] + maf.alnSizes[1], maf.alnStarts[0] + 1, maf.alnStarts[0] + \
+               maf.alnSizes[0]
+    return maf.seqSizes[1] - maf.alnStarts[1] - maf.alnSizes[1] + 1, maf.seqSizes[1] - maf.alnStarts[1], maf.alnStarts[
+        0] + maf.alnSizes[0], maf.alnStarts[0] + 1
+
+
+def set_positions_prot(maf):
+    assert maf.strands[0] == "+"
+    if maf.strands[1] == "+":
+        return maf.alnStarts[1] + 1, maf.alnStarts[1] + maf.alnSizes[1], maf.alnStarts[0] + 1, maf.alnStarts[0] + \
+               maf.alnSizes[0]
+    return maf.seqSizes[1] - maf.alnStarts[1], maf.seqSizes[1] - maf.alnStarts[1] - maf.alnSizes[1] + 1, maf.alnStarts[
+        0] + 1, maf.alnStarts[0] + maf.alnSizes[0]
+
+
+def mafrecord2alignmentrecord(maf, alnencoder):
+    dieUnlessPairwise(maf)
+    alignment_cols = zip(*maf.alnStrings)
+    record = AlignmentRecord()
+    record.query_identifier = maf.seqNames[1]
+    record.query_length = maf.seqSizes[1]
+    record.reference_identifier = maf.seqNames[0]
+    record.identities = quantify(alignment_cols, isMatch)
+    assert len(maf.alnStrings[0]) == len(maf.alnStrings[1])  # TODO: comment out!
+    record.alignment_length = len(maf.alnStrings[0])
+    record.alignment_code = alnencoder(maf.alnStrings[1], maf.alnStrings[0])
+    record.score = float(maf.namesAndValues["score"])
+    record.evalue = float(maf.namesAndValues.get("expect", 0.0))
+    record.query_start, record.query_stop, record.reference_start, record.reference_stop = set_positions(maf)
+    return record
+
+
+def maf_parser(instream):
+    for m in mafInput(instream, False):
+        yield Maf(*m)
+
+
+if __name__ == "__main__":
+    # handle broken pipes
+    import signal
+
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+        # parse command line options
+    import getopt
+
+    try:
+        opts, args = getopt.getopt(argv[1:], 'hpen', ['help', 'dont-parse-header', 'encode-alignment',
+                                                      'dont-print-header'])
+    except getopt.GetoptError, err:
+        # print help information and exit:
+        print str(err)  # will print something like "option -a not recognized"
+        usage()
+        exit(2)
+
+    aln_encode = False
+    parse_header = True
+    print_header = True
+
+    for o, a in opts:
+        if o in ("-h", "--help"):
+            usage()
+            exit(2)
+        elif o in ("-e", "--encode-alignment"):
+            aln_encode = True
+        elif o in ("-p", "--dont-parse-header"):
+            parse_header = False
+        elif o in ("-n", "--dont-print-header"):
+            print_header = False
+        else:
+            assert False, "unhandled option"
+
+    try:
+        if parse_header:
+            # first line is program name
+            fields = stdin.next()[2:].strip().split()
+            generating_program_name = fields[0]
+            assert generating_program_name == "LAST"
+            last_version = fields[2]
+            stdin.next()  # empty line
+
+            # next two lines are parameters
+            parameters = {}
+            for i in range(2):
+                for pair in stdin.next()[2:].strip().split():
+                    key, val = pair.split("=")
+                    parameters[key] = val
+            db_name = stdin.next()[2:].strip().split()[0]
+            fields = stdin.next()[2:].strip().split()
+            db_seq_num = int(fields[1].split("=")[1])
+            db_letter_num = int(fields[3].split("=")[1])
+
+        # determine if protein or DNA db by option "-F"
+        if parse_header and "F" in parameters and parameters["F"] != "-1":
+            set_positions = set_positions_prot
+            if aln_encode:
+                encode_alignment = get_alignment_encoding_prot
+            else:
+                encode_alignment = get_alignment_encoding_dummy
+        else:
+            set_positions = set_positions_dna
+            if aln_encode:
+                encode_alignment = get_alignment_encoding_dna
+            else:
+                encode_alignment = get_alignment_encoding_dummy
+
+        # header for column description
+        if print_header:
+            stdout.write(AlignmentRecord().file_header)
+	
+	try:
+	        for maf in maf_parser(stdin):
+                        stdout.write(mafrecord2alignmentrecord(maf, encode_alignment).line)
+	except Exception as e:
+                if len(e.args) > 0 and e.args[0] == "pairwise alignments only, please":
+                        stderr.write("There was an error parsing a MAF record\n")
+                        exit(1)
+                raise e
+
+    except KeyboardInterrupt:
+        pass

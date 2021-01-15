@@ -1,0 +1,79 @@
+This file only lists changes for the extended version of taxator-tk, see
+taxator-tk source code for detailed algorithmic changes. All extended
+releases are based on taxator-tk source versions which are equal (or
+lower when the code base did not change between minor versions).
+
+v. 1.3.3e
+=========
+* fix crashes in all LCA algorithms
+* more consistent behavior of command line parameters in taxknife
+* better error reporting
+
+v. 1.3.1e
+=========
+* suppress some notifications
+* set more options via variable with LAST and BLAST
+* refactor shell code for cleaner workflows and improve POSIX compatibility
+* better CPU core detection via numproc command (supports containers)
+* specification of output folder (backward-compatible behavior)
+
+v. 1.3.0e
+=========
+* much better scaling core algorithm due to homolog selection heuristic,
+  there is no need to restrict the number of input alignments any more
+* CPU core auto-detection, now working with Linux taskset/cpusets
+* support for multi-core alignment with LAST (lastal-parallel wrapper script)
+* support of parallel search with LAST by integration of GNU parallel in
+  script lastal-parallel, uses lz4 compression of temporary data
+* faster conversion by integration of GNU parallel in script 
+  lastmaf2alignments-parallel
+* integration of KronaTools for interactive pie chart plotting
+* LAST update to v.508
+* download script for sample refpack removed, the project page will point
+  to a location from where to download refpacks
+
+v. 1.2.2-extended
+=================
+* make reference data and aligner index location independent of program
+  installation folder, makes it easier to run it in multiuser environments
+* remove integrity check for any data (should become part of the repack)
+* rename and clean all scripts
+* change standard BLAST algorithm to "discontiguous megablast" for better
+  sensitivity (increases the run-time by ~20x)
+
+v. 1.2.1-extended
+=================
+* fix bug in binning-workflow-fasta-last.sh, reference FASTA index wasn't used
+* replaced quickstart.pdf by a text-based README file
+
+v. 1.2.0-extended
+=================
+* new non-redundant reference data with updated taxonomy
+* taxator speedup (all aligners), BLAST parameter optimization
+* rank-filter and name-filter tools unified into taxknife
+* binner gives an integer support value (bp) for each classified input sequence
+  + new taxon support summary
+* logging disabled by default for smaller size of result folder
+* results are created in current working instead of "working/" folder
+  (admin/multiuser improvement)
+* minor file/folder restructuring
+
+v. 1.1.1-extended
+=================
+* fix typo bug in create-index-last.sh
+* quickstart manual update
+
+v. 1.1.0-extended
+=================
+* workflow executable on workstations (new indexed FASTA feature in taxator; with BLAST)
+* SEQAN update with faster alignments (>2x speed improvement)
+* switch to NCBI BLAST+ (nucleotide megablast) as default, option to use LAST
+* general cleanup/improvement of included workflow scripts, no Python required any more in BLAST workflow
+
+v. 1.0-extended
+===============
+* first pre-compiled static binary package for 64 bit Linux
+* sample workflow shell scripts for taxonomic binning
+* includes microbial RefSeq with taxonomy
+* large prepared LAST index with download script
+* optimized for large-memory systems
