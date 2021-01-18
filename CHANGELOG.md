@@ -1,21 +1,30 @@
-This file only lists major changes and bug fixes for each version
+# Changelog
+All notable changes to this project will be documented in this file.
 
-v1.3.3 taxator-tk
-=================
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+**Notes**
+There are no recorded dates and only record type `Changed` prior to v1.4.0.
+Also, no version tags existis prior to version 1.0.0. Pipeline scripts were only
+added to this repository starting from version 1.4.0.
+
+## [1.3.3]
+### Changed
 * core: fix crashes in all LCA algorithms
 * core: more consistent behavior of command line parameters in taxknife
 * core: better error reporting
 
-v1.3.1 taxator-tk
-=================
+## [1.3.1]
+### Changed
 * extended: set more options via variable with LAST and BLAST
 * extended: refactor shell code for cleaner workflows and
             improve POSIX compatibility
 * extended: better CPU core detection via numproc command (supports containers)
 * extended: specification of output folder (backward-compatible behavior)
 
-v1.3.0 taxator-tk
-=================
+## [1.3.0]
+### Changed
 * core: rewrite of RPA with better handling of input alignments and
         speed improvements
 * core: C++11 compatibility
@@ -35,8 +44,8 @@ v1.3.0 taxator-tk
 * extended: download script for sample refpack removed, the project page will
             point to a location from where to download refpacks
 
-v1.2.2 taxator-tk
-=================
+## [1.2.2]
+### Changed
 * extended: make reference data and aligner index location independent of
 *           installation root (easier to run it in multiuser environments)
 * extended: remove integrity check for data (should become part of the refpack)
@@ -44,13 +53,13 @@ v1.2.2 taxator-tk
 * extended: change standard BLAST algorithm to "discontiguous megablast"
             for better sensitivity (increases the runtime by ~20x)
 
-v1.2.1 taxator-tk
-=================
+## [1.2.1]
+### Changed
 * extended: fix bug in binning-workflow-fasta-last.sh, reference FASTA index wasn't used
 * extended: replaced quickstart.pdf by a text-based README file
 
-v1.2.0 taxator-tk
-=================
+## [1.2.0]
+### Changed
 * core: program taxknife substitutes name-filter and rank-filter
 * core: adjust data types to support longer segments
 * core: better approximation of identity scores + support values in binner
@@ -58,13 +67,13 @@ v1.2.0 taxator-tk
 * core: heuristic to avoid excessive runtime with bad alignments
 * core: workaround for CMake bug with boost threads linking
 
-v1.1.1 taxator-tk
-=================
+## [1.1.1]
+### Changed
 * extended: fix typo bug in create-index-last.sh
 * extended: quickstart manual update
 
-v1.1.0 taxator-tk
-=================
+## [1.1.0]
+### Changed
 * core: code cleanup
 * core: SEQAN update with faster alignments (>2x speed improvement)
 * core: indexed FASTA access (now runs on computers with much less RAM)
@@ -78,8 +87,8 @@ v1.1.0 taxator-tk
 * extended: general cleanup/improvement of included workflow scripts;
             no Python required any more in BLAST workflow
 
-v1.0.0 taxator-tk
-=================
+## [1.0.0]
+### Changed
 * core: publication release, many functionality added;
   evaluations done on this version
 * core: optimized for large-memory systems
@@ -87,20 +96,31 @@ v1.0.0 taxator-tk
   includes microbial RefSeq with taxonomy
 * extended: large prepared LAST index with download script
 
-v0.3 taxator-tk
-===============
+## [0.3]
+### Changed
 * core: bug fix for noise filtering in binner
 * core: tools reduced to a core set around taxator (previously predictor) and binner
   (prevously predictions-filter)
 * core: multi-threading support in taxator
 * core: binner supports user defined identity constrains at fixed ranks
 
-v0.2 taxator-tk
-===============
+## [0.2]
+### Changed
 * core: predictions-filter for combination of predictions by mutiple methods/experts
   and to clean up the predictions of natural samples where we require a certain
   number of read for each taxonomic group to be considered
 
-v0.1 taxator-tk
-===============
+## [0.1]
+### Changed
 * core: functional framework with support for various LCA methods and fast aligners
+
+[Unreleased]: https://github.com/fungs/taxator-tk/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/fungs/taxator-tk/compare/v1.3.2...v1.3.3
+[1.3.1]: https://github.com/fungs/taxator-tk/compare/v1.3.1...v1.3.0
+[1.3.0]: https://github.com/fungs/taxator-tk/compare/v1.2.2...v1.3.0
+[1.2.2]: https://github.com/fungs/taxator-tk/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/fungs/taxator-tk/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/fungs/taxator-tk/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/fungs/taxator-tk/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/fungs/taxator-tk/compare/v1.0.0...v1.1.1
+[1.0.0]: https://github.com/fungs/taxator-tk/releases/tag/v1.0.0
