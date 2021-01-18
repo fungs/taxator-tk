@@ -1,8 +1,9 @@
-# Dependencies
+# Extended pipeline dependencies
 
-The extended pipeline depends on the following programs. We list the recommended version for each version of taxator-tk starting from v1.3.3
+The extended pipeline depends on the following programs. We list the recommended version for each release of taxator-tk starting from v1.3.3
 
 ## [1.3.3]
+
 ### taxator-tk
 Executables: core binaries
 License: GPLv3
