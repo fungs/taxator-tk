@@ -6,36 +6,36 @@ This is the source code for the taxator toolkit. If you are looking for pre-pack
 programs or sample refpacks for taxonomic assignment, please go to the
 [official download page](http://research.bifo.helmholtz-hzi.de/webapps/wa-download/).
 
-Issues concerning the extended version (binaries, workflow scripts etc.) which you have downloaded from the official download page should be mailed to us (see contact below).
+This repository consists of two parts, the actual taxator-tk C++ code in the folder `core` and the pipeline scripts which are used to build the ready-to-use binary distribution in folder `extended`.
 
-Issues which apply to the taxator-tk core can be filed in the
-[official GitHub repository](https://github.com/fungs/taxator-tk/).
+All issues can be filed in the
+[official GitHub repository](https://github.com/fungs/taxator-tk/issues/).
 
 ## Documentation
-Please see separate documentation: [install guide](INSTALL.md) and [usage instructions](USAGE.md).
+Please see separate documentation:
+* [global build and install guide](INSTALL.md)
+* [changelog](CHANGELOG.md)
+* [core tools compilation guide](core/BUILD.md)
+* [core tools detailed usage instructions](core/USAGE.md)
+* [core dependencies](core/DEPENDENCIES.md)
+* [extended pipeline description](extended/README.md)
+* [extended pipeline dependencies](extended/DEPENDENCIES.md)
 
 ## Code licensing
 The taxator-tk source is licensend under the GPLv3 and builds on the following software components:
-
-* SeqAn (BSD license), http://www.seqan.de, version 1.4.1
-* Boost (Boost Software License), http://www.boost.org, version "not too old"
-* tree.hh (GPLv3), http://tree.phi-sci.com, version 2.81
-
-More information can be found in the folder licenses and in the header source code.
 
 ## Acknowledgments and contact
 
 We acknowledge the work done by the contributors of the SeqAn and BOOST projects
 as well as the author(s) of the tree.hh classes and all other anonymous
-contributors.
+contributors. For the extended pipeline, we acknowledge all external programs.
 
 For any questions, feedback or complaints, contact
-johannes.droege@uni-duesseldorf.de
+science[at]fungs.de
 
 Please, if you use this software and publish a paper, cite
 
-    J. Dröge, I. Gregor, and A. C. McHardy 
+    J. Dröge, I. Gregor, and A. C. McHardy
     Taxator-tk: precise taxonomic assignment of metagenomes by fast approximation of evolutionary neighborhoods
     Bioinformatics 2015 31: 817-824.
     doi: 10.1093/bioinformatics/btu745
-
