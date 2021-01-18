@@ -1,15 +1,13 @@
 #!/bin/sh
-# This script will try to compile the source code in the subdirectory
-# build-$architecture, using one processor core
-# you need to have the dependencies fullfilled, see README
+# This script will try to compile the source code in the bin subdirectory,
+# using one processor core by default
 
 set -o errexit
 set -o nounset
 
 compile_threads=${1:-1}
 
-arch="$(uname -m)"
-bdir="Build-$arch"
+bdir='bin'
 
 test -d "$bdir" || mkdir "$bdir"
 
