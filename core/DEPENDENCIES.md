@@ -15,7 +15,7 @@ Included: yes
 Files: tree.hh
 License: GPLv3
 Link: http://tree.phi-sci.com
-Version: 2.81
+Version: 3.7
 Included: yes
 
 ### Boost
