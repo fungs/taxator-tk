@@ -3,84 +3,46 @@
 #functions for parsing MAF files produced by LAST
 #
 # Copyright 2010, 2011, 2013, 2014 Martin C. Frith
-# Read MAF-format alignments: write them in other formats.
-# Seems to work with Python 2.x, x>=4
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Seems to work with Python 2.x, x>=6
 
 # By "MAF" we mean "multiple alignment format" described in the UCSC
 # Genome FAQ, not e.g. "MIRA assembly format".
 
+from __future__ import print_function
+
 from itertools import *
-import sys, os, fileinput, math, operator, optparse, signal, string
+import collections
+import functools
+import gzip
+import logging
+import math
+import operator
+import optparse
+import os
+import signal
+import sys
+
+try:
+    from future_builtins import map, zip
+except ImportError:
+    pass
+
+def myOpen(fileName):
+    if fileName == "-":
+        return sys.stdin
+    if fileName.endswith(".gz"):
+        return gzip.open(fileName, "rt")  # xxx dubious for Python2
+    return open(fileName)
 
 def maxlen(s):
     return max(map(len, s))
 
-def joined(things, delimiter):
-    return delimiter.join(map(str, things))
-
-identityTranslation = string.maketrans("", "")
-def deleted(myString, deleteChars):
-    return myString.translate(identityTranslation, deleteChars)
-
-def quantify(iterable, pred=bool):
-    """Count how many times the predicate is true."""
-    return sum(map(pred, iterable))
-
-class Maf:
-    def __init__(self, aLine, sLines, qLines, pLines):
-        self.namesAndValues = dict(i.split("=") for i in aLine[1:])
-
-        if not sLines: raise Exception("empty alignment")
-        cols = zip(*sLines)
-        self.seqNames = cols[1]
-        self.alnStarts = map(int, cols[2])
-        self.alnSizes = map(int, cols[3])
-        self.strands = cols[4]
-        self.seqSizes = map(int, cols[5])
-        self.alnStrings = cols[6]
-
-        self.qLines = qLines
-        self.pLines = pLines
-
-def dieUnlessPairwise(maf):
-    if len(maf.alnStrings) != 2:
-        raise Exception("pairwise alignments only, please")
-
-def insertionCounts(alnString):
-    gaps = alnString.count("-")
-    forwardFrameshifts = alnString.count("\\")
-    reverseFrameshifts = alnString.count("/")
-    letters = len(alnString) - gaps - forwardFrameshifts - reverseFrameshifts
-    return letters, forwardFrameshifts, reverseFrameshifts
-
-def coordinatesPerLetter(alnString, alnSize):
-    letters, forwardShifts, reverseShifts = insertionCounts(alnString)
-    if forwardShifts or reverseShifts or letters < alnSize: return 3
-    else: return 1
-
-def mafLetterSizes(maf):
-    return map(coordinatesPerLetter, maf.alnStrings, maf.alnSizes)
-
-def alnLetterSizes(sLines):
-    return [coordinatesPerLetter(i[6], int(i[3])) for i in sLines]
-
-def isTranslated(sLines):
-    for i in sLines:
-        alnString = i[6]
-        if "\\" in alnString or "/" in alnString: return True
-        if len(alnString) - alnString.count("-") < int(i[3]): return True
-    return False
-
-def insertionSize(alnString, letterSize):
-    """Get the length of sequence included in the alnString."""
-    letters, forwardShifts, reverseShifts = insertionCounts(alnString)
-    return letters * letterSize + forwardShifts - reverseShifts
-
-def symbolSize(symbol, letterSize):
-    if symbol == "-": return 0
-    if symbol == "\\": return 1
-    if symbol == "/": return -1
-    return letterSize
+def pairOrDie(sLines, formatName):
+    if len(sLines) != 2:
+        e = "for %s, each alignment must have 2 sequences" % formatName
+        raise Exception(e)
+    return sLines
 
 def isMatch(alignmentColumn):
     # No special treatment of ambiguous bases/residues: same as NCBI BLAST.
@@ -89,45 +51,194 @@ def isMatch(alignmentColumn):
         if i.upper() != first: return False
     return True
 
-def isGapless(alignmentColumn):
-    return "-" not in alignmentColumn
+def gapRunCount(row):
+    """Get the number of runs of gap characters."""
+    return sum(k == "-" for k, v in groupby(row))
+
+def alignmentRowsFromColumns(columns):
+    return map(''.join, zip(*columns))
+
+def symbolSize(symbol, letterSize):
+    if symbol == "\\": return 1
+    if symbol == "/": return -1
+    return letterSize
+
+def insertSize(row, letterSize):
+    """Get the length of sequence included in the row."""
+    return (len(row) - row.count("-")) * letterSize - 4 * row.count("/") - 2 * row.count("\\")
 
 def matchAndInsertSizes(alignmentColumns, letterSizes):
     """Get sizes of gapless blocks, and of the inserts between them."""
-    for k, v in groupby(alignmentColumns, isGapless):
-        if k:
-            sizeOfGaplessBlock = len(list(v))
-            yield str(sizeOfGaplessBlock)
+    letterSizeA, letterSizeB = letterSizes
+    delSize = insSize = subSize = 0
+    for x, y in alignmentColumns:
+        if x == "-":
+            if subSize:
+                if delSize or insSize: yield str(delSize) + ":" + str(insSize)
+                yield str(subSize)
+                delSize = insSize = subSize = 0
+            insSize += symbolSize(y, letterSizeB)
+        elif y == "-":
+            if subSize:
+                if delSize or insSize: yield str(delSize) + ":" + str(insSize)
+                yield str(subSize)
+                delSize = insSize = subSize = 0
+            delSize += symbolSize(x, letterSizeA)
         else:
-            blockRows = izip(*v)
-            blockRows = imap(''.join, blockRows)
-            insertSizes = imap(insertionSize, blockRows, letterSizes)
-            yield joined(insertSizes, ":")
+            subSize += 1
+    if delSize or insSize: yield str(delSize) + ":" + str(insSize)
+    if subSize: yield str(subSize)
+
+##### Routines for reading MAF format: #####
+
+def updateEvalueParameters(opts, line):
+    for field in line.split():
+        try:
+            k, v = field.split("=")
+            x = float(v)
+            if k == "lambda":
+                opts.bitScoreA = x / math.log(2)
+            if k == "K":
+                opts.bitScoreB = math.log(x, 2)
+        except ValueError:
+            pass
+
+def scoreAndEvalue(aLine):
+    score = evalue = None
+    for i in aLine.split():
+        if i.startswith("score="):
+            score = i[6:]
+        elif i.startswith("E="):
+            evalue = i[2:]
+    return score, evalue
+
+def mafInput(opts, lines):
+    aLine = ""
+    sLines = []
+    qLines = []
+    pLines = []
+    for line in lines:
+        if line[0] == "s":
+            junk, seqName, beg, span, strand, seqLen, row = line.split()
+            beg = int(beg)
+            span = int(span)
+            seqLen = int(seqLen)
+            if "\\" in row or "/" in row or len(row) - row.count("-") < span:
+                letterSize = 3
+            else:
+                letterSize = 1
+            fields = seqName, seqLen, strand, letterSize, beg, beg + span, row
+            sLines.append(fields)
+        elif line[0] == "a":
+            aLine = line
+        elif line[0] == "q":
+            qLines.append(line)
+        elif line[0] == "p":
+            pLines.append(line)
+        elif line.isspace():
+            if sLines: yield aLine, sLines, qLines, pLines
+            aLine = ""
+            sLines = []
+            qLines = []
+            pLines = []
+        elif line[0] == "#":
+            updateEvalueParameters(opts, line)
+            if opts.isKeepComments:
+                print(line, end="")
+    if sLines: yield aLine, sLines, qLines, pLines
+
+def isJoinable(opts, oldMaf, newMaf):
+    x = oldMaf[1]
+    y = newMaf[1]
+    if x[-1][2] == "-":
+        x, y = y, x
+    return all(i[:4] == j[:4] and i[5] <= j[4] and j[4] - i[5] <= opts.join
+               for i, j in zip(x, y))
+
+def fixOrder(mafs):
+    sLines = mafs[0][1]
+    if sLines[-1][2] == "-":
+        mafs.reverse()
+
+def mafGroupInput(opts, lines):
+    x = []
+    for i in mafInput(opts, lines):
+        if x and not isJoinable(opts, x[-1], i):
+            fixOrder(x)
+            yield x
+            x = []
+        x.append(i)
+    if x:
+        fixOrder(x)
+        yield x
+
+def linkedMafBegSortKey(sequenceNumber, mafAndLinks):
+    return operator.itemgetter(0, 2, 4)(mafAndLinks[0][1][sequenceNumber])
+
+def colinearMafInput(opts, lines):
+    mafs = list(mafInput(opts, lines))
+    if not mafs:
+        return
+    numOfSeqs = max(len(maf[1]) for maf in mafs)
+    linkedMafs = [(maf, [None] * numOfSeqs) for maf in mafs]
+    for s in range(numOfSeqs):
+        begFunc = functools.partial(linkedMafBegSortKey, s)
+        linkedMafs.sort(key=begFunc)
+        maxEnd = "", "+", 0
+        for j in range(1, len(linkedMafs)):
+            xMaf, xLinks = linkedMafs[j - 1]
+            yMaf, yLinks = linkedMafs[j]
+            x = xMaf[1][s]
+            y = yMaf[1][s]
+            newEnd = x[0], x[2], x[5]
+            if newEnd > maxEnd:
+                maxEnd = newEnd
+                if (x[:4] == y[:4] and 0 <= y[4] - x[5] <= opts.Join):
+                    k = j + 1
+                    yBeg = y[0], y[2], y[4]
+                    if k == len(linkedMafs) or yBeg < begFunc(linkedMafs[k]):
+                        yLinks[s] = xMaf
+    colinearMafs = []
+    for maf, links in linkedMafs:
+        if colinearMafs:
+            if any(i is not colinearMafs[-1] for i in links):
+                yield colinearMafs
+                colinearMafs = []
+        colinearMafs.append(maf)
+    yield colinearMafs
 
 ##### Routines for converting to AXT format: #####
 
 axtCounter = count()
 
 def writeAxt(maf):
-    if maf.strands[0] != "+":
+    aLine, sLines, qLines, pLines = maf
+
+    if sLines[0][2] != "+":
         raise Exception("for AXT, the 1st strand in each alignment must be +")
 
     # Convert to AXT's 1-based coordinates:
-    alnStarts = imap(operator.add, maf.alnStarts, repeat(1))
-    alnEnds = imap(operator.add, maf.alnStarts, maf.alnSizes)
+    ranges = [(i[0], str(i[4] + 1), str(i[5]), i[2]) for i in sLines]
 
-    rows = zip(maf.seqNames, alnStarts, alnEnds, maf.strands)
-    head, tail = rows[0], rows[1:]
+    head, body = ranges[0], ranges[1:]
 
-    outWords = []
-    outWords.append(axtCounter.next())
+    outWords = [str(next(axtCounter))]
     outWords.extend(head[:3])
-    outWords.extend(chain(*tail))
-    outWords.append(maf.namesAndValues["score"])
+    for i in body:
+        outWords.extend(i)
 
-    print joined(outWords, " ")
-    for i in maf.alnStrings: print i
-    print  # print a blank line at the end
+    score, evalue = scoreAndEvalue(aLine)
+    if score:
+        outWords.append(score)
+
+    print(*outWords)
+    for i in sLines:
+        print(i[6])
+    print()  # print a blank line at the end
+
+def mafConvertToAxt(opts, lines):
+    for maf in mafInput(opts, lines):
+        writeAxt(maf)
 
 ##### Routines for converting to tabular format: #####
 
@@ -135,123 +246,181 @@ def writeTab(maf):
     aLine, sLines, qLines, pLines = maf
 
     score = "0"
-    expect = None
-    mismap = None
-    for i in aLine:
-        if   i.startswith("score="): score = i[6:]
-        elif i.startswith("expect="): expect = i[7:]
-        elif i.startswith("mismap="): mismap = i[7:]
+    endWords = []
+    for i in aLine.split():
+        if   i.startswith("score="):
+            score = i[6:]
+        elif len(i) > 1:
+            endWords.append(i)
 
-    outWords = []
-    outWords.append(score)
+    outWords = [score]
 
-    for i in sLines: outWords.extend(i[1:6])
+    for seqName, seqLen, strand, letterSize, beg, end, row in sLines:
+        x = seqName, str(beg), str(end - beg), strand, str(seqLen)
+        outWords.extend(x)
 
-    alnStrings = [i[6] for i in sLines]
-    alignmentColumns = zip(*alnStrings)
-    letterSizes = alnLetterSizes(sLines)
-    gapStrings = matchAndInsertSizes(alignmentColumns, letterSizes)
-    gapWord = ",".join(gapStrings)
+    letterSizes = [i[3] for i in sLines]
+    rows = [i[6] for i in sLines]
+    alignmentColumns = zip(*rows)
+    gapWord = ",".join(matchAndInsertSizes(alignmentColumns, letterSizes))
     outWords.append(gapWord)
 
-    if expect: outWords.append(expect)
-    if mismap: outWords.append(mismap)
+    print("\t".join(outWords + endWords))
 
-    print "\t".join(outWords)
+def mafConvertToTab(opts, lines):
+    for maf in mafInput(opts, lines):
+        writeTab(maf)
+
+##### Routines for converting to chain format: #####
+
+def writeChain(maf):
+    aLine, sLines, qLines, pLines = maf
+
+    score = "0"
+    for i in aLine.split():
+        if i.startswith("score="):
+            score = i[6:]
+
+    outWords = ["chain", score]
+
+    for seqName, seqLen, strand, letterSize, beg, end, row in sLines:
+        x = seqName, str(seqLen), strand, str(beg), str(end)
+        outWords.extend(x)
+
+    outWords.append(str(next(axtCounter) + 1))
+
+    print(*outWords)
+
+    letterSizes = [i[3] for i in sLines]
+    rows = [i[6] for i in sLines]
+    alignmentColumns = zip(*rows)
+    size = "0"
+    for i in matchAndInsertSizes(alignmentColumns, letterSizes):
+        if ":" in i:
+            print(size + "\t" + i.replace(":", "\t"))
+            size = "0"
+        else:
+            size = i
+    print(size)
+
+def mafConvertToChain(opts, lines):
+    for maf in mafInput(opts, lines):
+        writeChain(maf)
 
 ##### Routines for converting to PSL format: #####
 
-def pslBlocks(alignmentColumns, alnStarts, letterSizes):
+def pslBlocks(opts, mafs, outCounts):
     """Get sizes and start coordinates of gapless blocks in an alignment."""
-    start1, start2 = alnStarts
-    letterSize1, letterSize2 = letterSizes
-    size = 0
-    for x, y in alignmentColumns:
-        if x == "-":
-            if size:
-                yield size, start1, start2
-                start1 += size * letterSize1
-                start2 += size * letterSize2
-                size = 0
-            start2 += symbolSize(y, letterSize2)
-        elif y == "-":
-            if size:
-                yield size, start1, start2
-                start1 += size * letterSize1
-                start2 += size * letterSize2
-                size = 0
-            start1 += symbolSize(x, letterSize1)
-        else:
-            size += 1
-    if size: yield size, start1, start2
+    # repMatches is always zero
+    # for proteins, nCount is always zero, because that's what BLATv34 does
+    normalBases = "ACGTU"
+    matches = mismatches = repMatches = nCount = 0
+
+    for maf in mafs:
+        sLines = maf[1]
+        fieldsA, fieldsB = pairOrDie(sLines, "PSL")
+        letterSizeA, begA, endA, rowA = fieldsA[3:7]
+        letterSizeB, begB, endB, rowB = fieldsB[3:7]
+
+        size = 0
+        for x, y in zip(rowA.upper(), rowB.upper()):
+            if x == "-":
+                if size:
+                    yield size, begA, begB
+                    begA += size * letterSizeA
+                    begB += size * letterSizeB
+                    size = 0
+                begB += symbolSize(y, letterSizeB)
+            elif y == "-":
+                if size:
+                    yield size, begA, begB
+                    begA += size * letterSizeA
+                    begB += size * letterSizeB
+                    size = 0
+                begA += symbolSize(x, letterSizeA)
+            else:
+                size += 1
+                if x in normalBases and y in normalBases or opts.protein:
+                    if x == y:
+                        matches += 1
+                    else:
+                        mismatches += 1
+                else:
+                    nCount += 1
+        if size:
+            yield size, begA, begB
+
+    outCounts[0:4] = matches, mismatches, repMatches, nCount
+
+def pslNumInserts(blocks, letterSizeA, letterSizeB):
+    numInsertA = numInsertB = 0
+    for i, x in enumerate(blocks):
+        size, begA, begB = x
+        if i:
+            if begA > endA:
+                numInsertA += 1
+            if begB > endB:
+                numInsertB += 1
+        endA = begA + size * letterSizeA
+        endB = begB + size * letterSizeB
+    return numInsertA, numInsertB
 
 def pslCommaString(things):
     # UCSC software seems to prefer a trailing comma
-    return joined(things, ",") + ","
+    return ",".join(map(str, things)) + ","
 
-def gapRunCount(letters):
-    """Get the number of runs of gap characters."""
-    uniqLetters = map(operator.itemgetter(0), groupby(letters))
-    return uniqLetters.count("-")
+def pslEnds(seqLen, strand, beg, end):
+    if strand == "-":
+        return seqLen - end, seqLen - beg
+    return beg, end
 
-def pslEndpoints(alnStart, alnSize, strand, seqSize):
-    alnEnd = alnStart + alnSize
-    if strand == "+": return alnStart, alnEnd
-    else: return seqSize - alnEnd, seqSize - alnStart
-
-def caseSensitivePairwiseMatchCounts(columns, isProtein):
-    # repMatches is always zero
-    # for proteins, nCount is always zero, because that's what BLATv34 does
-    standardBases = "ACGTU"
-    matches = mismatches = repMatches = nCount = 0
-    for i in columns:
-        if "-" in i: continue
-        x, y = i
-        if x in standardBases and y in standardBases or isProtein:
-            if x == y: matches += 1
-            else: mismatches += 1
-        else: nCount += 1
-    return matches, mismatches, repMatches, nCount
-
-def writePsl(maf, isProtein):
-    dieUnlessPairwise(maf)
-
-    alnStrings = map(str.upper, maf.alnStrings)
-    alignmentColumns = zip(*alnStrings)
-    letterSizes = mafLetterSizes(maf)
-
-    matchCounts = caseSensitivePairwiseMatchCounts(alignmentColumns, isProtein)
+def writePsl(opts, mafs):
+    matchCounts = [0] * 4
+    blocks = list(pslBlocks(opts, mafs, matchCounts))
     matches, mismatches, repMatches, nCount = matchCounts
     numGaplessColumns = sum(matchCounts)
 
-    qNumInsert = gapRunCount(maf.alnStrings[0])
-    qBaseInsert = maf.alnSizes[1] - numGaplessColumns * letterSizes[1]
+    if not blocks:
+        return
 
-    tNumInsert = gapRunCount(maf.alnStrings[1])
-    tBaseInsert = maf.alnSizes[0] - numGaplessColumns * letterSizes[0]
+    fieldsA, fieldsB = mafs[0][1]
+    headSize, headBegA, headBegB = blocks[0]
+    tailSize, tailBegA, tailBegB = blocks[-1]
 
-    strand = maf.strands[1]
-    if max(letterSizes) > 1:
-        strand += maf.strands[0]
-    elif maf.strands[0] != "+":
+    seqNameA, seqLenA, strandA, letterSizeA = fieldsA[0:4]
+    begA, endA = pslEnds(seqLenA, strandA, headBegA, tailBegA + tailSize)
+    baseInsertA = endA - begA - numGaplessColumns * letterSizeA
+
+    seqNameB, seqLenB, strandB, letterSizeB = fieldsB[0:4]
+    begB, endB = pslEnds(seqLenB, strandB, headBegB, tailBegB + tailSize)
+    baseInsertB = endB - begB - numGaplessColumns * letterSizeB
+
+    numInsertA, numInsertB = pslNumInserts(blocks, letterSizeA, letterSizeB)
+
+    strand = strandB
+    if letterSizeA > 1 or letterSizeB > 1:
+        strand += strandA
+    elif strandA != "+":
         raise Exception("for non-translated PSL, the 1st strand in each alignment must be +")
 
-    tName, qName = maf.seqNames
-    tSeqSize, qSeqSize = maf.seqSizes
-
-    rows = zip(maf.alnStarts, maf.alnSizes, maf.strands, maf.seqSizes)
-    tStart, tEnd = pslEndpoints(*rows[0])
-    qStart, qEnd = pslEndpoints(*rows[1])
-
-    blocks = list(pslBlocks(alignmentColumns, maf.alnStarts, letterSizes))
     blockCount = len(blocks)
-    blockSizes, tStarts, qStarts = map(pslCommaString, zip(*blocks))
+    blockSizes, blockStartsA, blockStartsB = map(pslCommaString, zip(*blocks))
 
-    outWords = (matches, mismatches, repMatches, nCount,
-                qNumInsert, qBaseInsert, tNumInsert, tBaseInsert, strand,
-                qName, qSeqSize, qStart, qEnd, tName, tSeqSize, tStart, tEnd,
-                blockCount, blockSizes, qStarts, tStarts)
-    print joined(outWords, "\t")
+    print(matches, mismatches, repMatches, nCount,
+          numInsertB, baseInsertB, numInsertA, baseInsertA, strand,
+          seqNameB, seqLenB, begB, endB, seqNameA, seqLenA, begA, endA,
+          blockCount, blockSizes, blockStartsB, blockStartsA, sep="\t")
+
+def mafConvertToPsl(opts, lines):
+    if opts.Join:
+        for i in colinearMafInput(opts, lines):
+            writePsl(opts, i)
+    elif opts.join:
+        for i in mafGroupInput(opts, lines):
+            writePsl(opts, i)
+    else:
+        for i in mafInput(opts, lines):
+            writePsl(opts, [i])
 
 ##### Routines for converting to SAM format: #####
 
@@ -261,19 +430,20 @@ def readGroupId(readGroupItems):
             return i[3:]
     raise Exception("readgroup must include ID")
 
-def readSequenceLengths(lines):
+def readSequenceLengths(fileNames):
     """Read name & length of topmost sequence in each maf block."""
-    sequenceLengths = {}  # an OrderedDict might be nice
-    isSearching = True
-    for line in lines:
-        if line.isspace(): isSearching = True
-        elif isSearching:
-            w = line.split()
-            if w[0] == "s":
-                seqName, seqSize = w[1], w[5]
-                sequenceLengths[seqName] = seqSize
-                isSearching = False
-    return sequenceLengths
+    for i in fileNames:
+        f = myOpen(i)
+        fields = None
+        for line in f:
+            if fields:
+                if line.isspace():
+                    fields = None
+            else:
+                if line[0] == "s":
+                    fields = line.split()
+                    yield fields[1], fields[5]
+        f.close()
 
 def naturalSortKey(s):
     """Return a key that sorts strings in "natural" order."""
@@ -285,25 +455,43 @@ def karyotypicSortKey(s):
     if s == "MT": return ["~"]
     return naturalSortKey(s)
 
-def writeSamHeader(sequenceLengths, dictFile, readGroupItems):
-    print "@HD\tVN:1.3\tSO:unsorted"
-    for k in sorted(sequenceLengths, key=karyotypicSortKey):
-        print "@SQ\tSN:%s\tLN:%s" % (k, sequenceLengths[k])
-    if dictFile:
-        for i in fileinput.input(dictFile):
-            if i.startswith("@SQ"): print i,
-            elif not i.startswith("@"): break
-    if readGroupItems:
-        print "@RG\t" + "\t".join(readGroupItems)
+def copyDictFile(lines):
+    for line in lines:
+        if line.startswith("@SQ"):
+            sys.stdout.write(line)
+        elif not line[0] == "@":
+            break
+
+def writeSamHeader(opts, fileNames):
+    print("@HD\tVN:1.3\tSO:unsorted")
+
+    if opts.dictionary:
+        sequenceLengths = dict(readSequenceLengths(fileNames))
+        for k in sorted(sequenceLengths, key=karyotypicSortKey):
+            print("@SQ\tSN:%s\tLN:%s" % (k, sequenceLengths[k]))
+
+    if opts.dictfile:
+        f = myOpen(opts.dictfile)
+        copyDictFile(f)
+        f.close()
+
+    if opts.readgroup:
+        print("@RG\t" + "\t".join(opts.readgroup.split()))
 
 mapqMissing = "255"
 mapqMaximum = "254"
 mapqMaximumNum = float(mapqMaximum)
 
 def mapqFromProb(probString):
-    try: p = float(probString)
-    except ValueError: raise Exception("bad probability: " + probString)
-    if p < 0 or p > 1: raise Exception("bad probability: " + probString)
+    try:
+        p = float(probString)
+    except ValueError:
+        raise ValueError("bad probability: " + probString)
+    if math.isnan(p):
+        logging.warning("bad probability: " + probString)
+        return mapqMissing
+    if p < 0 or p > 1:
+        raise ValueError("bad probability: " + probString)
     if p == 0: return mapqMaximum
     phred = -10 * math.log(p, 10)
     if phred >= mapqMaximumNum: return mapqMaximum
@@ -313,12 +501,19 @@ def cigarParts(beg, alignmentColumns, end):
     if beg: yield str(beg) + "H"
 
     # (doesn't handle translated alignments)
+    # uses "read-ahead" technique, aiming to be as fast as possible:
     isActive = True
     for x, y in alignmentColumns: break
     else: isActive = False
     while isActive:
         size = 1
-        if x == "-":
+        if x == y:  # xxx assumes no gap-gap columns, ignores ambiguous bases
+            for x, y in alignmentColumns:
+                if x != y: break
+                size += 1
+            else: isActive = False
+            yield str(size) + "="
+        elif x == "-":
             for x, y in alignmentColumns:
                 if x != "-": break
                 size += 1
@@ -332,160 +527,298 @@ def cigarParts(beg, alignmentColumns, end):
             yield str(size) + "D"
         else:
             for x, y in alignmentColumns:
-                if x == "-" or y == "-": break
+                if x == y or x == "-" or y == "-": break
                 size += 1
             else: isActive = False
-            yield str(size) + "M"
+            yield str(size) + "X"
 
     if end: yield str(end) + "H"
 
-def writeSam(maf, rg):
+def writeSam(readGroup, maf):
     aLine, sLines, qLines, pLines = maf
+    fieldsA, fieldsB = pairOrDie(sLines, "SAM")
+    seqNameA, seqLenA, strandA, letterSizeA, begA, endA, rowA = fieldsA
+    seqNameB, seqLenB, strandB, letterSizeB, begB, endB, rowB = fieldsB
 
-    if isTranslated(sLines):
+    if letterSizeA > 1 or letterSizeB > 1:
         raise Exception("this looks like translated DNA - can't convert to SAM format")
+
+    if strandA != "+":
+        raise Exception("for SAM, the 1st strand in each alignment must be +")
 
     score = None
     evalue = None
     mapq = mapqMissing
-    for i in aLine:
+    for i in aLine.split():
         if i.startswith("score="):
             v = i[6:]
             if v.isdigit(): score = "AS:i:" + v  # it must be an integer
-        elif i.startswith("expect="):
-            evalue = "EV:Z:" + i[7:]
+        elif i.startswith("E="):
+            evalue = "EV:Z:" + i[2:]
         elif i.startswith("mismap="):
             mapq = mapqFromProb(i[7:])
 
-    head, tail = sLines[0], sLines[1:]
+    pos = str(begA + 1)  # convert to 1-based coordinate
 
-    s, rName, rStart, rAlnSize, rStrand, rSeqSize, rAlnString = head
-    if rStrand != "+":
-        raise Exception("for SAM, the 1st strand in each alignment must be +")
-    pos = str(int(rStart) + 1)  # convert to 1-based coordinate
+    alignmentColumns = list(zip(rowA.upper(), rowB.upper()))
 
-    for s, qName, qStart, qAlnSize, qStrand, qSeqSize, qAlnString in tail:
-        alignmentColumns = zip(rAlnString.upper(), qAlnString.upper())
+    revBegB = seqLenB - endB
+    cigar = "".join(cigarParts(begB, iter(alignmentColumns), revBegB))
 
-        qStart = int(qStart)
-        qRevStart = int(qSeqSize) - qStart - int(qAlnSize)
-        cigar = "".join(cigarParts(qStart, iter(alignmentColumns), qRevStart))
+    seq = rowB.replace("-", "")
 
-        seq = deleted(qAlnString, "-")
+    qual = "*"
+    if qLines:
+        qFields = qLines[-1].split()
+        if qFields[1] == seqNameB:
+            qual = ''.join(j for i, j in zip(rowB, qFields[2]) if i != "-")
 
-        qual = "*"
-        if qLines:
-            q, qualityName, qualityString = qLines[0]
-            # don't try to handle multiple alignments for now (YAGNI):
-            if len(qLines) > 1 or len(tail) > 1 or qualityName != qName:
-                raise Exception("can't interpret the quality data")
-            qual = ''.join(j for i, j in izip(qAlnString, qualityString)
-                           if i != "-")
+    # It's hard to get all the pair info, so this is very
+    # incomplete, but hopefully good enough.
+    # I'm not sure whether to add 2 and/or 8 to flag.
+    if seqNameB.endswith("/1"):
+        seqNameB = seqNameB[:-2]
+        if strandB == "+": flag = "99"  # 1 + 2 + 32 + 64
+        else:              flag = "83"  # 1 + 2 + 16 + 64
+    elif seqNameB.endswith("/2"):
+        seqNameB = seqNameB[:-2]
+        if strandB == "+": flag = "163"  # 1 + 2 + 32 + 128
+        else:              flag = "147"  # 1 + 2 + 16 + 128
+    else:
+        if strandB == "+": flag = "0"
+        else:              flag = "16"
 
-        # It's hard to get all the pair info, so this is very
-        # incomplete, but hopefully good enough.
-        # I'm not sure whether to add 2 and/or 8 to flag.
-        if qName.endswith("/1"):
-            qName = qName[:-2]
-            if qStrand == "+": flag = "99"  # 1 + 2 + 32 + 64
-            else:              flag = "83"  # 1 + 2 + 16 + 64
-        elif qName.endswith("/2"):
-            qName = qName[:-2]
-            if qStrand == "+": flag = "163"  # 1 + 2 + 32 + 128
-            else:              flag = "147"  # 1 + 2 + 16 + 128
-        else:
-            if qStrand == "+": flag = "0"
-            else:              flag = "16"
+    editDistance = sum(x != y for x, y in alignmentColumns)
+    # no special treatment of ambiguous bases: might be a minor bug
+    editDistance = "NM:i:" + str(editDistance)
 
-        editDistance = sum(1 for x, y in alignmentColumns if x != y)
-        # no special treatment of ambiguous bases: might be a minor bug
-        editDistance = "NM:i:" + str(editDistance)
+    out = [seqNameB, flag, seqNameA, pos, mapq, cigar, "*\t0\t0", seq, qual]
+    out.append(editDistance)
+    if score: out.append(score)
+    if evalue: out.append(evalue)
+    if readGroup: out.append(readGroup)
+    print("\t".join(out))
 
-        outWords = [qName, flag, rName, pos, mapq, cigar, "*\t0\t0", seq, qual]
-        outWords.append(editDistance)
-        if score: outWords.append(score)
-        if evalue: outWords.append(evalue)
-        if rg: outWords.append(rg)
-        print "\t".join(outWords)
+def mafConvertToSam(opts, lines):
+    readGroup = ""
+    if opts.readgroup:
+        readGroup = "RG:Z:" + readGroupId(opts.readgroup.split())
+    for maf in mafInput(opts, lines):
+        writeSam(readGroup, maf)
 
 ##### Routines for converting to BLAST-like format: #####
 
 def pairwiseMatchSymbol(alignmentColumn):
-    if isMatch(alignmentColumn): return "|"
-    else: return " "
+    if isMatch(alignmentColumn):
+        return "|"
+    else:
+        return " "
 
 def strandText(strand):
-    if strand == "+": return "Plus"
-    else: return "Minus"
+    if strand == "+":
+        return "Plus"
+    else:
+        return "Minus"
 
-def blastCoordinate(oneBasedCoordinate, strand, seqSize):
-    if strand == "-":
-        oneBasedCoordinate = seqSize - oneBasedCoordinate + 1
-    return str(oneBasedCoordinate)
+def blastBegCoordinate(zeroBasedCoordinate, strand, seqLen):
+    if strand == "+":
+        return str(zeroBasedCoordinate + 1)
+    else:
+        return str(seqLen - zeroBasedCoordinate)
+
+def blastEndCoordinate(zeroBasedCoordinate, strand, seqLen):
+    if strand == "+":
+        return str(zeroBasedCoordinate)
+    else:
+        return str(seqLen - zeroBasedCoordinate + 1)
+
+def nextCoordinate(coordinate, row, letterSize):
+    return coordinate + insertSize(row, letterSize)
 
 def chunker(things, chunkSize):
     for i in range(0, len(things), chunkSize):
         yield things[i:i+chunkSize]
 
-def blastChunker(maf, lineSize, alignmentColumns):
-    letterSizes = mafLetterSizes(maf)
-    coords = maf.alnStarts
+def blastChunker(sLines, lineSize, alignmentColumns):
+    seqLens = [i[1] for i in sLines]
+    strands = [i[2] for i in sLines]
+    letterSizes = [i[3] for i in sLines]
+    coords = [i[4] for i in sLines]
     for chunkCols in chunker(alignmentColumns, lineSize):
-        chunkRows = zip(*chunkCols)
-        chunkRows = map(''.join, chunkRows)
-        starts = [i + 1 for i in coords]  # change to 1-based coordinates
-        starts = map(blastCoordinate, starts, maf.strands, maf.seqSizes)
-        increments = map(insertionSize, chunkRows, letterSizes)
-        coords = map(operator.add, coords, increments)
-        ends = map(blastCoordinate, coords, maf.strands, maf.seqSizes)
-        yield chunkCols, chunkRows, starts, ends
+        chunkRows = list(alignmentRowsFromColumns(chunkCols))
+        begs = list(map(blastBegCoordinate, coords, strands, seqLens))
+        coords = list(map(nextCoordinate, coords, chunkRows, letterSizes))
+        ends = list(map(blastEndCoordinate, coords, strands, seqLens))
+        yield chunkCols, chunkRows, begs, ends
 
-def writeBlast(maf, lineSize, oldQueryName):
-    dieUnlessPairwise(maf)
+def writeBlast(opts, maf, oldQueryName):
+    aLine, sLines, qLines, pLines = maf
+    fieldsA, fieldsB = pairOrDie(sLines, "Blast")
+    seqNameA, seqLenA, strandA, letterSizeA, begA, endA, rowA = fieldsA
+    seqNameB, seqLenB, strandB, letterSizeB, begB, endB, rowB = fieldsB
 
-    if maf.seqNames[1] != oldQueryName:
-        print "Query= %s" % maf.seqNames[1]
-        print "         (%s letters)" % maf.seqSizes[1]
-        print
+    if seqNameB != oldQueryName:
+        print("Query= " + seqNameB)
+        print("         (%s letters)" % seqLenB)
+        print()
 
-    print ">%s" % maf.seqNames[0]
-    print "          Length = %s" % maf.seqSizes[0]
-    print
+    print(">" + seqNameA)
+    print("          Length = %s" % seqLenA)
+    print()
 
-    scoreLine = " Score = %s" % maf.namesAndValues["score"]
-    try: scoreLine += ", Expect = %s" % maf.namesAndValues["expect"]
-    except KeyError: pass
-    print scoreLine
+    score, evalue = scoreAndEvalue(aLine)
 
-    alignmentColumns = zip(*maf.alnStrings)
+    if score and opts.bitScoreA is not None and opts.bitScoreB is not None:
+        bitScore = opts.bitScoreA * float(score) - opts.bitScoreB
+        scoreLine = " Score = %.3g bits (%s)" % (bitScore, score)
+    else:
+        scoreLine = " Score = %s" % score
+
+    if evalue:
+        scoreLine += ", Expect = %s" % evalue
+
+    print(scoreLine)
+
+    alignmentColumns = list(zip(rowA, rowB))
 
     alnSize = len(alignmentColumns)
-    matches = quantify(alignmentColumns, isMatch)
+    matches = sum(x.upper() == y.upper() for x, y in alignmentColumns)
     matchPercent = 100 * matches // alnSize  # round down, like BLAST
     identLine = " Identities = %s/%s (%s%%)" % (matches, alnSize, matchPercent)
-    gaps = alnSize - quantify(alignmentColumns, isGapless)
-    gapPercent = 100 * gaps // alnSize  # round down, like BLAST
-    if gaps: identLine += ", Gaps = %s/%s (%s%%)" % (gaps, alnSize, gapPercent)
-    print identLine
+    gaps = rowA.count("-") + rowB.count("-")
+    if gaps:
+        gapPercent = 100 * gaps // alnSize  # round down, like BLAST
+        identLine += ", Gaps = %s/%s (%s%%)" % (gaps, alnSize, gapPercent)
+    print(identLine)
 
-    strands = map(strandText, maf.strands)
-    print " Strand = %s / %s" % (strands[1], strands[0])
-    print
+    print(" Strand = %s / %s" % (strandText(strandB), strandText(strandA)))
+    print()
 
-    for chunk in blastChunker(maf, lineSize, alignmentColumns):
-        cols, rows, starts, ends = chunk
-        startWidth = maxlen(starts)
-        matchSymbols = map(pairwiseMatchSymbol, cols)
-        matchSymbols = ''.join(matchSymbols)
-        print "Query: %-*s %s %s" % (startWidth, starts[1], rows[1], ends[1])
-        print "       %-*s %s"    % (startWidth, " ", matchSymbols)
-        print "Sbjct: %-*s %s %s" % (startWidth, starts[0], rows[0], ends[0])
-        print
+    for chunk in blastChunker(sLines, opts.linesize, alignmentColumns):
+        cols, rows, begs, ends = chunk
+        begWidth = maxlen(begs)
+        matchSymbols = ''.join(map(pairwiseMatchSymbol, cols))
+        print("Query: %-*s %s %s" % (begWidth, begs[1], rows[1], ends[1]))
+        print("       %-*s %s"    % (begWidth, " ", matchSymbols))
+        print("Sbjct: %-*s %s %s" % (begWidth, begs[0], rows[0], ends[0]))
+        print()
+
+def mafConvertToBlast(opts, lines):
+    oldQueryName = ""
+    for maf in mafInput(opts, lines):
+        writeBlast(opts, maf, oldQueryName)
+        sLines = maf[1]
+        oldQueryName = sLines[1][0]
+
+def blastDataFromMafFields(fields):
+    seqName, seqLen, strand, letterSize, beg, end, row = fields
+    if strand == "+":
+        beg += 1
+    else:
+        beg = seqLen - beg
+        end = seqLen - end + 1
+    return seqName, str(beg), str(end), row.upper()
+
+def writeBlastTab(opts, maf):
+    aLine, sLines, qLines, pLines = maf
+    fieldsA, fieldsB = pairOrDie(sLines, "BlastTab")
+    seqNameA, begA, endA, rowA = blastDataFromMafFields(fieldsA)
+    seqNameB, begB, endB, rowB = blastDataFromMafFields(fieldsB)
+
+    alignmentColumns = list(zip(rowA, rowB))
+    alnSize = len(alignmentColumns)
+    matches = sum(x == y for x, y in alignmentColumns)
+    matchPercent = "%.2f" % (100.0 * matches / alnSize)
+    mismatches = alnSize - matches - rowA.count("-") - rowB.count("-")
+    gapOpens = gapRunCount(rowA) + gapRunCount(rowB)
+
+    out = [seqNameB, seqNameA, matchPercent, alnSize, mismatches,
+           gapOpens, begB, endB, begA, endA]
+
+    score, evalue = scoreAndEvalue(aLine)
+    if evalue:
+        out.append(evalue)
+        if score and opts.bitScoreA is not None and opts.bitScoreB is not None:
+            bitScore = opts.bitScoreA * float(score) - opts.bitScoreB
+            out.append("%.3g" % bitScore)
+
+    print(*out, sep="\t")
+
+def mafConvertToBlastTab(opts, lines):
+    for maf in mafInput(opts, lines):
+        writeBlastTab(opts, maf)
+
+##### Routines for converting to GFF format: #####
+
+def writeGffHeader():
+    print("##gff-version 3")
+
+def gffFromMaf(maf):
+    aLine, sLines, qLines, pLines = maf
+    fieldsA, fieldsB = pairOrDie(sLines, "GFF")
+    seqNameA, seqLenA, strandA, letterSizeA, begA, endA, rowA = fieldsA
+    seqNameB, seqLenB, strandB, letterSizeB, begB, endB, rowB = fieldsB
+
+    score = "."
+    for i in aLine.split():
+        if i.startswith("score="):
+            score = i[6:]
+
+    if strandA == "-":
+        begA, endA = seqLenA - endA, seqLenA - begA
+    if strandB == "-":
+        begB, endB = seqLenB - endB, seqLenB - begB
+    begA += 1
+    begB += 1
+
+    strand = "+" if strandA == strandB else "-"
+
+    return seqNameA, begA, endA, strand, score, seqNameB, begB, endB
+
+def writeOneGff(gff, typeOfThing, parentId):
+    seqNameA, begA, endA, strand, score, seqNameB, begB, endB = gff
+    target = "Target={0} {1} {2}".format(seqNameB, begB, endB)
+    name = "Name={0}:{1}-{2}".format(seqNameB, begB, endB)
+    attributes = [target, name]
+    if parentId:
+        attributes.append("Parent=" + parentId)
+    print(seqNameA, "maf-convert", typeOfThing, begA, endA, score, strand, ".",
+          ";".join(attributes), sep="\t")
+
+def writeGffGroup(qryNameCounts, mafs):
+    gffs = [gffFromMaf(i) for i in mafs]
+    seqNameA, begA, endA, strand, score, seqNameB, begB, endB = gffs[0]
+    endA = gffs[-1][2]
+    if strand == "+":
+        endB = gffs[-1][7]
+    else:
+        begB = gffs[-1][6]
+    qryNameCounts[seqNameB] += 1
+    parentId = "{0}.{1}".format(seqNameB, qryNameCounts[seqNameB])
+    myId = "ID=" + parentId
+    name = "Name={0}:{1}-{2}".format(seqNameB, begB, endB)
+    attributes = [myId, name]
+    print(seqNameA, "maf-convert", "match", begA, endA, ".", strand, ".",
+          ";".join(attributes), sep="\t")
+    for i in gffs:
+        writeOneGff(i, "match_part", parentId)
+
+def mafConvertToGff(opts, lines):
+    qryNameCounts = collections.defaultdict(int)
+    if opts.Join:
+        for i in colinearMafInput(opts, lines):
+            writeGffGroup(qryNameCounts, i)
+    elif opts.join:
+        for i in mafGroupInput(opts, lines):
+            writeGffGroup(qryNameCounts, i)
+    else:
+        for i in mafInput(opts, lines):
+            writeOneGff(gffFromMaf(i), "match", None)
 
 ##### Routines for converting to HTML format: #####
 
 def writeHtmlHeader():
-    print '''
+    print('''
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
  "http://www.w3.org/TR/html4/strict.dtd">
 <html lang="en"><head>
@@ -512,7 +845,7 @@ pre {font-family: "Courier New", monospace, serif; font-size: 0.8125em}
 <pre class="key"><span class="e">  </span> prob &gt; 0.5  </pre>
 <pre class="key"><span class="f">  </span> prob &le; 0.5  </pre>
 </div>
-'''
+''')
 
 def probabilityClass(probabilityColumn):
     p = ord(min(probabilityColumn)) - 33
@@ -541,100 +874,107 @@ def multipleMatchSymbol(alignmentColumn):
     if isMatch(alignmentColumn): return "*"
     else: return " "
 
-def writeHtml(maf, lineSize):
-    scoreLine = "Alignment"
-    try:
-        scoreLine += " score=%s" % maf.namesAndValues["score"]
-        scoreLine += ", expect=%s" % maf.namesAndValues["expect"]
-    except KeyError: pass
-    print "<h3>%s:</h3>" % scoreLine
+def writeHtml(opts, maf):
+    aLine, sLines, qLines, pLines = maf
 
-    if maf.pLines:
-        probRows = [i[1] for i in maf.pLines]
-        probCols = izip(*probRows)
-        classes = imap(probabilityClass, probCols)
+    scoreLine = "Alignment"
+    score, evalue = scoreAndEvalue(aLine)
+    if score:
+        scoreLine += " score=" + score
+        if evalue:
+            scoreLine += ", expect=" + evalue
+    print("<h3>%s:</h3>" % scoreLine)
+
+    if pLines:
+        probRows = [i.split()[1] for i in pLines]
+        probCols = zip(*probRows)
+        classes = map(probabilityClass, probCols)
     else:
         classes = repeat(None)
 
-    nameWidth = maxlen(maf.seqNames)
-    alignmentColumns = zip(*maf.alnStrings)
+    seqNames = [i[0] for i in sLines]
+    nameWidth = maxlen(seqNames)
+    rows = [i[6] for i in sLines]
+    alignmentColumns = list(zip(*rows))
 
-    print '<pre>'
-    for chunk in blastChunker(maf, lineSize, alignmentColumns):
-        cols, rows, starts, ends = chunk
-        startWidth = maxlen(starts)
+    print('<pre>')
+    for chunk in blastChunker(sLines, opts.linesize, alignmentColumns):
+        cols, rows, begs, ends = chunk
+        begWidth = maxlen(begs)
         endWidth = maxlen(ends)
-        matchSymbols = map(multipleMatchSymbol, cols)
-        matchSymbols = ''.join(matchSymbols)
-        classChunk = islice(classes, lineSize)
+        matchSymbols = ''.join(map(multipleMatchSymbol, cols))
+        classChunk = islice(classes, opts.linesize)
         classRuns = list(identicalRuns(classChunk))
-        for n, s, r, e in zip(maf.seqNames, starts, rows, ends):
+        for n, b, r, e in zip(seqNames, begs, rows, ends):
             spans = [htmlSpan(r, i) for i in classRuns]
             spans = ''.join(spans)
-            formatParams = nameWidth, n, startWidth, s, spans, endWidth, e
-            print '%-*s %*s %s %*s' % formatParams
-        print ' ' * nameWidth, ' ' * startWidth, matchSymbols
-        print
-    print '</pre>'
+            formatParams = nameWidth, n, begWidth, b, spans, endWidth, e
+            print('%-*s %*s %s %*s' % formatParams)
+        print(' ' * nameWidth, ' ' * begWidth, matchSymbols)
+        print()
+    print('</pre>')
 
-##### Routines for reading MAF format: #####
+def mafConvertToHtml(opts, lines):
+    for maf in mafInput(opts, lines):
+        writeHtml(opts, maf)
 
-def mafInput(lines, isKeepComments):
-    a = []
-    s = []
-    q = []
-    p = []
-    for i in lines:
-        w = i.split()
-        if not w:
-            if a: yield a, s, q, p
-            a = []
-            s = []
-            q = []
-            p = []
-        elif w[0] == "a":
-            a = w
-        elif w[0] == "s":
-            s.append(w)
-        elif w[0] == "q":
-            q.append(w)
-        elif w[0] == "p":
-            p.append(w)
-        elif i[0] == "#" and isKeepComments:
-            print i,
-    if a: yield a, s, q, p
+##### Main program: #####
 
 def isFormat(myString, myFormat):
     return myFormat.startswith(myString)
 
+def mafConvertOneFile(opts, formatName, lines):
+    if   isFormat(formatName, "axt"):
+        mafConvertToAxt(opts, lines)
+    elif isFormat(formatName, "blast"):
+        mafConvertToBlast(opts, lines)
+    elif isFormat(formatName, "blasttab"):
+        mafConvertToBlastTab(opts, lines)
+    elif isFormat(formatName, "chain"):
+        mafConvertToChain(opts, lines)
+    elif isFormat(formatName, "gff"):
+        mafConvertToGff(opts, lines)
+    elif isFormat(formatName, "html"):
+        mafConvertToHtml(opts, lines)
+    elif isFormat(formatName, "psl"):
+        mafConvertToPsl(opts, lines)
+    elif isFormat(formatName, "sam"):
+        mafConvertToSam(opts, lines)
+    elif isFormat(formatName, "tabular"):
+        mafConvertToTab(opts, lines)
+    else:
+        raise Exception("unknown format: " + formatName)
+
 def mafConvert(opts, args):
-    format = args[0].lower()
-    if isFormat(format, "sam"):
-        if opts.dictionary: d = readSequenceLengths(fileinput.input(args[1:]))
-        else: d = {}
-        if opts.readgroup:
-            readGroupItems = opts.readgroup.split()
-            rg = "RG:Z:" + readGroupId(readGroupItems)
-        else:
-            readGroupItems = []
-            rg = ""
-        if not opts.noheader: writeSamHeader(d, opts.dictfile, readGroupItems)
-    inputLines = fileinput.input(args[1:])
-    if isFormat(format, "html") and not opts.noheader: writeHtmlHeader()
-    isKeepCommentLines = isFormat(format, "tabular") and not opts.noheader
-    oldQueryName = ""
-    for maf in mafInput(inputLines, isKeepCommentLines):
-        if   isFormat(format, "axt"): writeAxt(Maf(*maf))
-        elif isFormat(format, "blast"):
-            maf = Maf(*maf)
-            writeBlast(maf, opts.linesize, oldQueryName)
-            oldQueryName = maf.seqNames[1]
-        elif isFormat(format, "html"): writeHtml(Maf(*maf), opts.linesize)
-        elif isFormat(format, "psl"): writePsl(Maf(*maf), opts.protein)
-        elif isFormat(format, "sam"): writeSam(maf, rg)
-        elif isFormat(format, "tabular"): writeTab(maf)
-        else: raise Exception("unknown format: " + format)
-    if isFormat(format, "html") and not opts.noheader: print "</body></html>"
+    logging.basicConfig(format="%(filename)s: %(message)s")
+
+    formatName = args[0].lower()
+    fileNames = args[1:]
+
+    opts.isKeepComments = False
+    opts.bitScoreA = None
+    opts.bitScoreB = None
+
+    if not opts.noheader:
+        if isFormat(formatName, "gff"):
+            writeGffHeader()
+        if isFormat(formatName, "html"):
+            writeHtmlHeader()
+        if isFormat(formatName, "sam"):
+            writeSamHeader(opts, fileNames)
+        if isFormat(formatName, "tabular"):
+            opts.isKeepComments = True
+
+    if not fileNames:
+        fileNames = ["-"]
+    for i in fileNames:
+        f = myOpen(i)
+        mafConvertOneFile(opts, formatName, f)
+        f.close()
+
+    if not opts.noheader:
+        if isFormat(formatName, "html"):
+            print("</body></html>")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # avoid silly error message
@@ -643,6 +983,9 @@ if __name__ == "__main__":
   %prog --help
   %prog axt mafFile(s)
   %prog blast mafFile(s)
+  %prog blasttab mafFile(s)
+  %prog chain mafFile(s)
+  %prog gff mafFile(s)
   %prog html mafFile(s)
   %prog psl mafFile(s)
   %prog sam mafFile(s)
@@ -653,6 +996,10 @@ if __name__ == "__main__":
     op = optparse.OptionParser(usage=usage, description=description)
     op.add_option("-p", "--protein", action="store_true",
                   help="assume protein alignments, for psl match counts")
+    op.add_option("-j", "--join", type="float", metavar="N", help="join "
+                  "consecutive co-linear alignments separated by <= N letters")
+    op.add_option("-J", "--Join", type="float", metavar="N", help=
+                  "join nearest co-linear alignments separated by <= N letters")
     op.add_option("-n", "--noheader", action="store_true",
                   help="omit any header lines from the output")
     op.add_option("-d", "--dictionary", action="store_true",
@@ -663,7 +1010,7 @@ if __name__ == "__main__":
                   help="read group info for sam format")
     op.add_option("-l", "--linesize", type="int", default=60, #metavar="CHARS",
                   help="line length for blast and html formats (default: %default)")
-    (opts, args) = op.parse_args()
+    opts, args = op.parse_args()
     if opts.linesize <= 0: op.error("option -l: should be >= 1")
     if opts.dictionary and opts.dictfile: op.error("can't use both -d and -f")
     if len(args) < 1: op.error("I need a format-name and some MAF alignments")
@@ -671,7 +1018,6 @@ if __name__ == "__main__":
         op.error("need file (not pipe) with option -d")
 
     try: mafConvert(opts, args)
-    except KeyboardInterrupt: pass  # avoid silly error message
-    except Exception, e:
+    except Exception as e:
         prog = os.path.basename(sys.argv[0])
         sys.exit(prog + ": error: " + str(e))
