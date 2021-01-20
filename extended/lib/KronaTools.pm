@@ -9,12 +9,24 @@ use strict;
 package KronaTools;
 
 use Getopt::Long;
+Getopt::Long::Configure("no_ignore_case");
 use File::Basename;
 use File::Path;
 
-
 use base 'Exporter';
 use Cwd 'abs_path';
+
+my $libPath;
+BEGIN
+{
+	use File::Basename;
+	use Cwd 'abs_path';
+	$libPath = dirname(abs_path(__FILE__));
+}
+my $taxonomyDir = $libPath;
+$taxonomyDir =~ s/lib$/taxonomy/;
+my $ecFile = "$libPath/../data/ec.tsv";
+my $useMembers; # set by addMember()
 
 # public subroutines
 #
@@ -23,18 +35,22 @@ our @EXPORT = qw
 	addByEC
 	addByLineage
 	addByTaxID
+	addXML
+	classify
 	classifyBlast
 	default
+	getAccFromSeqID
 	getKronaOptions
 	getOption
 	getOptionString
 	getScoreName
 	getScriptName
 	getTaxDepth
+	getTaxInfo
 	getTaxName
 	getTaxParent
 	getTaxRank
-	getTaxIDFromGI
+	getTaxIDFromAcc
 	htmlFooter
 	htmlHeader
 	ktDie
@@ -47,6 +63,7 @@ our @EXPORT = qw
 	printColumns
 	printHeader
 	printOptions
+	printWarnings
 	printUsage
 	setOption
 	taxContains
@@ -69,12 +86,14 @@ my %options =
 	'ecCol' => 2,
 	'hueBad' => 0,
 	'hueGood' => 120,
+	'key' => 1,
 	'queryCol' => 1,
 	'scoreCol' => 3,
-	'key' => 1,
+	'standalone' => 1,
 	'taxCol' => 2,
+	'taxonomy' => $taxonomyDir,
 	'threshold' => 3,
-	'url' => 'http://krona.sourceforge.net'
+	'thresholdGeneric' => 0,
 );
 
 # Option format codes to pass to GetOptions (and to be parsed for display).
@@ -83,6 +102,8 @@ my %options =
 #
 my %optionFormats =
 (
+	'standalone' =>
+		'a',
 	'bitScore' =>
 		'b',
 	'combine' =>
@@ -95,8 +116,10 @@ my %optionFormats =
 		'e=f',
 	'include' =>
 		'i',
-	'noRank' =>
+	'cellular' =>
 		'k',
+	'noRank' =>
+		'K',
 	'local' =>
 		'l',
 	'magCol' =>
@@ -129,6 +152,10 @@ my %optionFormats =
 		't=i',
 	'threshold' =>
 		't=f',
+	'thresholdGeneric' =>
+		't=f',
+	'taxonomy' =>
+		'tax=s',
 	'url' =>
 		'u=s',
 	'verbose' =>
@@ -153,6 +180,7 @@ my %optionTypes =
 my %optionDescriptions =
 (
 	'bitScore' => 'Use bit score for average scores instead of log[10] e-value.',
+	'cellular' => 'Show the "cellular organisms" taxon (collapsed by default).',
 	'combine' => 'Combine data from each file, rather than creating separate datasets within the chart.',
 	'depth' => 'Maximum depth of wedges to include in the chart.',
 	'ecCol' => 'Column of input files to use as EC number.',
@@ -161,22 +189,25 @@ my %optionDescriptions =
 	'hueGood' => 'Hue (0-360) for "good" scores.',
 	'percentIdentity' => 'Use percent identity for average scores instead of log[10] e-value.',
 	'include' => 'Include a wedge for queries with no hits.',
-	'local' => 'Create a local chart, which does not require an internet connection to view (but will only work on this computer).',
+	'local' => 'Use resources from the local KronaTools installation instead of bundling them with charts (charts will be smaller but will only work on this computer).',
 	'magCol' => 'Column of input files to use as magnitude. If magnitude files are specified, their magnitudes will override those in this column.',
 	'minConfidence' => 'Minimum confidence. Each query sequence will only be added to taxa that were predicted with a confidence score of at least this value.',
 	'name' => 'Name of the highest level.',
 	'noMag' => 'Files do not have a field for quantity.',
-	'noRank' => 'Allow taxa with ranks labeled "no rank".',
+	'noRank' => 'Collapse assignments to taxa with ranks labeled "no rank" by moving up to parent.',
 	'out' => 'Output file name.',
 	'phymm' => 'Input is phymm only (no confidence scores).',
 	'postUrl' => 'Url to send query IDs to (instead of listing them) for each wedge. The query IDs will be sent as a comma separated list in the POST variable "queries", with the current dataset index (from 0) in the POST variable "dataset". The url can include additional variables encoded via GET.',
 	'queryCol' => 'Column of input files to use as query ID. Required if magnitude files are specified.',
 	'random' => 'Pick from the best hits randomly instead of finding the lowest common ancestor.',
 	'scoreCol' => 'Column of input files to use as score.',
+	'standalone' => 'Create a standalone chart, which includes Krona resources and does not require an Internet connection or KronaTools installation to view.',
 	'summarize' => 'Summarize counts and average scores by taxonomy ID.',
 	'taxCol' => 'Column of input files to use as taxonomy ID.',
+	'taxonomy' => 'Path to directory containing a taxonomy database to use.',
 	'threshold' => 'Threshold for bit score differences when determining "best" hits. Hits with scores that are within this distance of the highest score will be included when computing the lowest common ancestor (or picking randomly if -r is specified).',
-	'url' => 'URL of Krona resources.',
+	'thresholdGeneric' => 'Threshold for score differences when determining "best" hits. Hits with scores that are within this distance of the highest score will be included when computing the lowest common ancestor (or picking randomly if -r is specified). If 0, only exact ties for the best hit are used.',
+	'url' => 'URL of Krona resources to use instead of bundling them with the chart (e.g. "http://krona.sourceforge.net"). Reduces size of charts and allows updates, though charts will not work without access to this URL.',
 	'verbose' => 'Verbose.'
 );
 
@@ -190,6 +221,7 @@ my %optionDescriptions =
 our %argumentNames =
 (
 	'blast' => 'blast_output',
+	'hits' => 'hits',
 	'magnitude' => 'magnitudes',
 	'metarep' => 'metarep_folder',
 	'name' => 'name',
@@ -201,13 +233,20 @@ our %argumentDescriptions =
 (
 	'blast' =>
 'File containing BLAST results in tabular format ("Hit table (text)" when
-downloading from NCBI).  If running BLAST locally, subject IDs in the local
-database must contain GI numbers in "gi|12345" format.',
+downloading from NCBI). If running BLAST locally, subject IDs in the local
+database must contain accession numbers, either bare or in the fourth field of
+the pipe-separated ("gi|12345|xx|ABC123.1|") format.',
+	'hits' =>
+'Tabular file whose fields are [query, subject, score]. Subject must be
+an accession or contain one in the fourth field of pipe notation (e.g.
+"gi|12345|xx|ABC123.1|". The subject and score can be omitted to
+include a query that has no hits, which will be assigned a taxonomy
+ID of -1.',
 	'magnitude' =>
-'Optional file listing query IDs with magnitudes, separated by tabs.  This can
+'Optional file listing query IDs with magnitudes, separated by tabs. This can
 be used to account for read length or contig depth to obtain a more accurate
-representation of abundance.  By default, query sequences without specified
-magnitudes will be assigned a magnitude of 1.  Magnitude files for assemblies in
+representation of abundance. By default, query sequences without specified
+magnitudes will be assigned a magnitude of 1. Magnitude files for assemblies in
 ACE format can be created with ktGetContigMagnitudes.',
 	'metarep' =>
 'Unpacked METAREP data folder.',
@@ -222,24 +261,30 @@ default, the basename of the file will be used.',
 # Global constants #
 ####################
 
-my $libPath = `ktGetLibPath`;
-my $taxonomyDir = "$libPath/../taxonomy";
-my $ecFile = "$libPath/../data/ec.tsv";
-
-my $version = '2.4';
+our $version = '2.7.1';
 my $javascriptVersion = '2.0';
 my $javascript = "src/krona-$javascriptVersion.js";
 my $hiddenImage = 'img/hidden.png';
 my $favicon = 'img/favicon.ico';
 my $loadingImage = 'img/loading.gif';
-my $logo = 'img/logo.png';
-my $taxonomyHrefBase = 'http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=info&id=';
+my $logo = 'img/logo-med.png';
+my $taxonomyHrefBase = 'http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=info&amp;id=';
 my $ecHrefBase = 'http://www.chem.qmul.ac.uk/iubmb/enzyme/EC';
 my $suppDirSuffix = '.files';
 my $suppEnableFile = 'enable.js';
+my $fileTaxonomy = 'taxonomy.tab';
+my $fileTaxByAcc = 'all.accession2taxid.sorted';
 my $memberLimitDataset = 10000;
 my $memberLimitTotal = 100000;
-my $columns = `tput cols`;
+my $columns;
+if (defined($ENV{TERM}))
+{
+	$columns = `tput cols`;
+}
+else
+{
+	$columns = 80;
+}
 our $minEVal = -450;
 
 
@@ -251,8 +296,12 @@ my @taxDepths;
 my @taxParents;
 my @taxRanks;
 my @taxNames;
-my %taxIDByGI;
+my %taxInfoByID;
+my %taxIDByAcc;
 my %ecNames;
+my %invalidAccs;
+my %missingAccs;
+my %missingTaxIDs;
 
 
 ############
@@ -348,6 +397,7 @@ sub addByEC
 		}
 		
 		$node->{'unassigned'}[$set]++;
+		$node->{'magnitudeUnassigned'}[$set] += $magnitude;
 	}
 }
 
@@ -474,7 +524,7 @@ sub addByLineage
 			$depth + 1
 		);
 	}
-	else
+	elsif ( ! $options{'leafAdd'} )
 	{
 		if ( $queryID )
 		{
@@ -482,6 +532,7 @@ sub addByLineage
 		}
 		
 		$node->{'unassigned'}[$dataset]++;
+		$node->{'magnitudeUnassigned'}[$dataset] += $magnitude;
 	}
 }
 
@@ -507,6 +558,12 @@ sub addByTaxID
 	) = @_;
 	
 	$magnitude = default($magnitude, 1);
+	
+	if ( $taxID != 0 && ! defined $taxDepths[$taxID] )
+	{
+		$missingTaxIDs{$taxID} = 1;
+		$taxID = 1; # unknown tax ID; set to root
+	}
 	
 	if ( $taxID == 0 )
 	{
@@ -535,17 +592,24 @@ sub addByTaxID
 	#
 	while
 	(
-		! $options{'noRank'} && $taxID > 1 && $taxRanks[$taxID] eq 'no rank' ||
-		$options{'depth'} && $taxDepths[$taxID] > $options{'depth'}
+		shouldCollapse($taxID) ||
+		$options{'depth'} && getTaxDepth($taxID) > $options{'depth'}
 	)
 	{
-		$taxID = $taxParents[$taxID];
+		$taxID = getTaxParent($taxID);
 	}
 	
 	# get parent recursively
 	#
 	my $parent;
-	my $parentID = getTaxParent($taxID);
+	my $parentID = $taxID;
+	
+	do
+	{
+		$parentID = getTaxParent($parentID);
+	}
+	while ( shouldCollapse($parentID) );
+	
 	#
 	if ( $parentID != 1 )#$taxID )
 	{
@@ -568,6 +632,7 @@ sub addByTaxID
 		}
 		
 		$parent->{'unassigned'}[$set]++;
+		$parent->{'magnitudeUnassigned'}[$set] += $magnitude;
 	}
 	else
 	{
@@ -600,6 +665,7 @@ sub addByTaxID
 		if ( ! $assigned )
 		{
 			$child->{'unassigned'}[$set]++;
+			$child->{'magnitudeUnassigned'}[$set] += $magnitude;
 		}
 		
 		${$child->{'magnitude'}}[$set] += $magnitude;
@@ -614,6 +680,235 @@ sub addByTaxID
 		return $child;
 	}
 }
+
+sub addXML
+{
+	my # parameters
+	(
+		$node,
+		$xml,
+		$dataset,
+		$file
+	) = @_;
+	
+	while ( (my $line = <$xml>) !~ /<\/node>/ )
+	{
+		if ( $line =~ /<node name="([^"]+)">/ )
+		{
+			my $child = $1;
+			
+			if ( ! defined $node->{'children'}{$child} )
+			{
+				my %newChild = ();
+				$node->{'children'}{$child} = \%newChild;
+			}
+			
+			addXML($node->{'children'}{$child}, $xml, $dataset, $file);
+		}
+		elsif ( $line =~ /<members>/ )
+		{
+			if ( $line =~ /<val>(.*)<\/val>/ )
+			{
+				my @members = split /<\/val><val>/, $1;
+				my $offset = 0;
+				
+				for ( my $i = 0; $i < @members; $i++ )
+				{
+					if ( $members[$i] eq "" )
+					{
+						next;
+					}
+					
+					my $fileMembers = "$file.files/$members[$i]";
+					
+					if ( open MEMBERS, $fileMembers )
+					{
+						while ( <MEMBERS> )
+						{
+							if ( /(data\(')?(.+)\\n\\/ )
+							{
+								addMember($node, $dataset + $i, $2);
+							}
+						}
+					
+						close MEMBERS;
+					}
+				}
+			}
+			
+			while ( $line !~ /<\/members>/ )
+			{
+				my $offset = 0;
+				
+				if ( $line =~ /<vals><val>(.*)<\/val><\/vals>/ )
+				{
+					my @members = split /<\/val><val>/, $1;
+					
+					for ( my $i = 0; $i < @members; $i++ )
+					{
+						addMember($node, $dataset + $offset, $members[$i]);
+					}
+					
+					$offset++;
+				}
+				
+				$line = <$xml>;
+			}
+		}
+		elsif ( $line =~ /<(rank|taxon)><val>(.*)<\/val><\/\1>/ )
+		{
+			$node->{$1}[0] = $2;
+		}
+		elsif ( $line =~ /<(count|score|magnitude)><val>(.*)<\/val><\/\1>/ )
+		{
+			my @vals = split /<\/val><val>/, $2;
+			
+			for ( my $i = 0; $i < @vals; $i++ )
+			{
+				if ( $1 eq 'score' )
+				{
+					$node->{'scoreTotal'}[$dataset + $i] = $vals[$i];
+					$node->{'scoreCount'}[$dataset + $i] = 1;
+				}
+				else
+				{
+					$node->{$1}[$dataset + $i] = $vals[$i];
+				}
+			}
+		}
+		elsif ( $line =~ /<\/node>/ )
+		{
+			return;
+		}
+	}
+}
+
+sub classify
+{
+	# taxonomically classifies generic hits based on LCA (or random selection)
+	# of 'best' hits.
+	#
+	# Options used: thresholdGeneric, include, percentIdentity, random, score
+	
+	my # parameters
+	(
+		$fileName, # file with tabular hits (query, subject, score)
+		
+		# hash refs to be populated with results (keyed by query ID)
+		#
+		$taxIDs,
+		$scores
+	) = @_;
+	
+	open HITS, "<$fileName" or ktDie("Could not open $fileName\n");
+	
+	my $lastQueryID;
+	my $topScore;
+	my $ties;
+	my $taxID;
+	my %lcaSet;
+	my $totalScore;
+	
+	while ( 1 )
+	{
+		my $line = <HITS>;
+		
+		chomp $line;
+		
+		my
+		(
+			$queryID,
+			$hitID,
+			$score
+		) = split /\t/, $line;
+		
+		if ( defined $queryID && ! defined $hitID )
+		{
+			$taxIDs->{$queryID} = -1;
+			$scores->{$queryID} = 0;
+			
+			next;
+		}
+		
+		if ( $queryID ne $lastQueryID )
+		{
+			if (  $ties )
+			{
+				# add the chosen hit from the last queryID
+				
+				if ( ! $options{'random'} )
+				{
+					$taxID = taxLowestCommonAncestor(keys %lcaSet)
+				}
+				
+				$taxIDs->{$lastQueryID} = $taxID;
+				$scores->{$lastQueryID} = $totalScore / $ties;
+			}
+			
+			$ties = 0;
+			$totalScore = 0;
+			%lcaSet = ();
+		}
+		
+		if ( ! defined $hitID )
+		{
+			last; # EOF
+		}
+		
+		my $acc = getAccFromSeqID($hitID);
+		
+		if ( ! defined $acc )
+		{
+			$lastQueryID = $queryID;
+			next;
+		}
+		
+		if # this is a 'best' hit if...
+		(
+			$queryID ne $lastQueryID || # new query ID (including null at EOF)
+			$score >= $topScore - $options{'thresholdGeneric'} # within score threshold
+		)
+		{
+			# add score for average
+			#
+			$totalScore += $score;
+			$ties++;
+			
+			if # use this hit if...
+			(
+				! $options{'random'} || # using LCA
+				$queryID ne $lastQueryID || # new query ID
+				int(rand($ties)) == 0 # randomly chosen to replace other hit
+			)
+			{
+				my $newTaxID = getTaxIDFromAcc($acc);
+				
+				if ( ! $newTaxID || ! taxIDExists($newTaxID) )
+				{
+					$newTaxID = 1;
+				}
+				
+				if ( $options{'random'} )
+				{
+					$taxID = $newTaxID;
+				}
+				else
+				{
+					$lcaSet{$newTaxID} = 1;
+				}
+			}
+		}
+		
+		if ( $queryID ne $lastQueryID )
+		{
+			$topScore = $score;
+		}
+		
+		$lastQueryID = $queryID;
+	}
+	
+	close HITS;
+}	
 
 sub classifyBlast
 {
@@ -713,14 +1008,18 @@ sub classifyBlast
 			last; # EOF
 		}
 		
-		$hitID =~ /gi\|(\d+)/;
+		my $acc = getAccFromSeqID($hitID);
 		
-		my $gi = $1;
+		if ( ! defined $acc )
+		{
+			$lastQueryID = $queryID;
+			next;
+		}
 		
 		if # this is a 'best' hit if...
 		(
 			$queryID ne $lastQueryID || # new query ID (including null at EOF)
-			$bitScore > $topScore - $options{'threshold'} || # within score threshold
+			$bitScore >= $topScore - $options{'threshold'} || # within score threshold
 			$options{'factor'} && $eVal <= $options{'factor'} * $topEVal # within e-val factor
 		)
 		{
@@ -756,9 +1055,9 @@ sub classifyBlast
 				int(rand($ties)) == 0 # randomly chosen to replace other hit
 			)
 			{
-				my $newTaxID = getTaxIDFromGI($gi);
+				my $newTaxID = getTaxIDFromAcc($acc);
 				
-				if ( ! $newTaxID )
+				if ( ! $newTaxID || ! taxIDExists($newTaxID) )
 				{
 					$newTaxID = 1;
 				}
@@ -783,6 +1082,8 @@ sub classifyBlast
 		$lastQueryID = $queryID;
 	}
 	
+	close BLAST;
+	
 	if ( $zeroEVal )
 	{
 		ktWarn("\"$fileName\" had e-values of 0. Approximated log[10] of 0 as $minEVal.");
@@ -803,6 +1104,28 @@ sub default
 	{
 		return $default;
 	}
+}
+
+sub getAccFromSeqID
+{
+	my ($seqID) = @_;
+	
+	$seqID =~ /^>?(\S+)/;
+	
+	my $acc = $1;
+	
+	if ( $acc =~ /\|/ )
+	{
+		$acc = (split /\|/, $acc)[3];
+	}
+	
+	if ( $acc !~ /^\d+$/ && $acc !~ /^[A-Z\d]+_?[A-Z\d]+(\.\d+)?$/ )
+	{
+		$invalidAccs{$acc} = 1;
+		#return undef;
+	}
+	
+	return $acc;
 }
 
 sub getKronaOptions
@@ -876,72 +1199,215 @@ sub getScriptName
 sub getTaxDepth
 {
 	my ($taxID) = @_;
-	checkTaxonomy();
-	return taxDepths[$taxID];
+	
+	if ( @taxDepths )
+	{
+		return $taxDepths[$taxID];
+	}
+	else
+	{
+		return (getTaxInfo($taxID))[1];
+	}
+}
+
+sub getTaxInfo
+{
+	# gets info from a line in taxonomy.tab with it being loaded (via binary search)
+	
+	my ($tax) = @_;
+	
+	$tax = int($tax);
+	
+	if ( defined $taxInfoByID{$tax} )
+	{
+		return @{$taxInfoByID{$tax}};
+	}
+	
+	my $size = -s "$options{'taxonomy'}/$fileTaxonomy";
+	my $taxCur;
+	my @info = ($tax);
+	
+	if ( ! open TAX, "<$options{'taxonomy'}/$fileTaxonomy" )
+	{
+		print "ERROR: Taxonomy not found in $options{'taxonomy'}. Was updateTaxonomy.sh run?\n";
+		exit 1;
+	}
+	
+	my $min = 0;
+	my $max = $size;
+	
+	while ( $taxCur ne $tax )
+	{
+		my $posNew = int(($min + $max) / 2);
+		
+		seek TAX, $posNew, 0;
+		
+		if ( $posNew > 0 )
+		{
+			<TAX>; # eat up to newline
+		}
+		
+		my $line = <TAX>;
+		
+		my $taxNew;
+		
+		$line =~ /^(\d+)/;
+		$taxNew = $1;
+		
+		if ( $tax == $taxNew )
+		{
+			chomp $line;
+			@info = split /\t/, $line;
+			last;
+		}
+		elsif ( $posNew == $min )
+		{
+			last;
+		}
+		
+		if ( $tax > $taxNew && $taxCur != $taxNew && $taxNew )
+		{
+			$min = $posNew;
+		}
+		else
+		{
+			$max = $posNew;
+		}
+		
+		$taxCur = $taxNew;
+	}
+	
+	close TAX;
+	
+	$taxInfoByID{$tax} = \@info;
+	
+	return @info;
 }
 
 sub getTaxName
 {
 	my ($taxID) = @_;
-	checkTaxonomy();
-	return $taxNames[$taxID]
+	
+	if ( @taxNames )
+	{
+		return $taxNames[$taxID];
+	}
+	else
+	{
+		return (getTaxInfo($taxID))[4];
+	}
 }
 
 sub getTaxParent
 {
 	my ($taxID) = @_;
 	
-	checkTaxonomy();
-	
-	do
+	if ( @taxParents )
 	{
-		$taxID = $taxParents[$taxID];
+		return $taxParents[$taxID];
 	}
-	while (! $options{'noRank'} && $taxID > 1 && $taxRanks[$taxID] eq 'no rank');
-	
-	return $taxID;
+	else
+	{
+		return (getTaxInfo($taxID))[2];
+	}
 }
 
 sub getTaxRank
 {
 	my ($taxID) = @_;
-	checkTaxonomy();
-	return $taxRanks[$taxID];
+	
+	if ( @taxRanks )
+	{
+		return $taxRanks[$taxID];
+	}
+	else
+	{
+		return (getTaxInfo($taxID))[3];
+	}
 }
 
-sub getTaxIDFromGI
+sub getTaxIDFromAcc
 {
-	my ($gi) = @_;
+	my ($acc) = @_;
 	
-	if ( ! defined $taxIDByGI{$gi} )
+	if ( $acc =~ /^\d+$/ )
 	{
-		if ( ! open GI, "<$taxonomyDir/gi_taxid.dat" )
+		return $acc;
+	}
+	
+	$acc =~ s/\.\d+$//;
+	
+	if ( defined $taxIDByAcc{$acc} )
+	{
+		return $taxIDByAcc{$acc};
+	}
+	
+	my $size = -s "$options{'taxonomy'}/$fileTaxByAcc";
+	my $accCur;
+	my $taxID;
+	
+	if ( ! open ACC, "<$options{'taxonomy'}/$fileTaxByAcc" )
+	{
+		print "ERROR: Sorted accession to taxID list not found. Was updateAccessions.sh run?\n";
+		exit 1;
+	}
+	
+	my $min = 0;
+	my $max = $size;
+	
+	#print "ACC: $acc\n";
+	
+	while ( $acc ne $accCur && $min < $max )
+	{
+		my $posNew = int(($min + $max) / 2);
+		
+		seek ACC, $posNew, 0;
+		
+		if ( $posNew != $min )
 		{
-			print "ERROR: GI to TaxID data not found.  Was updateTaxonomy.sh run?\n";
-			exit 1;
+			<ACC>; # eat up to newline
 		}
 		
-		seek GI, $gi * 4, 0;
+		my $line = <ACC>;
 		
-		my $data;
+		my $accNew;
+		($accNew, $taxID) = split /\t/, $line;
 		
-		read GI, $data, 4;
-		
-		my $taxID = unpack "L", $data;
-		
-		close GI;
-		
-		if ( 0 && $taxID == 0 )
+		if ( $acc gt $accNew && $accCur ne $accNew && $accNew )
 		{
-			$taxIDByGI{$gi} = 1;
+			if ( $accNew )
+			{
+				$posNew = tell ACC;
+			}
+			
+			$min = $posNew;
+			
+			if ( $min >= $max )
+			{
+				$max = $min + 1;
+			}
 		}
 		else
 		{
-			$taxIDByGI{$gi} = $taxID;
+			$max = $posNew;
 		}
+		
+		$accCur = $accNew;
 	}
 	
-	return $taxIDByGI{$gi};
+	close ACC;
+	
+	chomp $taxID;
+	
+	if ( $accCur ne $acc )
+	{
+		$missingAccs{$acc} = 1;
+		$taxID = 0;
+	}
+	
+	$taxIDByAcc{$acc} = $taxID;
+	
+	return $taxIDByAcc{$acc};
 }
 
 sub htmlFooter
@@ -953,16 +1419,34 @@ sub htmlHeader
 {
 	my $path;
 	my $notFound;
+	my $script;
 	
-	if ( $options{'local'} )
+	if ( $options{'standalone'} && ! $options{'local'} &&  ! $options{'url'} )
 	{
-		$path = "$libPath/../";
-		$notFound = "This is a local chart and must be viewed on the computer it was created with.";
+		$script =
+			indent(2) . "<script language=\"javascript\" type=\"text/javascript\">\n" .
+			slurp("$libPath/../$javascript") . "\n" .
+			indent(2) . "</script>\n";
+		
+		$hiddenImage = slurp("$libPath/../img/hidden.uri");
+		$loadingImage = slurp("$libPath/../img/loading.uri");
+		$favicon = slurp("$libPath/../img/favicon.uri");
+		$logo = slurp("$libPath/../img/logo-med.uri");
 	}
 	else
 	{
-		$path = "$options{'url'}/";
-		$notFound = "Could not get resources from \\\"$options{'url'}\\\".";
+		if ( $options{'local'} )
+		{
+			$path = "$libPath/../";
+			$notFound = "This is a local chart and must be viewed on the computer it was created with.";
+		}
+		else
+		{
+			$path = "$options{'url'}/";
+			$notFound = "Could not get resources from \\\"$options{'url'}\\\".";
+		}
+		
+		$script = indent(2) . "<script src=\"$path$javascript\" type=\"text/javascript\"></script>\n";
 	}
 	
 	return
@@ -972,13 +1456,13 @@ sub htmlHeader
 			indent(2) . "<meta charset=\"utf-8\"/>\n" .
 #			indent(2) . "<base href=\"$path\" target=\"_blank\"/>\n" .
 			indent(2) . "<link rel=\"shortcut icon\" href=\"$path$favicon\"/>\n" .
-			indent(2) . "<script id=\"notfound\">window.onload=function(){document.body.innerHTML=\"$notFound\"}</script>\n" .
-			indent(2) . "<script src=\"$path$javascript\"></script>\n" .
+			indent(2) . "<script id=\"notfound\" type=\"text/javascript\">window.onload=function(){document.body.innerHTML=\"$notFound\"}</script>\n" .
+			$script .
 		indent(1) . "</head>\n" .
 		indent(1) . "<body>\n" .
-			indent(2) . "<img id=\"hiddenImage\" src=\"$path$hiddenImage\" style=\"display:none\"/>\n" .
-			indent(2) . "<img id=\"loadingImage\" src=\"$path$loadingImage\" style=\"display:none\"/>\n" .
-			indent(2) . "<img id=\"logo\" src=\"$path$logo\" style=\"display:none\"/>\n" .
+			indent(2) . "<img id=\"hiddenImage\" src=\"$path$hiddenImage\" style=\"display:none\" alt=\"Hidden Image\"/>\n" .
+			indent(2) . "<img id=\"loadingImage\" src=\"$path$loadingImage\" style=\"display:none\" alt=\"Loading Indicator\"/>\n" .
+			indent(2) . "<img id=\"logo\" src=\"$path$logo\" style=\"display:none\" alt=\"Logo of Krona\"/>\n" .
 			indent(2) . "<noscript>Javascript must be enabled to view this page.</noscript>\n" .
 			indent(2) . "<div style=\"display:none\">\n";
 }
@@ -996,7 +1480,10 @@ sub ktWarn
 {
 	my ($warning) = @_;
 	
+	*STDOUTOLD = *STDOUT;
+	*STDOUT = *STDERR;
 	printColumns('   [ WARNING ]', $warning);
+	*STDOUT = *STDOUTOLD
 }
 
 sub loadEC
@@ -1039,8 +1526,8 @@ sub loadMagnitudes
 
 sub loadTaxonomy
 {
-	open INFO, "<$taxonomyDir/taxonomy.tab" or die
-		"Taxonomy not found.  Was updateTaxonomy.sh run?";
+	open INFO, "<$options{'taxonomy'}/$fileTaxonomy" or die
+		"Taxonomy not found in $options{'taxonomy'}. Was updateTaxonomy.sh run?";
 	
 	while ( my $line = <INFO> )
 	{
@@ -1174,6 +1661,42 @@ sub printOptions
 	print "\n";
 }
 
+sub printWarnings
+{
+	if ( %invalidAccs )
+	{
+		ktWarn
+		(
+			"The following accessions look strange and may yield erroneous results. Please check if they are acual valid NCBI accessions:\n" .
+			join ' ', (keys %invalidAccs)
+		);
+		
+		%invalidAccs = ();
+	}
+	
+	if ( %missingAccs )
+	{
+		ktWarn
+		(
+			"The following accessions were not found in the local database (if they were recently added to NCBI, use updateAccessions.sh to update the local database):\n" .
+			join ' ', (keys %missingAccs)
+		);
+		
+		%missingAccs = ();
+	}
+	
+	if ( %missingTaxIDs )
+	{
+		ktWarn
+		(
+			"The following taxonomy IDs were not found in the local database and were set to root (if they were recently added to NCBI, use updateTaxonomy.sh to update the local database):\n" .
+			join ' ', (keys %missingTaxIDs)
+		);
+		
+		%missingTaxIDs = ();
+	}
+}
+
 sub printUsage
 {
 	my
@@ -1246,6 +1769,19 @@ sub setOption
 	$options{$option} = $value;
 }
 
+sub shouldCollapse
+{
+	my ($taxID) = @_;
+	
+	return !
+	(
+		getTaxRank($taxID) ne 'no rank' ||
+		! $options{'noRank'} && $taxID != 131567 ||
+		$taxID == 1 ||
+		$options{'cellular'} && $taxID == 131567
+	);
+}
+
 sub taxContains
 {
 	# determines if $parent is an ancestor of (or equal to) $child
@@ -1266,25 +1802,29 @@ sub taxLowestCommonAncestor
 {
 	my @nodes = @_;
 	
-	checkTaxonomy();
-	
 	# walk the nodes up to an equal depth
 	#
 	my $minDepth;
 	#
 	foreach my $node ( @nodes )
 	{
-		if ( ! defined $minDepth || $taxDepths[$node] < $minDepth )
+		if ( ! taxIDExists($node) )
 		{
-			$minDepth = $taxDepths[$node];
+			$missingTaxIDs{$node} = 1;
+			$node = 1;
+		}
+		
+		if ( ! defined $minDepth || getTaxDepth($node) < $minDepth )
+		{
+			$minDepth = getTaxDepth($node);
 		}
 	}
 	#
 	foreach my $node ( @nodes )
 	{
-		while ( $taxDepths[$node] > $minDepth )
+		while ( getTaxDepth($node) > $minDepth )
 		{
-			$node = $taxParents[$node];
+			$node = getTaxParent($node);
 		}
 	}
 	
@@ -1311,7 +1851,13 @@ sub taxLowestCommonAncestor
 		{
 			for ( my $i = 0; $i < @nodes; $i++ )
 			{
-				$nodes[$i] = $taxParents[$nodes[$i]];
+				if ( ! defined getTaxParent($nodes[$i]) )
+				{
+					ktDie("Undefined parent for taxID $nodes[$i]");
+					return;
+				}
+				
+				$nodes[$i] = getTaxParent($nodes[$i]);
 			}
 		}
 	}
@@ -1322,8 +1868,8 @@ sub taxLowestCommonAncestor
 sub taxIDExists
 {
 	my ($taxID) = @_;
-	checkTaxonomy();
-	return defined $taxDepths[$taxID];
+	
+	return defined getTaxParent($taxID);
 }
 
 sub writeTree
@@ -1341,6 +1887,8 @@ sub writeTree
 		$hueStart, # (optional) hue at the start of the gradient for score
 		$hueEnd # (optional) hue at the end of the gradient for score
 	) = @_;
+	
+	printWarnings();
 	
 	my %attributeHash;
 	
@@ -1366,14 +1914,17 @@ sub writeTree
 	my $totalCount;
 	my $supp;
 	#
-	foreach my $count ( @{$tree->{'count'}} )
+	if ( $useMembers )
 	{
-		$totalCount += $count;
-		
-		if ( $count > $memberLimitDataset || $totalCount > $memberLimitTotal )
+		foreach my $count ( @{$tree->{'count'}} )
 		{
-			$supp = 1;
-			last;
+			$totalCount += $count;
+		
+			if ( $count > $memberLimitDataset || $totalCount > $memberLimitTotal )
+			{
+				$supp = 1;
+				last;
+			}
 		}
 	}
 	
@@ -1438,6 +1989,7 @@ sub addMember
 #	$member =~ s/"/&quot;/g;
 	
 	push @{$node->{'members'}[$set]}, $member;
+	$useMembers = 1;
 }
 
 sub argumentString
@@ -1525,14 +2077,14 @@ sub dataHeader
 	my $assignedText;
 	my $summaryText;
 	#
-	if ( $assignedName && $summaryName )
+	if ( $assignedName && $summaryName && $useMembers )
 	{
 		my $memberTag = $supp ? 'data' : 'list';
 		my $suppDir = basename($options{'out'}) . $suppDirSuffix;
 		my $enableText = $supp ? " enable=\"$suppDir/$suppEnableFile\"" : '';
 		$header .= indent(4) . "<$memberTag$enableText>members</$memberTag>\n";
 		$assignedText = " ${memberTag}Node=\"members\"";
-		$summaryText = " ${memberTag}\All=\"members\"";
+		$summaryText = " ${memberTag}All=\"members\"";
 		
 		if ( $options{'postUrl'} )
 		{
@@ -1817,6 +2369,17 @@ sub setScores
 	return ($min, $max);
 }
 
+sub slurp
+{
+	my ($fileName) = @_;
+	
+	local $/;
+	open FILE, $fileName or die "Can't read file '$fileName' [$!]\n";
+	my $file = <FILE>;
+	close (FILE);
+	return $file;
+}
+
 sub taxonLink
 {
 	my ($taxID) = @_;
@@ -1846,7 +2409,7 @@ sub toStringXML
 			$key ne 'scoreCount' &&
 			$key ne 'scoreTotal' &&
 			$key ne 'href' &&
-			( keys %{$node->{'children'}} || $key ne 'unassigned' ) &&
+			( keys %{$node->{'children'}} || ($key ne 'unassigned' && $key ne 'magnitudeUnassigned') ) &&
 			( $key eq 'members' || defined $$attributeHash{$key} )
 		)
 		{
@@ -1931,7 +2494,7 @@ sub toStringXML
 	
 	$$nodeIDRef++;
 	
-	if ( defined $node->{'children'} )
+	if ( defined $node->{'children'} && ( ! $options{'depth'} || $depth < $options{'depth'} ) )
 	{
 		foreach my $child (keys %{$node->{'children'}})
 		{

@@ -1,4 +1,4 @@
-#! /usr/bin/env perl
+#!/usr/bin/env perl
 
 # Copyright © 2011, Battelle National Biodefense Institute (BNBI);
 # all rights reserved. Authored by: Brian Ondov, Nicholas Bergman, and
@@ -9,8 +9,13 @@
 
 use strict;
 
-use lib (`ktGetLibPath`);
-use KronaTools;
+BEGIN
+{
+	use File::Basename;
+	use Cwd 'abs_path';
+	use lib dirname(abs_path($0)) . "/../lib";
+	use KronaTools;
+}
 
 setOption('out', 'text.krona.html');
 setOption('name', 'all');
@@ -21,7 +26,6 @@ qw(
 	name
 	noMag
 	combine
-	local
 	url
 );
 
@@ -101,11 +105,13 @@ foreach my $input ( @ARGV )
 my @attributeNames =
 (
 	'magnitude',
+	'magnitudeUnassigned'
 );
 
 my @attributeDisplayNames =
 (
 	'Total',
+	'Unassigned'
 );
 
 writeTree
