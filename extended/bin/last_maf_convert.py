@@ -1,4 +1,4 @@
-#This file was part of LAST v454 and released under the GNU GPL3 or later
+#This file was part of LAST v1170 and released under the GNU GPL3 or later
 #Here, it is included to be used as a python module to avoid rewriting
 #functions for parsing MAF files produced by LAST
 #
