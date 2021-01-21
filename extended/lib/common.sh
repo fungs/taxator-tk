@@ -8,7 +8,7 @@
 #
 #   You should have received a copy of the CC0 Public Domain Dedication along
 #   with this software. If not, see
-#   http://creativecommons.org/publicdomain/zero/1.0/ 
+#   http://creativecommons.org/publicdomain/zero/1.0/
 
 # check if binary in path
 checkexecutables() {
@@ -90,7 +90,7 @@ initrefpack() {
 		echo 'Refpack path must be defined' 1>&2
 		return 1;
 	fi
-	
+
 	ref_root="$(readlink -f "$refpack")"
 	aligner_index="$ref_root/$index_subdir/nuc"
 	refdata="$ref_root/refdata.fna"
@@ -122,7 +122,7 @@ taxpath2taxsummary() {
 binning2vprofile() {
 	checkexecutables grep cut taxknife sort uniq || return 2
 	cat $@ |
-	grep -v -e '^@' -e '^#' |
+	grep -v -e '^@' -e '^#' -e '^$' |
 	cut -f 2 |
 	taxknife -f 1 --mode annotate -s rank |
 	LC_COLLATE='C' sort |
@@ -154,4 +154,3 @@ taxonomy_version() {
 	md5sum |
 	cut -d ' ' -f 1;
 }
-
