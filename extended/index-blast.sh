@@ -57,5 +57,5 @@ fi
 echo -n "Creating BLAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -parse_seqids -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2
+makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2
 
