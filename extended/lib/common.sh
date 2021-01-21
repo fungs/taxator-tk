@@ -74,9 +74,10 @@ makeprojectdir() {
 # check if python is 2.7+ but not 3.0+
 checkpython2() {
 	checkexecutables cut tr "$1" || return 2
-	python_version="$($1 --version 2>&1 | cut -d ' ' -f 2 | tr -d .)"
-	if [ "$python_version" -lt 270 -o "$python_version" -ge 300 ]; then
-		echo "Your Python must be at least version 2.7 but not Python 3"
+	python_version="$($1 --version 2>&1 | cut -d ' ' -f 2)"
+	IFS=. read python_version_major python_version_minor python_version_patch <<< $python_version
+	if [ "$python_version_major" -ne 2 -o "$python_version_minor" -lt 7 ]; then
+		echo "Your Python '$python_version_major.$python_version_minor.$python_version_patch' must be at least version 2.7 but not Python 3"
 		return 1
 	fi
 }
