@@ -10,6 +10,10 @@
 #   with this software. If not, see
 #   http://creativecommons.org/publicdomain/zero/1.0/
 
+pipeline_version() {
+	echo '1.4.0' # TODO: take from Git or file
+}
+
 # check if binary in path
 checkexecutables() {
 	for cmd in $@; do
