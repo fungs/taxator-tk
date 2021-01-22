@@ -53,4 +53,4 @@ fi
 echo -n "Creating BLAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-$time_cmd -p -o "$dbname".time makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2
+$time_cmd -p -o "$dbname".makedb.time makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2

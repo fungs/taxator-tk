@@ -26,6 +26,7 @@ addtopath "${progpath%/*}/bin"
 # System check
 checkexecutables time readlink dirname basename lastdb
 time_cmd="$(which time)"
+cores_max="$(detectcores)"
 
 # Parse command line
 refpack="$1"
@@ -53,4 +54,4 @@ fi
 echo -n "Creating LAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-$time_cmd -p -o "$dbname".time lastdb -Q 0 -i 10 "$dbname" "$ref_fasta" 2> "$dbname".makedb.log && echo 'Success.' || echo 'Failed.' 1>&2
+$time_cmd -p -o "$dbname".makedb.time lastdb -P "${cores:-$cores_max}" -Q 0 -i 10 "$dbname" "$ref_fasta" 2> "$dbname".makedb.log && echo 'Success.' || echo 'Failed.' 1>&2
