@@ -36,7 +36,8 @@ progpath="$(absolutepath "$0")"
 addtopath "${progpath%/*}/bin"
 
 # System check
-checkexecutables sort gzip gunzip grep tr cut uniq tee python lastal-parallel taxator binner alignments-filter taxknife lz4
+checkexecutables sort time gzip gunzip grep tr cut uniq tee python lastal-parallel taxator binner alignments-filter taxknife lz4
+time_cmd="$(which time)"
 cores_max="$(detectcores)"
 memory_max="$(detectmemory)"
 checkpython2 python
@@ -89,14 +90,14 @@ cd "$working_project"
 echo "Aligning sample against sequences in '$refdata' and assigning segments to taxa using ${cores:-$cores_max} threads."
 
 # Align query against reference
-compression_cmd='lz4' decompression_cmd='lz4 -d' lastal-parallel -f 1 -P "${cores:-$cores_max}" ${last_options:-$last_options_default} "$aligner_index" "$input" |
+compression_cmd='lz4' decompression_cmd='lz4 -d' $time_cmd -p -o lastal-parallel.time lastal-parallel -f 1 -P "${cores:-$cores_max}" ${last_options:-$last_options_default} "$aligner_index" "$input" |
 lastmaf2alignments-parallel -s |  # convert from MAF to tabular
 
 # Save the alignment in a gzipped tabular format
 tee >(gzip > "$sample_name".alignments.gz) |
 
 # Assign query segments to taxa
-taxator \
+$time_cmd -p -o taxator.time taxator \
   -a rpa \
   -g "$mapping" \
   -q "$input" \
@@ -109,7 +110,7 @@ taxator \
 sort -k1,1 > "$sample_name".gff3
 
 echo "Assigning whole sequences."
-binner \
+$time_cmd -p -o binner.time binner \
   -n "$input_filename" \
   -l "${binner_logfile:-$binner_logfile_default}" \
   < "$sample_name".gff3 \

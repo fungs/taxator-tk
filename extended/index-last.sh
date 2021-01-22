@@ -15,21 +15,17 @@
 set -o errexit
 
 # Constants
-required_programs="readlink dirname basename lastdb"
 subdir=aligner-index/last
 dbname=nuc
 
-# Use binary folder
-base_root="$(readlink -f "$(dirname "$0")")"
-export PATH="$base_root/bin:$PATH"
+# Load library and set path
+source "${0%/*}/lib/common.sh"
+progpath="$(absolutepath "$0")"
+addtopath "${progpath%/*}/bin"
 
-# Check for required programs
-for cmd in $required_programs; do
-	if test -z "$(which "$cmd")"; then
-		echo "'$cmd' not found in PATH."
-		exit 1
-	fi
-done
+# System check
+checkexecutables time readlink dirname basename lastdb
+time_cmd="$(which time)"
 
 # Parse command line
 refpack="$1"
@@ -57,5 +53,4 @@ fi
 echo -n "Creating LAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-lastdb -Q 0 -i 10 "$dbname" "$ref_fasta" 2> "$dbname".makedb.log && echo 'Success.' || echo 'Failed.' 1>&2
-
+$time_cmd -p -o "$dbname".time lastdb -Q 0 -i 10 "$dbname" "$ref_fasta" 2> "$dbname".makedb.log && echo 'Success.' || echo 'Failed.' 1>&2

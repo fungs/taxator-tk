@@ -15,21 +15,17 @@
 set -o errexit
 
 # Constants
-required_programs="readlink dirname basename makeblastdb"
 subdir=aligner-index/blast
 dbname=nuc
 
-# Use binary folder
-base_root="$(readlink -f "$(dirname "$0")")"
-export PATH="$base_root/bin:$PATH"
+# Load library and set path
+source "${0%/*}/lib/common.sh"
+progpath="$(absolutepath "$0")"
+addtopath "${progpath%/*}/bin"
 
-# Check for required programs
-for cmd in $required_programs; do
-	if test -z "$(which "$cmd")"; then
-		echo "'$cmd' not found in PATH."
-		exit 1
-	fi
-done
+# System check
+checkexecutables readlink dirname basename makeblastdb
+time_cmd="$(which time)"
 
 # Parse command line
 refpack="$1"
@@ -57,5 +53,4 @@ fi
 echo -n "Creating BLAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2
-
+$time_cmd -p -o "$dbname".time makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2

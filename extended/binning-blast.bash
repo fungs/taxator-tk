@@ -41,7 +41,8 @@ progpath="$(absolutepath "$0")"
 addtopath "${progpath%/*}/bin"
 
 # System check
-checkexecutables ls sort gzip gunzip grep tr cut uniq tee blastn taxator binner taxknife
+checkexecutables ls sort time gzip gunzip grep tr cut uniq tee blastn taxator binner taxknife
+time_cmd="$(which time)"
 cores_max="$(detectcores)"
 
 # Parse command line
@@ -86,7 +87,7 @@ cd "$working_project"
 echo "Aligning sample against sequences in '$refdata' and assigning segments to taxa using ${cores:-$cores_max} threads."
 
 # Align query against reference
-blastn \
+$time_cmd -p -o blastn.time blastn \
   -task "${blast_algorithm:-$blast_algorithm_default}" \
   -db "$aligner_index" \
   -outfmt '6 qseqid qstart qend qlen sseqid sstart send bitscore evalue nident length' \
@@ -99,7 +100,7 @@ tr -d ' ' |  # fields in blast output contain spaces which must be removed
 tee >(gzip > "$sample_name".alignments.gz) |
 
 # Assign query segments to taxa
-taxator \
+$time_cmd -p -o taxator.time taxator \
   -a rpa \
   -g "$mapping" \
   -q "$input" \
@@ -112,7 +113,7 @@ taxator \
 sort -k1,1 > "$sample_name".gff3
 
 echo "Assigning whole sequences."
-binner \
+$time_cmd -p -o binner.time binner \
   -n "$input_filename" \
   -l "${binner_logfile:-$binner_logfile_default}" \
   < "$sample_name".gff3 \
