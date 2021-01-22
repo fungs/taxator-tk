@@ -1,7 +1,7 @@
-#!/bin/bash
-#   binning-workflow-fasta-last.bash - sample binning workflow using LAST
+#!/usr/bin/env bash
+#   binning-last.bash - sample binning workflow using LAST
 #
-#   Written in 2014 by Johannes Dröge johannes.droege@uni-duesseldorf.de
+#   Written in 2014-2021 by Johannes Dröge code@fungs.de
 #
 #   To the extent possible under law, the author(s) have dedicated all copyright
 #   and related and neighboring rights to this software to the public domain
@@ -28,7 +28,7 @@ working_project="${3-}"
 # Constants
 sample_name=sample
 index_subdir=aligner-index/last
-memory_min=10240  # minimum main memory in MB
+memory_min=5120  # minimum main memory in MB
 
 # Load library and set path
 source "${0%/*}/lib/common.sh"
@@ -119,4 +119,3 @@ echo "Generating summary files."
 binning2summary "$sample_name"
 
 echo "Results are in '$working_project/'."
-

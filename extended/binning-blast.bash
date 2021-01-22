@@ -1,7 +1,7 @@
-#!/bin/bash
-#   binning-workflow-fasta-blast.sh - sample binning workflow using BLAST
+#!/usr/bin/env bash
+#   binning-blast.bash - sample binning workflow using BLAST
 #
-#   Written in 2014 by Johannes Dröge johannes.droege@uni-duesseldorf.de
+#   Written in 2014-2021 by Johannes Dröge code@fungs.de
 #
 #   To the extent possible under law, the author(s) have dedicated all copyright
 #   and related and neighboring rights to this software to the public domain
@@ -122,4 +122,3 @@ echo "Generating summary files."
 binning2summary "$sample_name"
 
 echo "Results are in '$working_project/'."
-
