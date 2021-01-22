@@ -8,7 +8,11 @@
 #
 #   You should have received a copy of the CC0 Public Domain Dedication along
 #   with this software. If not, see
-#   http://creativecommons.org/publicdomain/zero/1.0/ 
+#   http://creativecommons.org/publicdomain/zero/1.0/
+
+pipeline_version() {
+	echo '1.4.0' # TODO: take from Git or file
+}
 
 # check if binary in path
 checkexecutables() {
@@ -74,9 +78,10 @@ makeprojectdir() {
 # check if python is 2.7+ but not 3.0+
 checkpython2() {
 	checkexecutables cut tr "$1" || return 2
-	python_version="$($1 --version 2>&1 | cut -d ' ' -f 2 | tr -d .)"
-	if [ "$python_version" -lt 270 -o "$python_version" -ge 300 ]; then
-		echo "Your Python must be at least version 2.7 but not Python 3"
+	python_version="$($1 --version 2>&1 | cut -d ' ' -f 2)"
+	IFS=. read python_version_major python_version_minor python_version_patch <<< $python_version
+	if [ "$python_version_major" -ne 2 -o "$python_version_minor" -lt 7 ]; then
+		echo "Your Python '$python_version_major.$python_version_minor.$python_version_patch' must be at least version 2.7 but not Python 3"
 		return 1
 	fi
 }
@@ -90,7 +95,7 @@ initrefpack() {
 		echo 'Refpack path must be defined' 1>&2
 		return 1;
 	fi
-	
+
 	ref_root="$(readlink -f "$refpack")"
 	aligner_index="$ref_root/$index_subdir/nuc"
 	refdata="$ref_root/refdata.fna"
@@ -122,7 +127,7 @@ taxpath2taxsummary() {
 binning2vprofile() {
 	checkexecutables grep cut taxknife sort uniq || return 2
 	cat $@ |
-	grep -v -e '^@' -e '^#' |
+	grep -v -e '^@' -e '^#' -e '^$' |
 	cut -f 2 |
 	taxknife -f 1 --mode annotate -s rank |
 	LC_COLLATE='C' sort |
