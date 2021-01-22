@@ -15,8 +15,8 @@ All issues can be filed in the
 Please see separate documentation:
 * [global build and install guide](INSTALL.md)
 * [changelog](CHANGELOG.md)
-* [core tools compilation guide](core/BUILD.md)
-* [core tools detailed usage instructions](core/USAGE.md)
+* [core compilation guide](core/BUILD.md)
+* [core detailed usage instructions](core/USAGE.md)
 * [core dependencies](core/DEPENDENCIES.md)
 * [extended pipeline description](extended/README.md)
 * [extended pipeline dependencies](extended/DEPENDENCIES.md)
