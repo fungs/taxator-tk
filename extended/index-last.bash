@@ -1,6 +1,6 @@
-#!/bin/sh
-#   index-blast.sh - uses BLAST makeblastdb to build an index (aka database)
-#                    for the reference data
+#!/usr/bin/env bash
+#   index-last.bash - uses LAST blastdb to build an index (aka database)
+#                     for the reference data
 #
 #   Written in 2014 by Johannes Dröge johannes.droege@uni-duesseldorf.de
 #
@@ -15,7 +15,7 @@
 set -o errexit
 
 # Constants
-subdir=aligner-index/blast
+subdir=aligner-index/last
 dbname=nuc
 
 # Load library and set path
@@ -24,7 +24,7 @@ progpath="$(absolutepath "$0")"
 addtopath "${progpath%/*}/bin"
 
 # System check
-checkexecutables readlink dirname basename makeblastdb
+checkexecutables time readlink dirname basename lastdb
 time_cmd="$(which time)"
 
 # Parse command line
@@ -50,7 +50,7 @@ if test -d "$cpath"; then
 fi
 
 # Build index
-echo -n "Creating BLAST index for '$ref_root'. "
+echo -n "Creating LAST index for '$ref_root'. "
 mkdir -p "$cpath"
 cd "$cpath"
-$time_cmd -p -o "$dbname".time makeblastdb -in "$ref_fasta" -dbtype nucl -input_type fasta -logfile "$dbname".makedb.log -out "$dbname" 2>/dev/null && echo 'Success.' || echo 'Failed.' 1>&2
+$time_cmd -p -o "$dbname".time lastdb -Q 0 -i 10 "$dbname" "$ref_fasta" 2> "$dbname".makedb.log && echo 'Success.' || echo 'Failed.' 1>&2

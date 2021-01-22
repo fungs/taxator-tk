@@ -38,7 +38,7 @@ you require a different or more recent refpack and have problems building it.
 Create an index (use BLAST for general purpose and LAST for high-performance,
 read the following paragraph)
 
-    "${installpath}/${ttk}/index-blast.sh" "${datapath}/${refpack}"
+    "${installpath}/${ttk}/index-blast.bash" "${datapath}/${refpack}"
 
 Note: taxator-tk supports BLAST due to its ability to run on hardware with
 limited main memory, like laptop computers. It is quite fast with the
