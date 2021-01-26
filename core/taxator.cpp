@@ -362,9 +362,10 @@ int main( int argc, char** argv ) {
                                                 split_alignments, alignments_sorted, logsink, number_threads);
         }
         else if(data_format == "protein"){
-          execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
-                                                tax , filterout, toppercent, seqid2taxid,
-                                                split_alignments, alignments_sorted, logsink, number_threads);
+          cout << "protein mode disabled" << endl;
+          // execute<seqan::String<seqan::AminoAcid>>(db_filename, db_index_filename, query_filename, query_index_filename,
+          //                                       tax , filterout, toppercent, seqid2taxid,
+          //                                       split_alignments, alignments_sorted, logsink, number_threads);
         } else {
           cout << "data format can either be nucleotide or protein" << endl;
           return EXIT_FAILURE;
