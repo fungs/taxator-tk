@@ -123,7 +123,7 @@ public:
             }
 
             try {
-                score_ = boost::lexical_cast< float >( std::stof(fields[7]) );
+                score_ = boost::lexical_cast< float >( fields[7] );
             } catch(boost::bad_lexical_cast&) {
                 BOOST_THROW_EXCEPTION(ParsingError {} << general_info {"bad score"});
             }

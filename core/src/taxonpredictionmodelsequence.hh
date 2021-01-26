@@ -137,9 +137,6 @@ public:
         boost::format seqname_fmt("%d:%d@%s");  // local variable because not thread-safe
         StopWatchCPUTime stopwatch_init("initializing this record");  // log overall time for this predict phase
         stopwatch_init.start();
-	// prepare alignment/ score type
-	//seqan::Score<int> myBlosum = seqan::Blosum80();
-	//align_method = &myBlosum;
 
         // push records into active_records  TODO: remove intermediate active_records?
         active_list_type_ active_records;
@@ -631,6 +628,7 @@ public:
         }
 
         if(unode_global == lnode_global) ival_global = 1.;
+        
         logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
 
         prec.setSignalStrength(anchors_taxsig);
@@ -698,74 +696,36 @@ template<typename AlignMethod>
 alignment<StringType> getAlignment(StringType A, StringType B){
 
 	alignment<StringType> returnalignment;
-
+        //typedef StringType TSequence;     
     typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
     typedef typename seqan::Row<TAlign>::Type TRow;
     typedef typename seqan::Iterator<TRow>::Type TRowIterator;
 
+        //align sequence to itselftypedef typename 
  	TAlign selfalignA;
     TAlign selfalignB;
-	TAlign diffalign;
-
-	int selfcomp;
-	int alignscore;
-
-	if(typeid(StringType)==typeid(seqan::String<seqan::AminoAcid>)){
-
-        //align sequence to itself
-
-        //int selfcomp = seqan::globalAlignment(selfalignA,AlignMethod());
-        //selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
-
-        //int alignscore = seqan::globalAlignment(diffalign,AlignMethod());
-
-
+	
         resize(rows(selfalignA), 2);
         assignSource(row(selfalignA, 0), A);
         assignSource(row(selfalignA, 1), A);
 
-	selfcomp = seqan::globalAlignment(selfalignA,seqan::Blosum80());
+        int selfcomp = seqan::globalAlignment(selfalignA,AlignMethod());
 
+        //TAlign selfalignB;
 	resize(rows(selfalignB), 2);
         assignSource(row(selfalignB, 0), B);
         assignSource(row(selfalignB, 1), B);
 
-        selfcomp += seqan::globalAlignment(selfalignB,seqan::Blosum80());
-
-
+        selfcomp += seqan::globalAlignment(selfalignB,AlignMethod());
+        // score without alignment
+        //align sequences
+        TAlign diffalign;
         resize(rows(diffalign), 2);
         assignSource(row(diffalign, 0), A);
         assignSource(row(diffalign, 1), B);
 
-        alignscore = seqan::globalAlignment(diffalign,seqan::Blosum80());
-
-	}
-	else if(typeid(StringType)==typeid(seqan::String<seqan::Dna5>)){
-        //align sequence to itself
-
-        resize(rows(selfalignA), 2);
-        assignSource(row(selfalignA, 0), A);
-        assignSource(row(selfalignA, 1), A);
-
-        selfcomp = seqan::globalAlignment(selfalignA,seqan::MyersHirschberg());
-
-		resize(rows(selfalignB), 2);
-        assignSource(row(selfalignB, 0), B);
-        assignSource(row(selfalignB, 1), B);
-
-        selfcomp += seqan::globalAlignment(selfalignB,seqan::MyersHirschberg());
-
-	// score without alignment
-
-        resize(rows(diffalign), 2);
-        assignSource(row(diffalign, 0), A);
-        assignSource(row(diffalign, 1), B);
-        alignscore = seqan::globalAlignment(diffalign,seqan::MyersHirschberg());
-	}
-	else{
-		std::cerr << "Something went wrong";
-		assert(false);
-	}
+        int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
+        //int returnscore = selfcomp - alignscore;
 
         //logsink << diffalign << std::endl;
 
@@ -802,12 +762,7 @@ alignment<StringType> getAlignment(StringType A, StringType B){
         returnalignment.alignment = diffalign;
         //std::cerr << A << std::endl;
         //std::cerr << B << std::endl;
-        //std::cerr << selfcomp <<" "<< alignscore << std::endl;
-	//std::cerr << diffalign << std::endl;
-	//std::cerr << "score: " << returnalignment.score << std::endl;
-	//std::cerr << "match: " << matchCount << std::endl;
-	//std::cerr << "mm: " << missmatchCount << std::endl;
-	//std::cerr << "gaps :" << gapCount << std::endl;
+        //std::cerr << selfcomp <<" "<< alignscore <<" "<< returnscore <<" "<< std::endl;
 	//assert(selfcomp >= alignscore);
         //assert(returnalignment.score >= 0);
 

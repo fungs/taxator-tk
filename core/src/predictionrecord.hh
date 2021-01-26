@@ -86,6 +86,32 @@ public:
         return 0;
     } //TODO: at->[]
 
+                 
+                large_unsigned_int getSupportAt_full( const TaxonNode* node){ return getSupportAt_full( node->data->root_pathlength );}
+                
+                large_unsigned_int getSupportAt_full( small_unsigned_int depth){
+                    int index = depth - upper_node_->data->root_pathlength;
+                    large_unsigned_int support = 0;
+                    if (index >= 0){
+                        if(index < static_cast< const int >(taxon_support_.size())){
+                            //support = taxon_support_.at( index );
+                            //while(support == 0){
+                            //    index += 1;
+                            //    support = taxon_support_.at( index );
+                            //}
+                            //return support;
+                            return taxon_support_.at( index );
+                        }else{
+                            return support = taxon_support_.back();
+                            //while(support == 0){
+                            
+                            //}
+                        
+                        }
+                    }
+                    return taxon_support_.back();
+                }
+
     float getInterpolationValue() const {
         return interpolation_value_;
     }
