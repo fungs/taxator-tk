@@ -218,7 +218,12 @@ public:
         }
 
         stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
-        seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+	
+	{ // TODO: check if locking is still required
+		boost::mutex::scoped_lock lock(seq_mutex);
+        	seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+	}        
+
         assert( seqan::length( seq ) == (stop - start + 1) );
         return seq;
     }
@@ -240,6 +245,7 @@ protected:
     seqan::FaiIndex index_;
     bool write_on_exit_;
     std::map<seqan::CharString, unsigned int> refid2position_;
+    mutable boost::mutex seq_mutex;
 };
 
 
