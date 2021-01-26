@@ -9,7 +9,7 @@ be most reproducible, I recommend to install the exact versions listed below.
 If you use a different setup, please report all program versions with your
 results.
 
-## [Unreleased]
+## [1.4.0]
 
 ### taxator-tk
 Files: core binaries

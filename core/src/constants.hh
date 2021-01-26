@@ -43,7 +43,7 @@ namespace newick {
 	const std::string treestop = ";\n";
 }
 
-const std::string program_version = "1.3.4";
+const std::string program_version = "1.4.0";
 const std::string citation_note = u8R"(
 J. Dröge, I. Gregor, and A. C. McHardy
 Taxator-tk: precise taxonomic assignment of metagenomes by fast approximation of evolutionary neighborhoods
@@ -52,4 +52,3 @@ doi: 10.1093/bioinformatics/btu745
 )";
 
 #endif //constants_hh_
-
