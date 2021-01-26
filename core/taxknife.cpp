@@ -52,6 +52,7 @@ int main( int argc, char** argv ) {
   po::options_description desc("Allowed options");
   desc.add_options()
   ( "help,h", "show help message")
+  ( "version,V", "show program version" )
   ( "mode,m", po::value< std::string >( &operation)->default_value( "annotate" ), "choose mode:\n"
                                           "\"traverse\": follow nodes upwards in taxonomy\n\n"
                                           "\"annotate\": looks up metainformation attached to nodes (e.g. names)\n\n"
@@ -93,9 +94,15 @@ int main( int argc, char** argv ) {
 
     // global sanity checks
     if( vm.count("help")) { cout << desc << endl; return EXIT_SUCCESS; }
+
+    if ( vm.count ( "version" ) ) {
+        cout << program_version << endl;
+        return EXIT_SUCCESS;
+    }
+
     if(operation.empty()) { cout << "\n Please choose a mode.\n" << endl; cout << desc <<endl; return EXIT_FAILURE; }
     if( field_pos < 1 ) { cerr << "Field number index is 1-based" << endl; return EXIT_FAILURE; }
-    
+
     try {
       if( operation == "traverse" ) {
           // command line arguments
@@ -103,13 +110,13 @@ int main( int argc, char** argv ) {
           bool keep_not_rank = vm.count( "keep-not-rank" );
           bool keep_not_taxid = vm.count( "keep-not-taxid" );
           bool replace_invalid = vm.count( "set-invalid-traverse" );
-          
+
           // build taxonomy
           boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
           if(!tax) return EXIT_FAILURE;
           TaxonomyInterface interface(tax.get());
 
-          
+
           // internal string addresses for comparison
           set< const string* > ranks;
           for (vector< string >::iterator it = rank_names.begin(); it != rank_names.end(); ++it ) {
@@ -139,7 +146,7 @@ int main( int argc, char** argv ) {
                 ++i;
                 continue;
               }
-              
+
               try {
                 taxid = boost::lexical_cast< TaxonID >( *field_it );
                 node = interface.getNode( taxid );
@@ -173,14 +180,14 @@ int main( int argc, char** argv ) {
             buffer.str("");
             buffer.clear();
           }
-        
+
         } else if( operation == "annotate" ) {
 
           if( ! vm.count( "allnodes" ) ) allnodes = false;
           else allnodes = true;
 
           bool replace_invalid = vm.count( "set-invalid-annotate" );
-          
+
           // build taxonomy
           boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
           if(!tax) return EXIT_FAILURE;
@@ -235,7 +242,7 @@ int main( int argc, char** argv ) {
               buffer.str("");
               buffer.clear();
             }
-          
+
           } else if( show_what == "rank" ) {
             while( getline( cin, line ) ) {
               if ( ignoreLine( line ) ) continue;
@@ -277,7 +284,7 @@ int main( int argc, char** argv ) {
               buffer.str("");
               buffer.clear();
             }
-            
+
           } else if ( show_what == "path" ) {
             while( getline( cin, line ) ) {
               if ( ignoreLine( line ) ) continue;
@@ -294,7 +301,7 @@ int main( int argc, char** argv ) {
                   taxid = boost::lexical_cast< TaxonID >( *field_it );
                   node = interface.getNode( taxid );
                   cout << buffer.str();
-                  
+
                   const TaxonNode* root = interface.getRoot();
                   Taxonomy::CPathDownIterator it( root, node );
                   while(true) {
@@ -313,7 +320,7 @@ int main( int argc, char** argv ) {
                       else cout << ";node_without_annotation";
                     }
                   };
-                  
+
                 } catch ( TaxonNotFound& ) {
                   cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy";
                   if ( replace_invalid ) {
@@ -358,7 +365,7 @@ int main( int argc, char** argv ) {
                     taxid = boost::lexical_cast< TaxonID >( *field_it );
                     node = interface.getNode( taxid );
                     cout << buffer.str();
-                    
+
                     const TaxonNode* root = interface.getRoot();
                     Taxonomy::CPathDownIterator it( root, node );
                     while(true) {
@@ -373,7 +380,7 @@ int main( int argc, char** argv ) {
                       ++it;
                       if ( allnodes || it->data->mark_special ) cout << ';' << it->data->taxid;
                     };
-                    
+
                   } catch ( TaxonNotFound& ) {
                     cerr << "Could not find node with taxonomic id " << taxid << " in taxonomy";
                     if ( replace_invalid ) {
@@ -409,7 +416,7 @@ int main( int argc, char** argv ) {
       } else if( operation == "tree" ) {
         bool tree_show_names = vm.count( "names" );
         bool tree_fill_intermediate = vm.count( "fill-intermediate" );
-        
+
         // build taxonomy
         boost::scoped_ptr< Taxonomy > tax(loadTaxonomyFromEnvironment(&default_ranks));
         if(!tax) return EXIT_FAILURE;
@@ -455,4 +462,3 @@ int main( int argc, char** argv ) {
         return EXIT_FAILURE;
     }
 }
-

@@ -89,6 +89,7 @@ int main( int argc, char** argv ) {
     po::options_description desc("Allowed options");
     desc.add_options()
     ( "help,h", "show help message")
+    ( "version,V", "show program version" )
     ( "min-score,m", po::value< float >( &minscore )->default_value( 0.0 ), "set min-score filter value" )
     ( "min-pid,p", po::value< float >( &minpid )->default_value( 0.0 ), "set minimal PID to consider" )
     ( "top-percent,t", po::value< float >( &toppercent )->default_value( 1.0 ), "set top-percent filter value" )
@@ -108,6 +109,11 @@ int main( int argc, char** argv ) {
 
     if( vm.count( "help" ) ) {
         cout << desc << endl;
+        return EXIT_SUCCESS;
+    }
+
+    if ( vm.count ( "version" ) ) {
+        cout << program_version << endl;
         return EXIT_SUCCESS;
     }
 
