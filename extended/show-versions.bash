@@ -27,7 +27,12 @@ extract_version() {
 echo -e "This is the taxator-tk extended pipeline with the following program versions\n"
 
 # taxator-tk extended pipeline
-echo "taxator-tk pipeline scripts: v$(pipeline_version)"
+echo "taxator-tk pipeline scripts: $(pipeline_version)"
+
+# taxator-tk binaries
+checkexecutables taxator && echo "taxator: $(taxator --version)"
+checkexecutables binner && echo "binner: $(binner --version)"
+checkexecutables taxknife && echo "taxknife: $(taxknife --version)"
 
 # makeblastdb
 regex='^makeblastdb:\ (.+)$'
