@@ -52,6 +52,7 @@ int main( int argc, char** argv ) {
   po::options_description desc("Allowed options");
   desc.add_options()
   ( "help,h", "show help message")
+  ( "version,V", "show program version" )
   ( "mode,m", po::value< std::string >( &operation)->default_value( "annotate" ), "choose mode:\n"
                                           "\"traverse\": follow nodes upwards in taxonomy\n\n"
                                           "\"annotate\": looks up metainformation attached to nodes (e.g. names)\n\n"
@@ -93,6 +94,12 @@ int main( int argc, char** argv ) {
 
     // global sanity checks
     if( vm.count("help")) { cout << desc << endl; return EXIT_SUCCESS; }
+
+    if ( vm.count ( "version" ) ) {
+        cout << program_version << endl;
+        return EXIT_SUCCESS;
+    }
+
     if(operation.empty()) { cout << "\n Please choose a mode.\n" << endl; cout << desc <<endl; return EXIT_FAILURE; }
     if( field_pos < 1 ) { cerr << "Field number index is 1-based" << endl; return EXIT_FAILURE; }
     
@@ -455,4 +462,3 @@ int main( int argc, char** argv ) {
         return EXIT_FAILURE;
     }
 }
-

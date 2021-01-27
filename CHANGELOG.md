@@ -9,6 +9,23 @@ There are no recorded dates and only record type `Changed` prior to v1.4.0.
 Also, no version tags existis prior to version 1.0.0. Pipeline scripts were only
 added to this repository starting from version 1.4.0.
 
+## [1.4.0] - 2021-01-26
+### Added
+* all: reorganized code and included extended pipeline scripts and documentation
+
+### Changed
+* core: backport of code changes from 1.5 branch
+* core: add version flags to binaries
+* core: seqan update to v2.4.0
+* core: tree.hh update to v3.7
+* extended: correctly detect Python2 version with two digits in patch number
+* extended: update KronaTools to v2.7.1
+* extended: update GNU parallel to v20201222
+* extended: align with LZA v1.9.3
+* extended: align with NCBI Blast 2.11.0+
+* extended: align with last-align v1170
+* extended: parallel index building and ambiguous characters with last aligner
+
 ## [1.3.3]
 ### Changed
 * core: fix crashes in all LCA algorithms

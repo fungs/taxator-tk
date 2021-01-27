@@ -51,6 +51,7 @@ public:
 };
 
 
+
 template < typename StorageStringType = seqan::Dna5String, typename WorkingStringType = seqan::Dna5String, typename Format = seqan::Fasta >
 class RandomInmemorySeqStoreRO : public RandomSeqStoreROInterface<WorkingStringType> {
 public:
@@ -73,7 +74,7 @@ public:
             seqan::goNext(id);
         }
         
-        std::cerr << "fasta-file loaded" << std::endl;
+        // std::cerr << "fasta-file loaded" << std::endl;
     }
 
     RandomInmemorySeqStoreRO ( const std::string& filename, const std::set< std::string >& whitelist ) : format_( Format() ) {
@@ -354,7 +355,7 @@ public:
         
         stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
 	
-	{
+	{ // TODO: check if locking is still required
 		boost::mutex::scoped_lock lock(seq_mutex);
         	seqan::readRegion( seq, index_, seq_num, start - 1, stop );
 	}        

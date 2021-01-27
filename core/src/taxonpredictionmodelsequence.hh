@@ -265,7 +265,7 @@ public:
 
         std::vector< StringType > segments(n);    //TODO: don't call element constructors
         std::vector< int > queryscores(n, std::numeric_limits< int >::max());
-        std::vector< large_int > querymatches(n, 0);   //TODO: value is not really relevant
+        std::vector< large_unsigned_int > querymatches(n, 0);   //TODO: value is not really relevant
         stopwatch_init.stop();
 
         // count number of alignment calculations in each of the three passes
@@ -293,7 +293,7 @@ public:
 
             for (uint i = 0; i < n; ++i) { //calculate scores for best-scoring references
                 int score;
-                large_int matches;
+                large_unsigned_int matches;
                 alignment<StringType> queryalignment;
                 //int matches;
                 const float qlscore = records[i]->getScore();
@@ -317,13 +317,13 @@ public:
                     stopwatch_seqret.stop();
                     //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::MyersBitVector());
                     //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::Blosum30());
-                    queryalignment = getAlignment<seqan::Blosum80>(segments[i],qrseq);
+                    queryalignment = getAlignment<seqan::MyersBitVector()>(segments[i], qrseq);
                     score = queryalignment.score;
                     ++pass_0_counter;
                     ++pass_0_counter_naive;
 
-                    //matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), static_cast<large_int>(records[i]->getIdentities()));
-                    matches = std::max(static_cast<large_int>(queryalignment.matches), static_cast<large_int>(records[i]->getIdentities()));
+                    //matches = std::max(static_cast<large_unsigned_int>(std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), static_cast<large_int>(records[i]->getIdentities()));
+                    matches = std::max(static_cast<large_unsigned_int>(queryalignment.matches), static_cast<large_unsigned_int>(records[i]->getIdentities()));
                     //matches = std::max((std::max(seqan::length(segments[i]), seqan::length(qrseq)) - score), static_cast<int>records[i]->getIdentities());
                     double qpid = static_cast<double>(matches)/qrlength;
                     logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; qlpid=" << qlpid << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << std::endl;
@@ -341,7 +341,7 @@ public:
                     else if (matches == querymatches[index_best] && qlscore > records[index_best]->getScore()) index_best = i;
                 }
                 //anchors_support = std::max(anchors_support, matches);
-                anchors_support = std::max(static_cast<large_int>(anchors_support), matches);  //TODO: move to previous if-statement?
+                anchors_support = std::max(static_cast<large_unsigned_int>(anchors_support), matches);  //TODO: move to previous if-statement?
                 lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records[i]->getReferenceNode());
             }
 
@@ -426,12 +426,12 @@ public:
 
                                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                                 //score = getAlignment(segments[i],segments[index_anchor]);
-                                segmentalignment = getAlignment<seqan::Blosum80>(segments[i],segments[index_anchor]);
+                                segmentalignment = getAlignment<seqan::MyersBitVector()>(segments[i],segments[index_anchor]);
                                 score = segmentalignment.score;
 
                                 ++pass_1_counter;
                                 //matches = std::max(seqan::length(segments[i]), seqan::length(segments[index_anchor])) - score;
-                                large_int matches = segmentalignment.matches;
+                                large_unsigned_int matches = segmentalignment.matches;
 
                                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; qlpid=" << qlpid << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << "; qlscore_cut=" << qlscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
                                 //logsink << segmentalignment.alignment << std::endl;
@@ -576,7 +576,7 @@ public:
 
                                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                                 //score = getAlignment(segments[i], segments[index_anchor]);
-                                segmentalignment = getAlignment<seqan::Blosum80>(segments[i], segments[index_anchor]);
+                                segmentalignment = getAlignment<seqan::MyersBitVector()>(segments[i], segments[index_anchor]);
                                 score = segmentalignment.score;
 
 
@@ -597,12 +597,12 @@ public:
 
                                 //int score = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, seqan::MyersBitVector());
                                 //int score = getAlignment(segments[index_anchor],qrseq);
-                                segmentalignment =  getAlignment<seqan::Blosum80>(segments[index_anchor], qrseq);
+                                segmentalignment =  getAlignment<seqan::MyersBitVector()>(segments[index_anchor], qrseq);
                                 int score = segmentalignment.score;
 
-                                //large_int matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
+                                //large_unsigned_int matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
                                 //TODO
-                                large_int matches = std::max(static_cast<large_int>(segmentalignment.matches), querymatches[index_anchor]);
+                                large_unsigned_int matches = std::max(static_cast<large_unsigned_int>(segmentalignment.matches), querymatches[index_anchor]);
 
                                 double qpid = static_cast<double>(matches)/qrlength;
                                 logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qlscore=" << records[index_anchor]->getScore() << "; qlmatch=" << qlmatch << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << std::endl;
@@ -628,7 +628,7 @@ public:
         }
 
         if(unode_global == lnode_global) ival_global = 1.;
-        
+
         logsink << "    RANGE\t" << rtax->data->annotation->name << tab << lnode_global->data->annotation->name << tab << unode_global->data->annotation->name << std::endl << std::endl;
 
         prec.setSignalStrength(anchors_taxsig);
@@ -696,15 +696,15 @@ template<typename AlignMethod>
 alignment<StringType> getAlignment(StringType A, StringType B){
 
 	alignment<StringType> returnalignment;
-        //typedef StringType TSequence;     
+        //typedef StringType TSequence;
     typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
     typedef typename seqan::Row<TAlign>::Type TRow;
     typedef typename seqan::Iterator<TRow>::Type TRowIterator;
 
-        //align sequence to itselftypedef typename 
+        //align sequence to itselftypedef typename
  	TAlign selfalignA;
     TAlign selfalignB;
-	
+
         resize(rows(selfalignA), 2);
         assignSource(row(selfalignA, 0), A);
         assignSource(row(selfalignA, 1), A);
@@ -724,7 +724,7 @@ alignment<StringType> getAlignment(StringType A, StringType B){
         assignSource(row(diffalign, 0), A);
         assignSource(row(diffalign, 1), B);
 
-        int alignscore = seqan::globalAlignment(diffalign,AlignMethod()); 
+        int alignscore = seqan::globalAlignment(diffalign,AlignMethod());
         //int returnscore = selfcomp - alignscore;
 
         //logsink << diffalign << std::endl;

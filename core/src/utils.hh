@@ -66,7 +66,7 @@ void tokenizeSingleCharDelim(const std::string& str, ContainerT& tokens, const s
       pos = str.length();
       if ( pos != lastpos || !trimempty ) tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );
       lastpos = pos;
-      return;
+			break;
     }
     if ( pos != lastpos || !trimempty ) {
       tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );

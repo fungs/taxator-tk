@@ -226,29 +226,29 @@ void execute(string db_filename,string db_index_filename,string query_filename, 
    //  , *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // T
 
     // load query sequences
-    std::cerr << "load queries\n";
+    // std::cerr << "load queries\n";
     boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > query_storage;
 
     if( query_index_filename.empty() ) query_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( query_filename ) );
     else query_storage.reset( new RandomIndexedSeqstoreRO< StringType >( query_filename, query_index_filename ) );
 
-    std::cerr << "end load queries\n";
+    // std::cerr << "end load queries\n";
 
     // reference query sequences
     boost::scoped_ptr< RandomSeqStoreROInterface< StringType > > db_storage;
     StopWatchCPUTime measure_db_loading( "loading reference db" );
-    measure_db_loading.start();
-    std::cerr << "db loading\n";
+    // measure_db_loading.start();
+    // std::cerr << "db loading\n";
     if( db_index_filename.empty() ) {
-        std::cerr << "db indexfile empty";
+        std::cerr << "Building reference index\n";
         db_storage.reset( new RandomInmemorySeqStoreRO< StringType, StringType >( db_filename ) );
     }
     else {
-        std::cerr << "not empty";
+        // std::cerr << "not empty";
         db_storage.reset( new RandomIndexedSeqstoreRO< StringType >( db_filename, db_index_filename ) );
     }
     measure_db_loading.stop();
-    std::cerr << "db loaded\n";
+    // std::cerr << "db loaded\n";
     auto rpa = RPAPredictionModel< RecordSetType, RandomSeqStoreROInterface< StringType >, RandomSeqStoreROInterface< StringType>, StringType>( tax.get(), *query_storage, *db_storage, filterout, toppercent );
     doPredictions( &rpa, *seqid2taxid, tax.get(), split_alignments, alignments_sorted, logsink, number_threads );  // TODO: reuse toppercent param?
 }
@@ -268,6 +268,7 @@ int main( int argc, char** argv ) {
     ( "help,h", "show help message")
     ( "citation", "show citation info" )
     ( "advanced-options", "show advanced program options" )
+    ( "version,V", "show program version" )
     ( "algorithm,a", po::value< string >( &algorithm )->default_value( "rpa" ), "set the algorithm that is used to predict taxonomic ids from alignments" )
     ( "seqid-taxid-mapping,g", po::value< string >( &accessconverter_filename ), "filename of seqid->taxid mapping for reference" )
     ( "query-sequences,q", po::value< string >( &query_filename ), "query sequences FASTA" )
@@ -313,6 +314,11 @@ int main( int argc, char** argv ) {
         return EXIT_SUCCESS;
     }
 
+    if ( vm.count ( "version" ) ) {
+        cout << program_version << endl;
+        return EXIT_SUCCESS;
+    }
+
     po::notify ( vm );  // check required etc.
 
     if( ! vm.count( "ranks" ) ) {  // set to fallback if not given
@@ -327,16 +333,16 @@ int main( int argc, char** argv ) {
 
     bool ignore_unclassified = vm.count( "ignore-unclassified" );
 
-    std::cerr << "load taxonomy\n";
+    // std::cerr << "load taxonomy\n";
     boost::scoped_ptr< Taxonomy > tax( loadTaxonomyFromEnvironment( &ranks ) );  // create taxonomy
     if( ! tax ) return EXIT_FAILURE;
-    std::cerr << "end load taxonomy\n";
+    // std::cerr << "end load taxonomy\n";
     if( delete_unmarked ) tax->deleteUnmarkedNodes();  // do everything only with the major NCBI ranks given by "ranks"
 
-    std::cerr << "load idtotax\n";
+    // std::cerr << "load idtotax\n";
     boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
     std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
-    std::cerr << "end load idtotax\n";
+    // std::cerr << "end load idtotax\n";
 
     try {
       // choose appropriate prediction model from command line parameters

@@ -56,6 +56,7 @@ int main ( int argc, char** argv ) {
     ( "help,h", "show help message" )
     ( "citation", "show citation info" )
     ( "advanced-options", "show advanced program options" )
+    ( "version,V", "show program version" )
     ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
     ( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
     ( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
@@ -91,6 +92,11 @@ int main ( int argc, char** argv ) {
         return EXIT_SUCCESS;
     }
     
+    if ( vm.count ( "version" ) ) {
+        cout << program_version << endl;
+        return EXIT_SUCCESS;
+    }
+
     po::notify ( vm );  // check required etc.
 
     if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
@@ -239,7 +245,7 @@ int main ( int argc, char** argv ) {
         // range is shrunk such that the remaining nodes have a minimum support (unit is bp)
 
         //counting support of nodes
-        std::cerr << "analyzing sample composition by signal counting...";
+        std::cerr << "Analyzing sample composition: ";
         large_unsigned_int minimum_support_found = std::numeric_limits< large_unsigned_int >::max();
         const TaxonNode* const root_node = taxinter.getRoot();
         FastNodeMap< large_unsigned_int > support( taxinter.getMaxDepth() );
@@ -269,13 +275,13 @@ int main ( int argc, char** argv ) {
                 }
             }
         }
-        std::cerr << " done: " << support.size() << " nested taxa with total support of " << support[ root_node ] << " bp" << std::endl;
+        std::cerr << support.size() << " nested taxa with total support of " << support[ root_node ] << " bp" << std::endl;
 
         // if min_support_in_sample was given as fraction
         if ( min_support_in_sample_percentage ) min_support_in_sample = support[ root_node ]*min_support_in_sample_percentage;
 
         // shrink ranges from lower end if support is smaller than the minimum required or if it does not comply with user-defined PID per rank.
-        std::cerr << "noise removal...";
+        std::cerr << "Noise removal: ";
         std::set< const TaxonNode* > pruned_nodes;
         if ( minimum_support_found < min_support_in_sample ) {
             for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator query_it = predictions_per_query.begin(); query_it != predictions_per_query.end(); ++query_it ) {
@@ -300,7 +306,7 @@ int main ( int argc, char** argv ) {
                 }
             }
         }
-        std::cerr << " done: " << pruned_nodes.size() << " taxa were removed" << std::endl;
+        std::cerr << pruned_nodes.size() << " taxa removed" << std::endl;
 
         // STEP 2: BINNING
         // in this step multiple ranges are combined into a single range by combining
@@ -308,7 +314,7 @@ int main ( int argc, char** argv ) {
         // strength and interpolation values are ignored. This heuristic seems quite
         // robust
 
-        std::cerr << "binning step... ";
+        std::cerr << "Consensus taxonomy assignment: ";
         std::ofstream binning_debug_output( log_filename.c_str() );
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
