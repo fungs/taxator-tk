@@ -132,10 +132,6 @@ public:
   {};
 
   void predict(ContainerT& recordset, PredictionRecord& prec, std::ostream& logsink) {
-    // typedef seqan::Blosum80 ScoringScheme;
-    // typedef seqan::AffineGaps AlignmentAlgorithm;
-    typedef seqan::EditDistanceScore ScoringScheme;
-    typedef seqan::MyersHirschberg AlignmentAlgorithm;
     this->initPredictionRecord(recordset, prec);  // set query name and length
     const std::string& qid = prec.getQueryIdentifier();
     boost::format seqname_fmt("%d:%d@%s");  // local variable because not thread-safe
@@ -321,7 +317,7 @@ public:
           stopwatch_seqret.stop();
           //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::MyersBitVector());
           //score = -seqan::globalAlignmentScore(segments[i], qrseq, seqan::Blosum30());
-          queryalignment = getAlignment<ScoringScheme,AlignmentAlgorithm>(segments[i], qrseq);
+          queryalignment = getAlignment(segments[i], qrseq);
           score = queryalignment.score;
           ++pass_0_counter;
           ++pass_0_counter_naive;
@@ -430,7 +426,7 @@ public:
 
                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                 //score = getAlignment(segments[i],segments[index_anchor]);
-                segmentalignment = getAlignment<ScoringScheme,AlignmentAlgorithm>(segments[i],segments[index_anchor]);
+                segmentalignment = getAlignment(segments[i],segments[index_anchor]);
                 score = segmentalignment.score;
 
                 ++pass_1_counter;
@@ -580,7 +576,7 @@ public:
 
                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                 //score = getAlignment(segments[i], segments[index_anchor]);
-                segmentalignment = getAlignment<ScoringScheme,AlignmentAlgorithm>(segments[i], segments[index_anchor]);
+                segmentalignment = getAlignment(segments[i], segments[index_anchor]);
                 score = segmentalignment.score;
 
 
@@ -601,7 +597,7 @@ public:
 
                 //int score = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, ScoringScheme);
                 //int score = getAlignment(segments[index_anchor],qrseq);
-                segmentalignment =  getAlignment<ScoringScheme,AlignmentAlgorithm>(segments[index_anchor], qrseq);
+                segmentalignment =  getAlignment(segments[index_anchor], qrseq);
                 int score = segmentalignment.score;
 
                 //large_unsigned_int matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
@@ -685,10 +681,13 @@ private:
   //const seqan::Score<int> *align_method;
 
   // generic alignment for any pairwise dissimilarity scoring like BLOSUM
-  template<typename AlignmentScoring, typename AlignmentAlgorithm>
+  //template<typename AlignmentScoring, typename AlignmentAlgorithm>
   alignment<StringType> getAlignment(StringType A, StringType B){
 
-    // typedef StringType TSequence;
+    // typedef seqan::Blosum80 ScoringScheme;
+    // typedef seqan::AffineGaps AlignmentAlgorithm;
+    // typedef seqan::EditDistanceScore ScoringScheme;
+    typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
     typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
     typedef typename seqan::Row<TAlign>::Type TRow;
     typedef typename seqan::Iterator<TRow>::Type TRowIterator;
