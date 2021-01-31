@@ -692,60 +692,90 @@ private:
   alignment<seqan::String<seqan::AminoAcid>> getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B);
 };
 
+// template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
+// alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B) {
+//   // typedef seqan::EditDistanceScore ScoringScheme;
+//   typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
+//   typedef typename seqan::Align<seqan::String<seqan::Dna5>, seqan::ArrayGaps> TAlign;
+//   typedef typename seqan::Row<TAlign>::Type TRow;
+//   typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+//
+//   // instantiate static objects
+//   auto alignAlgo = AlignmentAlgorithm();
+//   // auto alignScoring = AlignmentScoring();
+//
+//   // align sequence A to B
+//   TAlign alignAB;
+//   resize(rows(alignAB), 2);
+//   assignSource(row(alignAB, 0), A);
+//   assignSource(row(alignAB, 1), B);
+//
+//   // alignment with traceback for alignment statistics
+//   int mutualscore = seqan::globalAlignment(
+//     alignAB,
+//     // alignScoring,
+//     alignAlgo
+//   );
+//
+//   // extract stats from mutual alignment
+//   TRow & row1 = row(alignAB, 0);
+//   TRow & row2 = row(alignAB, 1);
+//
+//   TRowIterator itRow1 = begin(row1);
+//   TRowIterator itEndRow1 = end(row1);
+//   TRowIterator itRow2 = begin(row2);
+//
+//   int gapcount = 0;
+//   int matchcount = 0;
+//   int mismatchcount = 0;
+//
+//   for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
+//     if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
+//       gapcount ++;
+//     } else if(*itRow1 == *itRow2){
+//       matchcount ++;
+//     } else{
+//       mismatchcount ++;
+//     }
+//   }
+//
+//   // construct return object
+//   alignment<seqan::String<seqan::Dna5>> aln;
+//   aln.score = -mutualscore; // edit distance is proper distance, just make it positive
+//   aln.matches = matchcount;
+//   aln.mmatches = mismatchcount;
+//   aln.gaps = gapcount;
+//   aln.alignment = alignAB;
+//
+//   assert(aln.score >= 0);
+//   return aln;
+// }
+
 template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
 alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B) {
   // typedef seqan::EditDistanceScore ScoringScheme;
-  typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
-  typedef typename seqan::Align<seqan::String<seqan::Dna5>, seqan::ArrayGaps> TAlign;
-  typedef typename seqan::Row<TAlign>::Type TRow;
-  typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+  typedef typename seqan::MyersBitVector AlignmentAlgorithm;
 
   // instantiate static objects
   auto alignAlgo = AlignmentAlgorithm();
   // auto alignScoring = AlignmentScoring();
 
-  // align sequence A to B
-  TAlign alignAB;
-  resize(rows(alignAB), 2);
-  assignSource(row(alignAB, 0), A);
-  assignSource(row(alignAB, 1), B);
+  // alignment without traceback using approximated alignment statistics
+  int mutualscore = -seqan::globalAlignmentScore(A, B, alignAlgo); // edit distance is proper distance, just make it positive
 
-  // alignment with traceback for alignment statistics
-  int mutualscore = seqan::globalAlignment(
-    alignAB,
-    // alignScoring,
-    alignAlgo
-  );
-
-  // extract stats from mutual alignment
-  TRow & row1 = row(alignAB, 0);
-  TRow & row2 = row(alignAB, 1);
-
-  TRowIterator itRow1 = begin(row1);
-  TRowIterator itEndRow1 = end(row1);
-  TRowIterator itRow2 = begin(row2);
-
-  int gapcount = 0;
-  int matchcount = 0;
-  int mismatchcount = 0;
-
-  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
-    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-      gapcount ++;
-    } else if(*itRow1 == *itRow2){
-      matchcount ++;
-    } else{
-      mismatchcount ++;
-    }
-  }
+  // approximate required statistics
+  int matchcount = std::max(seqan::length(A), seqan::length(B) - mutualscore); //TODO: verify/improve formula (it's not symmetric)
+  int gaps_or_mismatches = mutualscore;
+  int mismatchcount = abs(seqan::length(A) - seqan::length(B)) - matchcount; // maximum possible
+  int gapcount = gaps_or_mismatches - mismatchcount; // remaining penality goes to gaps
 
   // construct return object
   alignment<seqan::String<seqan::Dna5>> aln;
-  aln.score = -mutualscore; // edit distance is proper distance, just make it positive
+  aln.score = mutualscore;
   aln.matches = matchcount;
   aln.mmatches = mismatchcount;
   aln.gaps = gapcount;
-  aln.alignment = alignAB;
+  // aln.alignment = alignAB;
 
   assert(aln.score >= 0);
   return aln;
