@@ -704,16 +704,14 @@ alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, 
   auto alignAlgo = AlignmentAlgorithm();
   // auto alignScoring = AlignmentScoring();
 
-  // TODO: instead use only scoring matrix to infer selfScore to save runtime
-  int selfScore = seqan::globalAlignmentScore(A, A, alignAlgo) + seqan::globalAlignmentScore(B, B, alignAlgo);
-
   // align sequence A to B
   TAlign alignAB;
   resize(rows(alignAB), 2);
   assignSource(row(alignAB, 0), A);
   assignSource(row(alignAB, 1), B);
 
-  int mutualScore = seqan::globalAlignment(
+  // alignment with traceback for alignment statistics
+  int mutualscore = seqan::globalAlignment(
     alignAB,
     // alignScoring,
     alignAlgo
@@ -727,30 +725,29 @@ alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, 
   TRowIterator itEndRow1 = end(row1);
   TRowIterator itRow2 = begin(row2);
 
-  int gapCount = 0;
-  int matchCount = 0;
-  int missmatchCount = 0;
+  int gapcount = 0;
+  int matchcount = 0;
+  int mismatchcount = 0;
 
   for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
     if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-      gapCount ++;
+      gapcount ++;
     } else if(*itRow1 == *itRow2){
-      matchCount ++;
+      matchcount ++;
     } else{
-      missmatchCount ++;
+      mismatchcount ++;
     }
   }
 
   // construct return object
   alignment<seqan::String<seqan::Dna5>> aln;
-  aln.score = selfScore - 2*mutualScore; // simple symmetric scoring formula
-  aln.matches = matchCount;
-  aln.mmatches = missmatchCount;
-  aln.gaps = gapCount;
+  aln.score = -mutualscore; // edit distance is proper distance, just make it positive
+  aln.matches = matchcount;
+  aln.mmatches = mismatchcount;
+  aln.gaps = gapcount;
   aln.alignment = alignAB;
 
-  //assert(selfcomp >= alignscore);
-  //assert(aln.score >= 0);
+  assert(aln.score >= 0);
   return aln;
 }
 
@@ -768,8 +765,8 @@ alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorT
   auto alignAlgo = AlignmentAlgorithm();
   auto alignScoring = AlignmentScoring();
 
-  // TODO: instead use only scoring matrix to infer selfScore to save runtime
-  int selfScore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) + seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
+  // TODO: instead use only scoring matrix to infer selfscore to save runtime
+  int selfscore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) + seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
 
   // align sequence A to B
   TAlign alignAB;
@@ -777,7 +774,7 @@ alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorT
   assignSource(row(alignAB, 0), A);
   assignSource(row(alignAB, 1), B);
 
-  int mutualScore = seqan::globalAlignment(
+  int mutualscore = seqan::globalAlignment(
     alignAB,
     alignScoring,
     alignAlgo
@@ -791,30 +788,30 @@ alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorT
   TRowIterator itEndRow1 = end(row1);
   TRowIterator itRow2 = begin(row2);
 
-  int gapCount = 0;
-  int matchCount = 0;
-  int missmatchCount = 0;
+  int gapcount = 0;
+  int matchcount = 0;
+  int mismatchcount = 0;
 
   for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
     if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-      gapCount ++;
+      gapcount ++;
     } else if(*itRow1 == *itRow2){
-      matchCount ++;
+      matchcount ++;
     } else{
-      missmatchCount ++;
+      mismatchcount ++;
     }
   }
 
   // construct return object
   alignment<seqan::String<seqan::AminoAcid>> aln;
-  aln.score = selfScore - 2*mutualScore; // simple symmetric scoring formula
-  aln.matches = matchCount;
-  aln.mmatches = missmatchCount;
-  aln.gaps = gapCount;
+  aln.score = selfscore - 2*mutualscore; // simple symmetric scoring formula
+  aln.matches = matchcount;
+  aln.mmatches = mismatchcount;
+  aln.gaps = gapcount;
   aln.alignment = alignAB;
 
-  //assert(selfcomp >= alignscore);
-  //assert(aln.score >= 0);
+  assert(selfscore >= mutualscore);
+  assert(aln.score >= 0);
   return aln;
 }
 
