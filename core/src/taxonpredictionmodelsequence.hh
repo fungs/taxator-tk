@@ -116,7 +116,7 @@ private:
 };
 
 // TODO: make timers thread-safe
-template< typename ContainerT, typename QStorType, typename DBStorType ,typename StringType>
+template< typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
 class RPAPredictionModel : public TaxonPredictionModel< ContainerT > {
 public:
   RPAPredictionModel(const Taxonomy* tax, QStorType& q_storage, const DBStorType& db_storage, float exclude_factor ,float reeval_bandwidth = .1) :
@@ -682,69 +682,140 @@ private:
 
   // generic alignment for any pairwise dissimilarity scoring like BLOSUM
   //template<typename AlignmentScoring, typename AlignmentAlgorithm>
-  alignment<StringType> getAlignment(StringType A, StringType B){
+  // template<typename T>
+  // alignment<T> getAlignment(T A, T B) { return alignment<T>()};
+  //template<typename T>
 
-    // typedef seqan::Blosum80 ScoringScheme;
-    // typedef seqan::AffineGaps AlignmentAlgorithm;
-    // typedef seqan::EditDistanceScore ScoringScheme;
-    typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
-    typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
-    typedef typename seqan::Row<TAlign>::Type TRow;
-    typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+  // alignment<StringType> getAlignment(StringType A, StringType B);
 
-    // instantiate static objects
-    auto alignAlgo = AlignmentAlgorithm();
-    // auto alignScoring = AlignmentScoring();
-
-    // TODO: instead use only scoring matrix to infer selfScore to save runtime
-    int selfScore = seqan::globalAlignmentScore(A, A, alignAlgo) + seqan::globalAlignmentScore(B, B, alignAlgo);
-
-    // align sequence A to B
-    TAlign alignAB;
-    resize(rows(alignAB), 2);
-    assignSource(row(alignAB, 0), A);
-    assignSource(row(alignAB, 1), B);
-
-    int mutualScore = seqan::globalAlignment(
-      alignAB,
-      // alignScoring,
-      alignAlgo
-    );
-
-    // extract stats from mutual alignment
-    TRow & row1 = row(alignAB, 0);
-    TRow & row2 = row(alignAB, 1);
-
-    TRowIterator itRow1 = begin(row1);
-    TRowIterator itEndRow1 = end(row1);
-    TRowIterator itRow2 = begin(row2);
-
-    int gapCount = 0;
-    int matchCount = 0;
-    int missmatchCount = 0;
-
-    for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
-      if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-        gapCount ++;
-      } else if(*itRow1 == *itRow2){
-        matchCount ++;
-      } else{
-        missmatchCount ++;
-      }
-    }
-
-    // construct return object
-    alignment<StringType> aln;
-    aln.score = selfScore - 2*mutualScore; // simple symmetric scoring formula
-    aln.matches = matchCount;
-    aln.mmatches = missmatchCount;
-    aln.gaps = gapCount;
-    aln.alignment = alignAB;
-
-    //assert(selfcomp >= alignscore);
-    //assert(aln.score >= 0);
-    return aln;
-  }
+  alignment<seqan::String<seqan::Dna5>> getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B);
+  alignment<seqan::String<seqan::AminoAcid>> getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B);
 };
+
+template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
+alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B) {
+  // typedef seqan::EditDistanceScore ScoringScheme;
+  typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
+  typedef typename seqan::Align<seqan::String<seqan::Dna5>, seqan::ArrayGaps> TAlign;
+  typedef typename seqan::Row<TAlign>::Type TRow;
+  typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+
+  // instantiate static objects
+  auto alignAlgo = AlignmentAlgorithm();
+  // auto alignScoring = AlignmentScoring();
+
+  // TODO: instead use only scoring matrix to infer selfScore to save runtime
+  int selfScore = seqan::globalAlignmentScore(A, A, alignAlgo) + seqan::globalAlignmentScore(B, B, alignAlgo);
+
+  // align sequence A to B
+  TAlign alignAB;
+  resize(rows(alignAB), 2);
+  assignSource(row(alignAB, 0), A);
+  assignSource(row(alignAB, 1), B);
+
+  int mutualScore = seqan::globalAlignment(
+    alignAB,
+    // alignScoring,
+    alignAlgo
+  );
+
+  // extract stats from mutual alignment
+  TRow & row1 = row(alignAB, 0);
+  TRow & row2 = row(alignAB, 1);
+
+  TRowIterator itRow1 = begin(row1);
+  TRowIterator itEndRow1 = end(row1);
+  TRowIterator itRow2 = begin(row2);
+
+  int gapCount = 0;
+  int matchCount = 0;
+  int missmatchCount = 0;
+
+  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
+    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
+      gapCount ++;
+    } else if(*itRow1 == *itRow2){
+      matchCount ++;
+    } else{
+      missmatchCount ++;
+    }
+  }
+
+  // construct return object
+  alignment<seqan::String<seqan::Dna5>> aln;
+  aln.score = selfScore - 2*mutualScore; // simple symmetric scoring formula
+  aln.matches = matchCount;
+  aln.mmatches = missmatchCount;
+  aln.gaps = gapCount;
+  aln.alignment = alignAB;
+
+  //assert(selfcomp >= alignscore);
+  //assert(aln.score >= 0);
+  return aln;
+}
+
+template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
+alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B) {
+  typedef seqan::Blosum80 AlignmentScoring;
+  typedef seqan::AffineGaps AlignmentAlgorithm;
+  // typedef seqan::EditDistanceScore ScoringScheme;
+  // typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
+  typedef typename seqan::Align<seqan::String<seqan::AminoAcid>, seqan::ArrayGaps> TAlign;
+  typedef typename seqan::Row<TAlign>::Type TRow;
+  typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+
+  // instantiate static objects
+  auto alignAlgo = AlignmentAlgorithm();
+  auto alignScoring = AlignmentScoring();
+
+  // TODO: instead use only scoring matrix to infer selfScore to save runtime
+  int selfScore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) + seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
+
+  // align sequence A to B
+  TAlign alignAB;
+  resize(rows(alignAB), 2);
+  assignSource(row(alignAB, 0), A);
+  assignSource(row(alignAB, 1), B);
+
+  int mutualScore = seqan::globalAlignment(
+    alignAB,
+    alignScoring,
+    alignAlgo
+  );
+
+  // extract stats from mutual alignment
+  TRow & row1 = row(alignAB, 0);
+  TRow & row2 = row(alignAB, 1);
+
+  TRowIterator itRow1 = begin(row1);
+  TRowIterator itEndRow1 = end(row1);
+  TRowIterator itRow2 = begin(row2);
+
+  int gapCount = 0;
+  int matchCount = 0;
+  int missmatchCount = 0;
+
+  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
+    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
+      gapCount ++;
+    } else if(*itRow1 == *itRow2){
+      matchCount ++;
+    } else{
+      missmatchCount ++;
+    }
+  }
+
+  // construct return object
+  alignment<seqan::String<seqan::AminoAcid>> aln;
+  aln.score = selfScore - 2*mutualScore; // simple symmetric scoring formula
+  aln.matches = matchCount;
+  aln.mmatches = missmatchCount;
+  aln.gaps = gapCount;
+  aln.alignment = alignAB;
+
+  //assert(selfcomp >= alignscore);
+  //assert(aln.score >= 0);
+  return aln;
+}
 
 #endif // taxonpredictionmodelsequence_hh_
