@@ -711,7 +711,7 @@ private:
 //   assignSource(row(alignAB, 1), B);
 //
 //   // alignment with traceback for alignment statistics
-//   int mutualscore = seqan::globalAlignment(
+//   int mutualscore = -seqan::globalAlignment(
 //     alignAB,
 //     // alignScoring,
 //     alignAlgo
@@ -741,7 +741,7 @@ private:
 //
 //   // construct return object
 //   alignment<seqan::String<seqan::Dna5>> aln;
-//   aln.score = -mutualscore; // edit distance is proper distance, just make it positive
+//   aln.score = mutualscore; // edit distance is proper distance, just make it positive
 //   aln.matches = matchcount;
 //   aln.mmatches = mismatchcount;
 //   aln.gaps = gapcount;
@@ -796,7 +796,8 @@ alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorT
   auto alignScoring = AlignmentScoring();
 
   // TODO: instead use only scoring matrix to infer selfscore to save runtime
-  int selfscore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) + seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
+  int selfscore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) +
+                  seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
 
   // align sequence A to B
   TAlign alignAB;
