@@ -47,6 +47,186 @@ struct alignment{
   seqan::Align<StringType, seqan::ArrayGaps> alignment;
 };
 
+// The MyersHirschberg implementation is working but currently disabled, because
+// it takes about 2 to 3 times as long as the MyersBitVector implementation
+alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+  typedef seqan::String<seqan::Dna5> StringType;
+  // typedef seqan::EditDistanceScore ScoringScheme;
+  typedef seqan::MyersHirschberg AlignmentAlgorithm;
+  typedef seqan::Align<StringType, seqan::ArrayGaps> TAlign;
+  typedef seqan::Row<TAlign>::Type TRow;
+  typedef seqan::Iterator<TRow>::Type TRowIterator;
+
+  // instantiate static objects
+  auto alignAlgo = AlignmentAlgorithm();
+  // auto alignScoring = AlignmentScoring();
+
+  // align sequence A to B
+  TAlign alignAB;
+  resize(rows(alignAB), 2);
+  assignSource(row(alignAB, 0), A);
+  assignSource(row(alignAB, 1), B);
+
+  // alignment with traceback for alignment statistics
+  int mutualscore = -seqan::globalAlignment( // make edit distance positive
+    alignAB,
+    // alignScoring,
+    alignAlgo
+  );
+  assert(mutualscore >= 0 && "distance metric cannot be negative");
+
+  // extract stats from mutual alignment
+  TRow & row1 = row(alignAB, 0);
+  TRow & row2 = row(alignAB, 1);
+
+  int gap = 0;
+  int match = 0;
+  int mismatch = 0;
+
+  TRowIterator itRow1 = begin(row1);
+  TRowIterator itEndRow1 = end(row1);
+  TRowIterator itRow2 = begin(row2);
+  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
+    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
+      gap++;
+    } else if(*itRow1 == *itRow2){
+      match++;
+    } else{
+      mismatch++;
+    }
+  }
+
+  // construct return object
+  alignment<StringType> aln;
+  aln.score = mutualscore;
+  aln.matches = match;
+  aln.mmatches = mismatch;
+  aln.gaps = gap;
+  aln.alignment = alignAB;
+
+  return aln;
+}
+
+// the MyersBitVector implementation for DNA sequences is fastest but only uses
+// lower bound estimates for the number of matches (which is good enough for
+// most applications)
+// template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
+alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+  typedef seqan::String<seqan::Dna5> StringType;
+  typedef seqan::MyersBitVector AlignmentAlgorithm;
+
+  // instantiate static objects
+  auto alignAlgo = AlignmentAlgorithm();
+  // auto alignScoring = AlignmentScoring();
+
+  // fix long and short sequence to make things easier
+  const StringType* long_seq = &A;
+  const StringType* short_seq = &B;
+  if(seqan::length(A) < seqan::length(B)) {
+    long_seq = &B;
+    short_seq = &A;
+  }
+
+  // alignment without traceback using approximated alignment statistics
+  int mutualscore = -seqan::globalAlignmentScore(*short_seq, *long_seq, alignAlgo); // make edit distance positive
+  assert(mutualscore >= 0 && "distance metric cannot be negative");
+
+  // approximate required statistics (lower bounds on matches)
+  int gap_or_mismatch = mutualscore;
+  int lendiff = seqan::length(*long_seq) - seqan::length(*short_seq);
+  assert(lendiff <= gap_or_mismatch && "alignment score ignores some positions");
+  int gap = lendiff; // lower bound
+  int mismatch = gap_or_mismatch - lendiff; // upper bound
+  int match = seqan::length(*short_seq) - mismatch; // lower bound
+
+  // construct return object
+  alignment<StringType> aln;
+  aln.score = mutualscore;
+  aln.matches = match;
+  aln.mmatches = mismatch;
+  aln.gaps = gap;
+
+  return aln;
+}
+
+alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
+  typedef seqan::String<seqan::AminoAcid> StringType;
+  typedef seqan::Blosum62 AlignmentScoring;
+  typedef seqan::AffineGaps AlignmentAlgorithm;
+  // typedef seqan::EditDistanceScore ScoringScheme;
+  // typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
+  typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
+  typedef typename seqan::Row<TAlign>::Type TRow;
+  typedef typename seqan::Iterator<TRow>::Type TRowIterator;
+
+  // instantiate static objects
+  auto alignAlgo = AlignmentAlgorithm();
+  auto alignScoring = AlignmentScoring();
+
+  // TODO: instead use only scoring matrix to infer selfscore to save runtime
+  int selfscore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) +
+                  seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
+
+  // align sequence A to B
+  TAlign alignAB;
+  resize(rows(alignAB), 2);
+  assignSource(row(alignAB, 0), A);
+  assignSource(row(alignAB, 1), B);
+
+  int mutualscore = seqan::globalAlignment(
+    alignAB,
+    alignScoring,
+    alignAlgo
+  );
+
+  // extract stats from mutual alignment
+  TRow & row1 = row(alignAB, 0);
+  TRow & row2 = row(alignAB, 1);
+
+  int gap = 0;
+  int match = 0;
+  int mismatch = 0;
+
+  TRowIterator itRow1 = begin(row1);
+  TRowIterator itEndRow1 = end(row1);
+  TRowIterator itRow2 = begin(row2);
+  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
+    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
+      gap++;
+    } else if(*itRow1 == *itRow2){
+      match++;
+    } else{
+      mismatch++;
+    }
+  }
+
+  // construct return object
+  alignment<StringType> aln;
+  aln.score = selfscore - 2*mutualscore; // simple symmetric scoring formula
+  aln.matches = match;
+  aln.mmatches = mismatch;
+  aln.gaps = gap;
+  aln.alignment = alignAB;
+
+  assert(selfscore >= mutualscore && "sequence self comparision must yield highest possible score");
+  assert(aln.score >= 0 && "distance metric cannot be negative");
+  return aln;
+}
+
+template<class T>
+alignment<T> getAlignment(const T& A, const T& B);
+
+template<>
+alignment<seqan::String<seqan::Dna5>> getAlignment<seqan::String<seqan::Dna5>>(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+  // return getAlignmentDNAExact(A, B);
+  return getAlignmentDNA(A, B);
+}
+
+template<>
+alignment<seqan::String<seqan::AminoAcid>> getAlignment<seqan::String<seqan::AminoAcid>>(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
+  return getAlignmentProtein(A, B);
+}
+
 // helper class
 class BandFactor {
 public:
@@ -655,7 +835,7 @@ private:
   StopWatchCPUTime measure_pass_1_alignment_;
   StopWatchCPUTime measure_pass_2_alignment_;
 
-  // compile type switch for member function specialization
+  // compile type switch for member function specialization TODO: simplify
   const StringType getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0) {
     if(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value) getSequenceProtein(id, start, stop, left_ext, right_ext);
     // assume DNA sequence
@@ -681,182 +861,6 @@ private:
     large_unsigned_int newstop = start + left_ext;
     return db_sequences_.getSequenceReverseComplement(id, newstart, newstop);
   }
-
-  // the function specialization is determined by the function arguments here (simple overloading)
-  alignment<seqan::String<seqan::Dna5>> getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B);
-  alignment<seqan::String<seqan::AminoAcid>> getAlignment(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B);
 };
-
-// The MyersHirschberg implementation is working but currently disabled, because
-// it takes about 2 to 3 times as long as the MyersBitVector implementation
-// template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-// alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
-// static_assert(std::is_same<StringType, seqan::String<seqan::Dna5>>::value, "StringType mismatch");
-//
-//   // typedef seqan::EditDistanceScore ScoringScheme;
-//   typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
-//   typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
-//   typedef typename seqan::Row<TAlign>::Type TRow;
-//   typedef typename seqan::Iterator<TRow>::Type TRowIterator;
-//
-//   // instantiate static objects
-//   auto alignAlgo = AlignmentAlgorithm();
-//   // auto alignScoring = AlignmentScoring();
-//
-//   // align sequence A to B
-//   TAlign alignAB;
-//   resize(rows(alignAB), 2);
-//   assignSource(row(alignAB, 0), A);
-//   assignSource(row(alignAB, 1), B);
-//
-//   // alignment with traceback for alignment statistics
-//   int mutualscore = -seqan::globalAlignment( // make edit distance positive
-//     alignAB,
-//     // alignScoring,
-//     alignAlgo
-//   );
-//   assert(mutualscore >= 0 && "distance metric cannot be negative");
-//
-//   // extract stats from mutual alignment
-//   TRow & row1 = row(alignAB, 0);
-//   TRow & row2 = row(alignAB, 1);
-//
-//   int gap = 0;
-//   int match = 0;
-//   int mismatch = 0;
-//
-//   TRowIterator itRow1 = begin(row1);
-//   TRowIterator itEndRow1 = end(row1);
-//   TRowIterator itRow2 = begin(row2);
-//   for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
-//     if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-//       gap++;
-//     } else if(*itRow1 == *itRow2){
-//       match++;
-//     } else{
-//       mismatch++;
-//     }
-//   }
-//
-//   // construct return object
-//   alignment<StringType> aln;
-//   aln.score = mutualscore;
-//   aln.matches = match;
-//   aln.mmatches = mismatch;
-//   aln.gaps = gap;
-//   aln.alignment = alignAB;
-//
-//   return aln;
-// }
-
-// the MyersBitVector implementation for DNA sequences is fastest but only uses
-// lower bound estimates for the number of matches (which is good enough for
-// most applications)
-template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
-  static_assert(std::is_same<StringType, seqan::String<seqan::Dna5>>::value, "StringType mismatch");
-
-  // typedef seqan::EditDistanceScore ScoringScheme;
-  typedef typename seqan::MyersBitVector AlignmentAlgorithm;
-
-  // instantiate static objects
-  auto alignAlgo = AlignmentAlgorithm();
-  // auto alignScoring = AlignmentScoring();
-
-  // fix long and short sequence to make things easier
-  const StringType* long_seq = &A;
-  const StringType* short_seq = &B;
-  if(seqan::length(A) < seqan::length(B)) {
-    long_seq = &B;
-    short_seq = &A;
-  }
-
-  // alignment without traceback using approximated alignment statistics
-  int mutualscore = -seqan::globalAlignmentScore(*short_seq, *long_seq, alignAlgo); // make edit distance positive
-  assert(mutualscore >= 0 && "distance metric cannot be negative");
-
-  // approximate required statistics (lower bounds on matches)
-  int gap_or_mismatch = mutualscore;
-  int lendiff = seqan::length(*long_seq) - seqan::length(*short_seq);
-  assert(lendiff <= gap_or_mismatch && "alignment score ignores some positions");
-  int gap = lendiff; // lower bound
-  int mismatch = gap_or_mismatch - lendiff; // upper bound
-  int match = seqan::length(*short_seq) - mismatch; // lower bound
-
-  // construct return object
-  alignment<StringType> aln;
-  aln.score = mutualscore;
-  aln.matches = match;
-  aln.mmatches = mismatch;
-  aln.gaps = gap;
-
-  return aln;
-}
-
-template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
-  static_assert(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value, "StringType mismatch");
-
-  typedef seqan::Blosum62 AlignmentScoring;
-  typedef seqan::AffineGaps AlignmentAlgorithm;
-  // typedef seqan::EditDistanceScore ScoringScheme;
-  // typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
-  typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
-  typedef typename seqan::Row<TAlign>::Type TRow;
-  typedef typename seqan::Iterator<TRow>::Type TRowIterator;
-
-  // instantiate static objects
-  auto alignAlgo = AlignmentAlgorithm();
-  auto alignScoring = AlignmentScoring();
-
-  // TODO: instead use only scoring matrix to infer selfscore to save runtime
-  int selfscore = seqan::globalAlignmentScore(A, A, alignScoring, alignAlgo) +
-                  seqan::globalAlignmentScore(B, B, alignScoring, alignAlgo);
-
-  // align sequence A to B
-  TAlign alignAB;
-  resize(rows(alignAB), 2);
-  assignSource(row(alignAB, 0), A);
-  assignSource(row(alignAB, 1), B);
-
-  int mutualscore = seqan::globalAlignment(
-    alignAB,
-    alignScoring,
-    alignAlgo
-  );
-
-  // extract stats from mutual alignment
-  TRow & row1 = row(alignAB, 0);
-  TRow & row2 = row(alignAB, 1);
-
-  int gap = 0;
-  int match = 0;
-  int mismatch = 0;
-
-  TRowIterator itRow1 = begin(row1);
-  TRowIterator itEndRow1 = end(row1);
-  TRowIterator itRow2 = begin(row2);
-  for (; itRow1 != itEndRow1; ++itRow1, ++itRow2) {
-    if (seqan::isGap(itRow1) || seqan::isGap(itRow2)) {
-      gap++;
-    } else if(*itRow1 == *itRow2){
-      match++;
-    } else{
-      mismatch++;
-    }
-  }
-
-  // construct return object
-  alignment<StringType> aln;
-  aln.score = selfscore - 2*mutualscore; // simple symmetric scoring formula
-  aln.matches = match;
-  aln.mmatches = mismatch;
-  aln.gaps = gap;
-  aln.alignment = alignAB;
-
-  assert(selfscore >= mutualscore && "sequence self comparision must yield highest possible score");
-  assert(aln.score >= 0 && "distance metric cannot be negative");
-  return aln;
-}
 
 #endif // taxonpredictionmodelsequence_hh_
