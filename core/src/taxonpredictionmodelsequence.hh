@@ -683,15 +683,14 @@ private:
   }
 
   // the function specialization is determined by the function arguments here (simple overloading)
-  alignment<seqan::String<seqan::Dna5>> getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B);
-  alignment<seqan::String<seqan::AminoAcid>> getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B);
+  alignment<seqan::String<seqan::Dna5>> getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B);
+  alignment<seqan::String<seqan::AminoAcid>> getAlignment(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B);
 };
-
 
 // The MyersHirschberg implementation is working but currently disabled, because
 // it takes about 2 to 3 times as long as the MyersBitVector implementation
 // template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-// alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B) {
+// alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
 // static_assert(std::is_same<StringType, seqan::String<seqan::Dna5>>::value, "StringType mismatch");
 //
 //   // typedef seqan::EditDistanceScore ScoringScheme;
@@ -754,7 +753,7 @@ private:
 // lower bound estimates for the number of matches (which is good enough for
 // most applications)
 template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B) {
+alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
   static_assert(std::is_same<StringType, seqan::String<seqan::Dna5>>::value, "StringType mismatch");
 
   // typedef seqan::EditDistanceScore ScoringScheme;
@@ -765,8 +764,8 @@ alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, 
   // auto alignScoring = AlignmentScoring();
 
   // fix long and short sequence to make things easier
-  StringType* long_seq = &A;
-  StringType* short_seq = &B;
+  const StringType* long_seq = &A;
+  const StringType* short_seq = &B;
   if(seqan::length(A) < seqan::length(B)) {
     long_seq = &B;
     short_seq = &A;
@@ -795,7 +794,7 @@ alignment<seqan::String<seqan::Dna5>> RPAPredictionModel<ContainerT, QStorType, 
 }
 
 template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B) {
+alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
   static_assert(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value, "StringType mismatch");
 
   typedef seqan::Blosum62 AlignmentScoring;
