@@ -112,7 +112,6 @@ private:
   float bandfactor_;
   data_type_ data_;
   TaxonomyInterface taxinter_;
-
 };
 
 // TODO: make timers thread-safe
@@ -641,27 +640,6 @@ public:
     logsink << "STATS" << tab << qrseqname << tab << n << tab << pass_0_counter << tab << pass_1_counter << tab << pass_2_counter << tab << gcounter << tab << stopwatch_init.read() << tab << stopwatch_seqret.read() << tab << stopwatch_process.read() << tab << std::setprecision(2) << std::fixed << normalised_rt << std::endl << std::endl;
   }
 
-  const StringType getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
-    if(typeid(StringType) == typeid(seqan::String<seqan::Dna5>)){
-      if(start <= stop) {
-        large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
-        large_unsigned_int newstop = stop + right_ext;
-        return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
-      }
-      large_unsigned_int newstart = right_ext < stop ? stop - right_ext : 1;
-      large_unsigned_int newstop = start + left_ext;
-      return db_sequences_.getSequenceReverseComplement(id, newstart, newstop);
-    }else if(typeid(StringType) == typeid(seqan::String<seqan::AminoAcid>)){
-      assert(start <= stop);
-      large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
-      large_unsigned_int newstop = stop + right_ext;
-      return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
-    }
-    else{
-      assert(false); // TODO: what is this? should throw an exeception instead
-    }
-  }
-
 protected:
   typedef std::list<typename ContainerT::value_type> active_list_type_;
   QStorType& query_sequences_;
@@ -676,16 +654,35 @@ private:
   StopWatchCPUTime measure_pass_0_alignment_;
   StopWatchCPUTime measure_pass_1_alignment_;
   StopWatchCPUTime measure_pass_2_alignment_;
-  //const seqan::Score<int> *align_method;
 
-  // generic alignment for any pairwise dissimilarity scoring like BLOSUM
-  //template<typename AlignmentScoring, typename AlignmentAlgorithm>
-  // template<typename T>
-  // alignment<T> getAlignment(T A, T B) { return alignment<T>()};
-  //template<typename T>
+  // compile type switch for member function specialization
+  const StringType getSequence(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0) {
+    if(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value) getSequenceProtein(id, start, stop, left_ext, right_ext);
+    // assume DNA sequence
+    return getSequenceDNA(id, start, stop, left_ext, right_ext);
+  }
 
-  // alignment<StringType> getAlignment(StringType A, StringType B);
+  const seqan::String<seqan::AminoAcid> getSequenceProtein(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
+    //static_assert(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value, "StringType mismatch");
+    assert(start <= stop);
+    large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
+    large_unsigned_int newstop = stop + right_ext;
+    return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
+  }
 
+  const seqan::String<seqan::Dna5> getSequenceDNA(const std::string& id, const large_unsigned_int start, const large_unsigned_int stop, const large_unsigned_int left_ext = 0, const large_unsigned_int right_ext = 0 ) {
+    //static_assert(std::is_same<StringType, seqan::String<seqan::Dna5>>::value, "StringType mismatch");
+    if(start <= stop) {
+      large_unsigned_int newstart = left_ext < start ? start - left_ext : 1;
+      large_unsigned_int newstop = stop + right_ext;
+      return db_sequences_.getSequence(id, newstart, newstop); //TODO: can we avoid copying
+    }
+    large_unsigned_int newstart = right_ext < stop ? stop - right_ext : 1;
+    large_unsigned_int newstop = start + left_ext;
+    return db_sequences_.getSequenceReverseComplement(id, newstart, newstop);
+  }
+
+  // the function specialization is determined by the function arguments here (simple overloading)
   alignment<seqan::String<seqan::Dna5>> getAlignment(seqan::String<seqan::Dna5> A, seqan::String<seqan::Dna5> B);
   alignment<seqan::String<seqan::AminoAcid>> getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B);
 };
@@ -801,7 +798,7 @@ template<typename ContainerT, typename QStorType, typename DBStorType, typename 
 alignment<seqan::String<seqan::AminoAcid>> RPAPredictionModel<ContainerT, QStorType, DBStorType, StringType>::getAlignment(seqan::String<seqan::AminoAcid> A, seqan::String<seqan::AminoAcid> B) {
   static_assert(std::is_same<StringType, seqan::String<seqan::AminoAcid>>::value, "StringType mismatch");
 
-  typedef seqan::Blosum80 AlignmentScoring;
+  typedef seqan::Blosum62 AlignmentScoring;
   typedef seqan::AffineGaps AlignmentAlgorithm;
   // typedef seqan::EditDistanceScore ScoringScheme;
   // typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
