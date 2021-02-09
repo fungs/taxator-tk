@@ -484,7 +484,7 @@ public:
 
       for (uint i = 0; i < n; ++i) { // get scores for best-scoring references
         int dist;
-        large_unsigned_int matches;
+        large_unsigned_int sim;
         Alignment<StringType> queryalignment;
 
         const float qsearchscore = records[i]->getScore();
@@ -495,8 +495,8 @@ public:
 
           qgroup.insert(i);
           dist = 0;
-          matches = records[i]->getIdentities();
-          logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; match=" << matches << "; qpid=1.0" << std::endl;
+          sim = records[i]->getIdentities();
+          logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; sim=" << sim << "; qpid=1.0" << std::endl;
           ++pass_0_counter_naive;
         } else if (records[i]->getScore() >= dbalignment_searchscore_threshold) {
 
@@ -511,28 +511,28 @@ public:
           ++pass_0_counter;
           ++pass_0_counter_naive;
 
-          matches = std::max(static_cast<large_unsigned_int>(queryalignment.matches), static_cast<large_unsigned_int>(records[i]->getIdentities()));
-          double qpid = static_cast<double>(matches)/qrlength;
-          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; match=" << matches << "; qpid=" << qpid << std::endl;
+          sim = std::max(static_cast<large_unsigned_int>(queryalignment.similarity), static_cast<large_unsigned_int>(records[i]->getIdentities()));
+          double qpid = static_cast<double>(sim)/qrlength;
+          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; =" << sim << "; qpid=" << qpid << std::endl;
           //logsink << queryalignment.alignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
           dist = std::numeric_limits< int >::max();
-          matches = records[i]->getIdentities();
+          sim = records[i]->getIdentities();
         }
         querydistance[i] = dist;
-        querysimilarity[i] = matches;
+        querysimilarity[i] = sim;
         if (dist < querydistance[index_best]) index_best = i;
         else if (dist == querydistance[index_best]) {
-          if (matches > querysimilarity[index_best]) index_best = i;
-          else if (matches == querysimilarity[index_best] && qsearchscore > records[index_best]->getScore()) index_best = i;
+          if (sim > querysimilarity[index_best]) index_best = i;
+          else if (sim == querysimilarity[index_best] && qsearchscore > records[index_best]->getScore()) index_best = i;
         }
-        //anchors_support = std::max(anchors_support, matches);
-        anchors_support = std::max(static_cast<large_unsigned_int>(anchors_support), matches);  //TODO: move to previous if-statement?
+        //anchors_support = std::max(anchors_support, sim);
+        anchors_support = std::max(static_cast<large_unsigned_int>(anchors_support), sim);  //TODO: move to previous if-statement?
         lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records[i]->getReferenceNode());
       }
 
-      // TODO: resort alignments by local score (already done), and by secondary vector (matches)
+      // TODO: resort alignments by local score (already done), and by secondary vector (sim)
       // only keep and use the best-scoring reference sequences
       rtax = records[index_best]->getReferenceNode();
       for (std::set< uint >::iterator it = qgroup.begin(); it != qgroup.end();) {
@@ -595,7 +595,7 @@ public:
 
           if(qpid >= qpid_thresh) {  //TODO: implement command line option
             int dist;
-            //large_unsigned_int matches;
+            //large_unsigned_int sim;
             Alignment<StringType> segmentalignment;
 
             if (i == index_anchor) dist = 0;
@@ -603,7 +603,7 @@ public:
               // use triangle relation to avoid alignment
               if (querydistance[i] == 0) { // && querydistance[index_anchor] == 0 ) { //&& querysimilarity[i]) { // TODO: correct?
                 dist = querydistance[index_anchor];
-                //matches = querysimilarity[index_anchor];
+                //sim = querysimilarity[index_anchor];
               }
               else {
                 stopwatch_seqret.start();
@@ -615,9 +615,9 @@ public:
                 dist = segmentalignment.distance;
 
                 ++pass_1_counter;
-                large_unsigned_int matches = segmentalignment.matches;
+                large_unsigned_int sim = segmentalignment.similarity;
 
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; match=" << matches << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
+                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; =" << sim << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
                 //logsink << segmentalignment.alignment << std::endl;
               }
             }
@@ -782,12 +782,12 @@ public:
                 segmentalignment =  getAlignment(segments[index_anchor], qrseq);
                 int dist = segmentalignment.distance;
 
-                large_unsigned_int matches = std::max(static_cast<large_unsigned_int>(segmentalignment.matches), querysimilarity[index_anchor]);
+                large_unsigned_int sim = std::max(static_cast<large_unsigned_int>(segmentalignment.similarity), querysimilarity[index_anchor]);
 
-                double qpid = static_cast<double>(matches)/qrlength;
-                logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; match=" << matches << "; qpid=" << qpid << std::endl;
+                double qpid = static_cast<double>(sim)/qrlength;
+                logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << std::endl;
                 querydistance[index_anchor] = dist;
-                querysimilarity[index_anchor] = matches;
+                querysimilarity[index_anchor] = sim;
                 qdist_ex = dist*bandfactor_max;
                 logsink << "      query: (" << qdist_ex << ") unknown" << std::endl;
                 //logsink << segmentalignment.alignment << std::endl;
