@@ -513,7 +513,7 @@ public:
 
           sim = std::max(static_cast<large_unsigned_int>(queryalignment.similarity), static_cast<large_unsigned_int>(records[i]->getIdentities()));
           double qpid = static_cast<double>(sim)/qrlength;
-          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; =" << sim << "; qpid=" << qpid << std::endl;
+          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << std::endl;
           //logsink << queryalignment.alignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
@@ -617,7 +617,7 @@ public:
                 ++pass_1_counter;
                 large_unsigned_int sim = segmentalignment.similarity;
 
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; =" << sim << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
+                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
                 //logsink << segmentalignment.alignment << std::endl;
               }
             }
