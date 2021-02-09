@@ -38,18 +38,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "profiling.hh"
 
 // alignment object
+// We represent each alignment with both, a distance and a similarity metric
+// because some alignment algorithms will report a distance while others will
+// report a similarity score. We normalize both to add up to the length of the
+// calculated alignment (unit fractional base pair)
 template <typename StringType>
-struct alignment{
-  int score;
-  int matches;
-  int mmatches;
+struct Alignment {
+  int matches; // only exact positional matches
+  int mismatches;
   int gaps;
+  float distance;
+  float similarity;
   seqan::Align<StringType, seqan::ArrayGaps> alignment;
 };
 
 // The MyersHirschberg implementation is working but currently disabled, because
 // it takes about 2 to 3 times as long as the MyersBitVector implementation
-alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+Alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
   typedef seqan::String<seqan::Dna5> StringType;
   // typedef seqan::EditDistanceScore ScoringScheme;
   typedef seqan::MyersHirschberg AlignmentAlgorithm;
@@ -96,11 +101,14 @@ alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
     }
   }
 
+  assert(mutualscore == gap+mismatch  && "edit distance does not equal gaps+mismatches");
+
   // construct return object
-  alignment<StringType> aln;
-  aln.score = mutualscore;
+  Alignment<StringType> aln;
+  aln.distance = mutualscore;
+  aln.similarity = match;
   aln.matches = match;
-  aln.mmatches = mismatch;
+  aln.mismatches = mismatch;
   aln.gaps = gap;
   aln.alignment = alignAB;
 
@@ -111,7 +119,7 @@ alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
 // lower bound estimates for the number of matches (which is good enough for
 // most applications)
 // template<typename ContainerT, typename QStorType, typename DBStorType, typename StringType>
-alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+Alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
   typedef seqan::String<seqan::Dna5> StringType;
   typedef seqan::MyersBitVector AlignmentAlgorithm;
 
@@ -140,16 +148,17 @@ alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan:
   int match = seqan::length(*short_seq) - mismatch; // lower bound
 
   // construct return object
-  alignment<StringType> aln;
-  aln.score = mutualscore;
+  Alignment<StringType> aln;
+  aln.distance = mutualscore;
+  aln.similarity = match;
   aln.matches = match;
-  aln.mmatches = mismatch;
+  aln.mismatches = mismatch;
   aln.gaps = gap;
 
   return aln;
 }
 
-alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
+Alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
   typedef seqan::String<seqan::AminoAcid> StringType;
   typedef seqan::Blosum62 AlignmentScoring;
   typedef seqan::AffineGaps AlignmentAlgorithm;
@@ -179,6 +188,8 @@ alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::Stri
     alignAlgo
   );
 
+  assert(selfscore >= mutualscore && "sequence self comparision must yield highest possible score");
+
   // extract stats from mutual alignment
   TRow & row1 = row(alignAB, 0);
   TRow & row2 = row(alignAB, 1);
@@ -199,31 +210,32 @@ alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::Stri
       mismatch++;
     }
   }
+  float normfactor = (gap + match + mismatch)/selfscore;
 
   // construct return object
-  alignment<StringType> aln;
-  aln.score = selfscore - 2*mutualscore; // simple symmetric scoring formula
+  Alignment<StringType> aln;
+  aln.distance = (selfscore - 2*mutualscore) * normfactor; // simple symmetric scoring formula
+  aln.similarity = (2*mutualscore) * normfactor;
   aln.matches = match;
-  aln.mmatches = mismatch;
+  aln.mismatches = mismatch;
   aln.gaps = gap;
   aln.alignment = alignAB;
 
-  assert(selfscore >= mutualscore && "sequence self comparision must yield highest possible score");
-  assert(aln.score >= 0 && "distance metric cannot be negative");
+  assert(aln.distance >= 0 && "distance metric cannot be negative");
   return aln;
 }
 
 template<class T>
-alignment<T> getAlignment(const T& A, const T& B);
+Alignment<T> getAlignment(const T& A, const T& B);
 
 template<>
-alignment<seqan::String<seqan::Dna5>> getAlignment<seqan::String<seqan::Dna5>>(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
+Alignment<seqan::String<seqan::Dna5>> getAlignment<seqan::String<seqan::Dna5>>(const seqan::String<seqan::Dna5>& A, const seqan::String<seqan::Dna5>& B) {
   // return getAlignmentDNAExact(A, B);
   return getAlignmentDNA(A, B);
 }
 
 template<>
-alignment<seqan::String<seqan::AminoAcid>> getAlignment<seqan::String<seqan::AminoAcid>>(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
+Alignment<seqan::String<seqan::AminoAcid>> getAlignment<seqan::String<seqan::AminoAcid>>(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
   return getAlignmentProtein(A, B);
 }
 
@@ -443,8 +455,8 @@ public:
     }
 
     std::vector< StringType > segments(n);    //TODO: don't call element constructors
-    std::vector< int > queryscores(n, std::numeric_limits< int >::max());
-    std::vector< large_unsigned_int > querymatches(n, 0);   //TODO: value is not really relevant
+    std::vector< int > querydistance(n, std::numeric_limits< int >::max()); // distance to query sequence
+    std::vector< large_unsigned_int > querymatches(n, 0);   // despite the name, this is a general similarity metric
     stopwatch_init.stop();
 
     // count number of alignment calculations in each of the three passes
@@ -473,7 +485,7 @@ public:
       for (uint i = 0; i < n; ++i) { //calculate scores for best-scoring references
         int score;
         large_unsigned_int matches;
-        alignment<StringType> queryalignment;
+        Alignment<StringType> queryalignment;
         //int matches;
         const float qlscore = records[i]->getScore();
         const large_unsigned_int qlmatch = records[i]->getIdentities();
@@ -495,7 +507,7 @@ public:
           stopwatch_seqret.stop();
 
           queryalignment = getAlignment(segments[i], qrseq);
-          score = queryalignment.score;
+          score = queryalignment.distance;
           ++pass_0_counter;
           ++pass_0_counter_naive;
 
@@ -510,10 +522,10 @@ public:
           score = std::numeric_limits< int >::max();
           matches = records[i]->getIdentities();
         }
-        queryscores[i] = score;
+        querydistance[i] = score;
         querymatches[i] = matches;
-        if (score < queryscores[index_best]) index_best = i;
-        else if (score == queryscores[index_best]) {
+        if (score < querydistance[index_best]) index_best = i;
+        else if (score == querydistance[index_best]) {
           if (matches > querymatches[index_best]) index_best = i;
           else if (matches == querymatches[index_best] && qlscore > records[index_best]->getScore()) index_best = i;
         }
@@ -526,11 +538,11 @@ public:
       // only keep and use the best-scoring reference sequences
       rtax = records[index_best]->getReferenceNode();
       for (std::set< uint >::iterator it = qgroup.begin(); it != qgroup.end();) {
-        if (queryscores[*it] != queryscores[index_best] || querymatches[*it] != querymatches[index_best] || records[*it]->getScore() != records[index_best]->getScore()) qgroup.erase(it++);
+        if (querydistance[*it] != querydistance[index_best] || querymatches[*it] != querymatches[index_best] || records[*it]->getScore() != records[index_best]->getScore()) qgroup.erase(it++);
         else {
           const TaxonNode* cnode = records[*it]->getReferenceNode();
           rtax = this->taxinter_.getLCA(rtax, cnode);
-          logsink << "      current ref node: " << "("<< queryscores[*it] <<") "<< rtax->data->annotation->name << " (+ " << cnode->data->annotation->name << " )" << std::endl;
+          logsink << "      current ref node: " << "("<< querydistance[*it] <<") "<< rtax->data->annotation->name << " (+ " << cnode->data->annotation->name << " )" << std::endl;
           ++it;
         }
       }
@@ -555,7 +567,7 @@ public:
         BandFactor bandfactor1(this->taxinter_, n);
         const uint index_anchor = *qgroup.begin();
         qgroup.erase(qgroup.begin());
-        const int qscore = queryscores[index_anchor];
+        const int qscore = querydistance[index_anchor];
         const TaxonNode* rnode = records[index_anchor]->getReferenceNode();
         bandfactor1.addSequence(0, rnode);
         const TaxonNode* lnode = rtax;
@@ -586,13 +598,13 @@ public:
           if(qpid >= qpid_thresh) {  //TODO: implement command line option
             int score;
             //large_unsigned_int matches;
-            alignment<StringType> segmentalignment;
+            Alignment<StringType> segmentalignment;
 
             if (i == index_anchor) score = 0;
             else {
               // use triangle relation to avoid alignment
-              if (queryscores[i] == 0) { // && queryscores[index_anchor] == 0 ) { //&& querymatches[i]) { // TODO: correct?
-                score = queryscores[index_anchor];
+              if (querydistance[i] == 0) { // && querydistance[index_anchor] == 0 ) { //&& querymatches[i]) { // TODO: correct?
+                score = querydistance[index_anchor];
                 //matches = querymatches[index_anchor];
               }
               else {
@@ -604,7 +616,7 @@ public:
                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                 //score = getAlignment(segments[i],segments[index_anchor]);
                 segmentalignment = getAlignment(segments[i],segments[index_anchor]);
-                score = segmentalignment.score;
+                score = segmentalignment.distance;
 
                 ++pass_1_counter;
                 //matches = std::max(seqan::length(segments[i]), seqan::length(segments[index_anchor])) - score;
@@ -718,7 +730,7 @@ public:
         outgroup.erase(outgroup.begin());
 
         if( unode_global == lca_allnodes ) {
-          if( queryscores[index_anchor] == std::numeric_limits<int>::max() ) pass_2_counter_naive += n;
+          if( querydistance[index_anchor] == std::numeric_limits<int>::max() ) pass_2_counter_naive += n;
           else pass_2_counter_naive += n - 1;
           continue;
         }
@@ -739,7 +751,7 @@ public:
             const float qlscore = records[i]->getScore();
             const large_unsigned_int qlmatch = records[i]->getIdentities();
             int score;
-            alignment<StringType> segmentalignment;
+            Alignment<StringType> segmentalignment;
 
             if (i == index_anchor) score = 0;
             else {
@@ -754,20 +766,20 @@ public:
                 //score = -seqan::globalAlignmentScore(segments[i], segments[index_anchor], seqan::MyersBitVector());
                 //score = getAlignment(segments[i], segments[index_anchor]);
                 segmentalignment = getAlignment(segments[i], segments[index_anchor]);
-                score = segmentalignment.score;
+                score = segmentalignment.distance;
 
 
                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qlscore=" << qlscore << "; qlmatch=" << qlmatch << "; score=" << score << "; qpid=" << qpid << std::endl;
                 //logsink << segmentalignment.alignment << std::endl;
                 ++pass_2_counter;
-                queryscores[i] = score;
+                querydistance[i] = score;
               }
             }
 
             if (score == 0) outgroup.erase(i);
             else {
               int qscore_ex;
-              if (queryscores[index_anchor] == std::numeric_limits<int>::max()) { //need to align query <=> anchor
+              if (querydistance[index_anchor] == std::numeric_limits<int>::max()) { //need to align query <=> anchor
                 stopwatch_seqret.start();
                 if(seqan::empty(segments[index_anchor])) segments[index_anchor] = getSequence(records[index_anchor]->getReferenceIdentifier(),  records[index_anchor]->getReferenceStart(), records[index_anchor]->getReferenceStop(), records[index_anchor]->getQueryStart() - qrstart, qrstop - records[index_anchor]->getQueryStop());
                 stopwatch_seqret.stop();
@@ -775,7 +787,7 @@ public:
                 //int score = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, ScoringScheme);
                 //int score = getAlignment(segments[index_anchor],qrseq);
                 segmentalignment =  getAlignment(segments[index_anchor], qrseq);
-                int score = segmentalignment.score;
+                int score = segmentalignment.distance;
 
                 //large_unsigned_int matches = std::max(static_cast<large_int>(std::max(seqan::length(segments[index_anchor]), seqan::length(qrseq)) - score), querymatches[index_anchor]);
                 //TODO
@@ -783,13 +795,13 @@ public:
 
                 double qpid = static_cast<double>(matches)/qrlength;
                 logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qlscore=" << records[index_anchor]->getScore() << "; qlmatch=" << qlmatch << "; score=" << score << "; match=" << matches << "; qpid=" << qpid << std::endl;
-                queryscores[index_anchor] = score;
+                querydistance[index_anchor] = score;
                 querymatches[index_anchor] = matches;
                 qscore_ex = score*bandfactor_max;
                 logsink << "      query: (" << qscore_ex << ") unknown" << std::endl;
                 //logsink << segmentalignment.alignment << std::endl;
                 ++pass_2_counter;
-              } else qscore_ex = queryscores[index_anchor]*bandfactor_max;
+              } else qscore_ex = querydistance[index_anchor]*bandfactor_max;
 
               if(score <= qscore_ex) {
                 const TaxonNode* rnode = records[index_anchor]->getReferenceNode();
