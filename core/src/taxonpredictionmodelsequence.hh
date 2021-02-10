@@ -106,7 +106,7 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
 
   // construct return object
   Alignment<StringType> aln;
-  aln.distance = mutualscore;
+  aln.distance = static_cast<float>(mutualscore);
   aln.similarity = match;
   aln.matches = match;
   aln.mismatches = mismatch;
@@ -255,7 +255,7 @@ public:
     if(reserve) data_.reserve(reserve);
   }
 
-  void addSequence(const int score, const TaxonNode* node) {
+  void addSequence(const float score, const TaxonNode* node) {
     data_.push_back(boost::make_tuple(score, node));
   }
 
@@ -268,12 +268,12 @@ public:
   }
 
 private:
-  void setBandFactor(const float min_bandfactor = 1., const float max_bandfactor = std::numeric_limits<  int >::max()) { //data_ must be sorted TODO: optimize
+  void setBandFactor(const float min_bandfactor = 1., const float max_bandfactor = std::numeric_limits< float >::max()) { //data_ must be sorted TODO: optimize
     float bandfactor = min_bandfactor;
-    int score;
+    float score;
     const TaxonNode* anchor;
     const TaxonNode* node;
-    std::map< small_unsigned_int, int > worstscore_per_rank;
+    std::map< small_unsigned_int, float > worstscore_per_rank;
     boost::tie(score, anchor) = data_[0];
     small_unsigned_int last_rank = anchor->data->root_pathlength;
     worstscore_per_rank[ last_rank ] = score; //TODO: change name
@@ -287,13 +287,13 @@ private:
         worstscore_per_rank[rank] = score;
         last_rank = rank;
       } else { //disorder
-        int refscore;
+        float refscore;
         small_unsigned_int r = rank - 1;
         do {
-          std::map< small_unsigned_int, int >::iterator it = worstscore_per_rank.find(r);
+          auto it = worstscore_per_rank.find(r);
           if (it != worstscore_per_rank.end()) {
             refscore = it->second;
-            if (refscore) bandfactor = std::max(bandfactor, float(score)/float(refscore));
+            if (refscore) bandfactor = std::max(bandfactor, score/refscore);
           }
         } while (r--);
       }
@@ -302,12 +302,12 @@ private:
   }
 
   void sort() { //sort by increasing order
-    data_type_::iterator start_it = data_.begin();
+    auto start_it = data_.begin();
     std::sort(++start_it, data_.end(), comparator_);
   }
 
-  compareTupleFirstLT< boost::tuple< int, const TaxonNode* >, 0 > comparator_;
-  typedef std::vector< boost::tuple< int, const TaxonNode* > > data_type_;
+  compareTupleFirstLT< boost::tuple< float, const TaxonNode* >, 0 > comparator_;
+  typedef std::vector< boost::tuple< float, const TaxonNode* > > data_type_;
   float bandfactor_;
   data_type_ data_;
   TaxonomyInterface taxinter_;
@@ -463,7 +463,7 @@ public:
 
     std::vector< StringType > segments(n);    //TODO: don't call element constructors
     std::vector< int > querydistance(n, std::numeric_limits< int >::max()); // distance to query sequence
-    std::vector< large_unsigned_int > querysimilarity(n, 0);   // number of matches for nucleotide
+    std::vector< float > querysimilarity(n, .0);   // number of matches for nucleotide
     stopwatch_init.stop();
 
     // count number of alignment calculations in each of the three passes
@@ -490,8 +490,8 @@ public:
       uint index_best = 0;
 
       for (uint i = 0; i < n; ++i) { // get scores for best-scoring references
-        int dist;
-        large_unsigned_int sim;
+        float dist;
+        float sim;
         Alignment<StringType> queryalignment;
 
         const float qsearchscore = records[i]->getScore();
@@ -518,7 +518,7 @@ public:
           ++pass_0_counter;
           ++pass_0_counter_naive;
 
-          sim = std::max(static_cast<large_unsigned_int>(queryalignment.similarity), static_cast<large_unsigned_int>(records[i]->getIdentities()));
+          sim = std::max(queryalignment.similarity, static_cast<float>(records[i]->getIdentities()));
           double qpid = static_cast<double>(sim)/qrlength;
           logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << std::endl;
           logsink << queryalignment.alignment << std::endl;
@@ -534,8 +534,7 @@ public:
           if (sim > querysimilarity[index_best]) index_best = i;
           else if (sim == querysimilarity[index_best] && qsearchscore > records[index_best]->getScore()) index_best = i;
         }
-        //anchors_support = std::max(anchors_support, sim);
-        anchors_support = std::max(static_cast<large_unsigned_int>(anchors_support), sim);  //TODO: move to previous if-statement?
+        anchors_support = std::max(anchors_support, static_cast<large_unsigned_int>(sim));  // TODO: make support a float?
         lca_allnodes = this->taxinter_.getLCA(lca_allnodes, records[i]->getReferenceNode());
       }
 
@@ -572,18 +571,18 @@ public:
         BandFactor bandfactor1(this->taxinter_, n);
         const uint index_anchor = *qgroup.begin();
         qgroup.erase(qgroup.begin());
-        const int qdist = querydistance[index_anchor];
+        const float qdist = querydistance[index_anchor];
         const TaxonNode* rnode = records[index_anchor]->getReferenceNode();
         bandfactor1.addSequence(0, rnode);
         const TaxonNode* lnode = rtax;
         const TaxonNode* unode = NULL;
-        int ldist = 0;
-        int udist = std::numeric_limits<int>::max();
+        float ldist = 0;
+        float udist = std::numeric_limits<float>::max();
 
         std::list< boost::tuple< uint, int > > outgroup_tmp;
 
         // align all others <=> anchor TODO: adaptive cut-off
-        logsink << "      query: (" << qdist << ") unknown" << std::endl;
+        logsink << std::setprecision(2) << "      query: (" << qdist << ") unknown" << std::endl;
         pass_1_counter_naive += n - 1;
 
         // TODO: implement heuristic cut-off
@@ -601,14 +600,14 @@ public:
           double qpid_thresh = std::max(qpid_thresh_guarantee, qpid_thresh_heuristic);
 
           if(qpid >= qpid_thresh) {  //TODO: implement command line option
-            int dist;
-            //large_unsigned_int sim;
+            float dist;
+            //float sim;
             Alignment<StringType> segmentalignment;
 
-            if (i == index_anchor) dist = 0;
+            if (i == index_anchor) dist = .0;
             else {
               // use triangle relation to avoid alignment
-              if (querydistance[i] == 0) { // && querydistance[index_anchor] == 0 ) { //&& querysimilarity[i]) { // TODO: correct?
+              if (querydistance[i] == .0) { // && querydistance[index_anchor] == 0 ) { //&& querysimilarity[i]) { // TODO: correct?
                 dist = querydistance[index_anchor];
                 //sim = querysimilarity[index_anchor];
               }
@@ -622,7 +621,7 @@ public:
                 dist = segmentalignment.distance;
 
                 ++pass_1_counter;
-                large_unsigned_int sim = segmentalignment.similarity;
+                float sim = segmentalignment.similarity;
 
                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
                 logsink << segmentalignment.alignment << std::endl;
@@ -632,12 +631,12 @@ public:
             bandfactor1.addSequence(dist, cnode);
 
             // place sequence
-            if (dist == 0) qgroup.erase(i);  // remove this from list of qnodes because it is sequence-identical
+            if (dist == .0) qgroup.erase(i);  // remove this from list of qnodes because it is sequence-identical
             else {
               if(dist <= qdist) {
                 lnode = this->taxinter_.getLCA(lnode, cnode);
                 if(dist > ldist) ldist = dist;
-                logsink << "      current lower node: " << "("<< dist <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                logsink << std::setprecision(2) << "      current lower node: " << "("<< dist <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
               }
               else {
                 if(dist < udist) {  // true if we find a segment with a lower dist than query
@@ -657,12 +656,12 @@ public:
 
         float bandfactor = bandfactor1.getFactor();  //TODO: limit and check
         bandfactor_max = std::max(bandfactor_max, bandfactor);
-        int qdist_ex = qdist * bandfactor;
-        int min_upper_dist = std::numeric_limits< int >::max();
+        float qdist_ex = qdist * bandfactor;
+        float min_upper_dist = std::numeric_limits< int >::max();
 
         logsink << std::endl << "    EXT\tquerydist = " << qdist << "; threshold = " << qdist_ex << "; bandfactor = " << bandfactor << std::endl;
         for(std::list< boost::tuple<uint,int> >::iterator it = outgroup_tmp.begin(); it != outgroup_tmp.end();) {
-          int dist = it->get<1>();
+          float dist = it->get<1>();
 
           if(dist > qdist_ex) {
             if (dist > min_upper_dist) it = outgroup_tmp.erase(it);
@@ -678,10 +677,10 @@ public:
         }
 
         // push elements from temporary to outgroup set
-        if(min_upper_dist != std::numeric_limits< int >::max()) unode = lnode;
+        if(min_upper_dist != std::numeric_limits< float >::max()) unode = lnode;
         for(std::list< boost::tuple<uint,int> >::iterator it = outgroup_tmp.begin(); it != outgroup_tmp.end(); ++it) {
           uint i;
-          int dist;
+          float dist;
           boost::tie(i, dist) = *it;
           const TaxonNode* cnode = records[i]->getReferenceNode();
 
@@ -707,9 +706,9 @@ public:
           unode = this->taxinter_.getRoot();
           udist = -1;
           ival = 1.;
-        } else if(unode != lnode && ldist < qdist) ival = (qdist - ldist)/static_cast<float>(udist - ldist);
+        } else if(unode != lnode && ldist < qdist) ival = (qdist - ldist)/(udist - ldist);
 
-        logsink << std::endl << "    SCORE\tldist = " << ldist << "; udist = " << udist << "; querydist = " << qdist << "; querydist_ex = " << qdist_ex << "; ival = " << ival  << std::endl << std::endl;
+        logsink << std::endl << std::setprecision(2) << "    SCORE\tldist = " << ldist << "; udist = " << udist << "; querydist = " << qdist << "; querydist_ex = " << qdist_ex << "; ival = " << ival  << std::endl << std::endl;
         const float taxsig = .0;  // TODO: placer.getTaxSignal(qdist);
 
         ival_global = std::max(ival, ival_global);  // combine interpolation values conservatively
@@ -732,7 +731,7 @@ public:
         outgroup.erase(outgroup.begin());
 
         if( unode_global == lca_allnodes ) {
-          if( querydistance[index_anchor] == std::numeric_limits<int>::max() ) pass_2_counter_naive += n;
+          if( querydistance[index_anchor] == std::numeric_limits<float>::max() ) pass_2_counter_naive += n;
           else pass_2_counter_naive += n - 1;
           continue;
         }
@@ -752,11 +751,11 @@ public:
             const TaxonNode* cnode = records[i]->getReferenceNode();
             const float qsearchscore = records[i]->getScore();
             const large_unsigned_int qsearchmatch = records[i]->getIdentities();
-            int dist;
-            large_unsigned_int sim;
+            float dist;
+            float sim;
             Alignment<StringType> segmentalignment;
 
-            if (i == index_anchor) dist = 0;
+            if (i == index_anchor) dist = .0;
             else {
               ++pass_2_counter_naive;
               if( this->taxinter_.isParentOf(unode_global, cnode) || cnode == unode_global ) continue;
@@ -777,18 +776,17 @@ public:
               }
             }
 
-            if (dist == 0) outgroup.erase(i);
+            if (dist == .0) outgroup.erase(i);
             else {
-              int qdist_ex;
-              if (querydistance[index_anchor] == std::numeric_limits<int>::max()) { //need to align query <=> anchor
+              float qdist_ex;
+              if (querydistance[index_anchor] == std::numeric_limits<float>::max()) { //need to align query <=> anchor
                 stopwatch_seqret.start();
                 if(seqan::empty(segments[index_anchor])) segments[index_anchor] = getSequence(records[index_anchor]->getReferenceIdentifier(),  records[index_anchor]->getReferenceStart(), records[index_anchor]->getReferenceStop(), records[index_anchor]->getQueryStart() - qrstart, qrstop - records[index_anchor]->getQueryStop());
                 stopwatch_seqret.stop();
 
                 segmentalignment =  getAlignment(segments[index_anchor], qrseq);
-                int dist = segmentalignment.distance;
-
-                large_unsigned_int sim = std::max(static_cast<large_unsigned_int>(segmentalignment.similarity), querysimilarity[index_anchor]);
+                float dist = segmentalignment.distance;
+                float sim = std::max(segmentalignment.similarity, querysimilarity[index_anchor]);
 
                 double qpid = static_cast<double>(sim)/qrlength;
                 logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
