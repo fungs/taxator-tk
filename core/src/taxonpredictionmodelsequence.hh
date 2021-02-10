@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // because some alignment algorithms will report a distance while others will
 // report a similarity score. We normalize both to add up to the length of the
 // calculated alignment (unit fractional base pair)
+// TODO: use AlignmentStats object in Seqan
 template <typename StringType>
 struct Alignment {
   unsigned int matches; // only exact positional matches
@@ -52,6 +53,14 @@ struct Alignment {
   float similarity;
   seqan::Align<StringType, seqan::ArrayGaps> alignment;
 };
+
+template <typename StringType>
+std::ostream& operator<<(std::ostream& os, const Alignment<StringType>& aln) {
+  if(seqan::length(seqan::rows(aln.alignment)) > 0) { // ugly hack because otherwise outstream fails on empty object
+    os << aln.alignment;
+  }
+  return os;
+}
 
 // The MyersHirschberg implementation is working but currently disabled, because
 // it takes about 2 to 3 times as long as the MyersBitVector implementation
@@ -521,7 +530,7 @@ public:
           sim = std::max(queryalignment.similarity, static_cast<float>(records[i]->getIdentities()));
           double qpid = static_cast<double>(sim)/qrlength;
           logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << std::endl;
-          logsink << queryalignment.alignment << std::endl;
+          logsink << queryalignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
           dist = std::numeric_limits< int >::max();
@@ -624,7 +633,7 @@ public:
                 float sim = segmentalignment.similarity;
 
                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
-                logsink << segmentalignment.alignment << std::endl;
+                logsink << segmentalignment << std::endl;
               }
             }
 
@@ -770,7 +779,7 @@ public:
                 sim = segmentalignment.similarity;
 
                 logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
-                logsink << segmentalignment.alignment << std::endl;
+                logsink << segmentalignment << std::endl;
                 ++pass_2_counter;
                 querydistance[i] = dist;
               }
@@ -790,7 +799,7 @@ public:
 
                 double qpid = static_cast<double>(sim)/qrlength;
                 logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
-                logsink << segmentalignment.alignment << std::endl;
+                logsink << segmentalignment << std::endl;
                 querydistance[index_anchor] = dist;
                 querysimilarity[index_anchor] = sim;
                 qdist_ex = dist*bandfactor_max;
