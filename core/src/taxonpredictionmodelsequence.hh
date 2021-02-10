@@ -44,9 +44,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // calculated alignment (unit fractional base pair)
 template <typename StringType>
 struct Alignment {
-  int matches; // only exact positional matches
-  int mismatches;
-  int gaps;
+  unsigned int matches; // only exact positional matches
+  unsigned int mismatches;
+  unsigned int gaps;
+  unsigned int length;
   float distance;
   float similarity;
   seqan::Align<StringType, seqan::ArrayGaps> alignment;
@@ -84,9 +85,9 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
   TRow & row1 = row(alignAB, 0);
   TRow & row2 = row(alignAB, 1);
 
-  int gap = 0;
-  int match = 0;
-  int mismatch = 0;
+  unsigned int gap = 0;
+  unsigned int match = 0;
+  unsigned int mismatch = 0;
 
   TRowIterator itRow1 = begin(row1);
   TRowIterator itEndRow1 = end(row1);
@@ -101,7 +102,7 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
     }
   }
 
-  assert(mutualscore == gap+mismatch  && "edit distance does not equal gaps+mismatches");
+  assert(static_cast<unsigned int>(mutualscore) == gap + mismatch  && "edit distance does not equal gaps+mismatches");
 
   // construct return object
   Alignment<StringType> aln;
@@ -110,6 +111,7 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNAExact(const seqan::String<s
   aln.matches = match;
   aln.mismatches = mismatch;
   aln.gaps = gap;
+  aln.length = match + mismatch + gap; // TODO: remove duplicate information
   aln.alignment = alignAB;
 
   return aln;
@@ -154,6 +156,7 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan:
   aln.matches = match;
   aln.mismatches = mismatch;
   aln.gaps = gap;
+  aln.length = match + mismatch + gap; // TODO: remove duplicate information
 
   return aln;
 }
@@ -161,7 +164,9 @@ Alignment<seqan::String<seqan::Dna5>> getAlignmentDNA(const seqan::String<seqan:
 Alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::String<seqan::AminoAcid>& A, const seqan::String<seqan::AminoAcid>& B) {
   typedef seqan::String<seqan::AminoAcid> StringType;
   typedef seqan::Blosum62 AlignmentScoring;
-  typedef seqan::AffineGaps AlignmentAlgorithm;
+  typedef seqan::LinearGaps AlignmentAlgorithm; // fast
+  // typedef seqan::DynamicGaps AlignmentAlgorithm; // medium
+  // typedef seqan::AffineGaps AlignmentAlgorithm; // slow
   // typedef seqan::EditDistanceScore ScoringScheme;
   // typedef typename seqan::MyersHirschberg AlignmentAlgorithm;
   typedef typename seqan::Align<StringType, seqan::ArrayGaps> TAlign;
@@ -210,7 +215,8 @@ Alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::Stri
       mismatch++;
     }
   }
-  float normfactor = (gap + match + mismatch)/selfscore;
+  unsigned int len = (gap + match + mismatch);
+  float normfactor = len/static_cast<float>(selfscore);
 
   // construct return object
   Alignment<StringType> aln;
@@ -219,6 +225,7 @@ Alignment<seqan::String<seqan::AminoAcid>> getAlignmentProtein(const seqan::Stri
   aln.matches = match;
   aln.mismatches = mismatch;
   aln.gaps = gap;
+  aln.length = len; // TODO: remove duplicate information
   aln.alignment = alignAB;
 
   assert(aln.distance >= 0 && "distance metric cannot be negative");
@@ -496,7 +503,7 @@ public:
           qgroup.insert(i);
           dist = 0;
           sim = records[i]->getIdentities();
-          logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; sim=" << sim << "; qpid=1.0" << std::endl;
+          logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=1.0" << std::endl;
           ++pass_0_counter_naive;
         } else if (records[i]->getScore() >= dbalignment_searchscore_threshold) {
 
@@ -513,8 +520,8 @@ public:
 
           sim = std::max(static_cast<large_unsigned_int>(queryalignment.similarity), static_cast<large_unsigned_int>(records[i]->getIdentities()));
           double qpid = static_cast<double>(sim)/qrlength;
-          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << std::endl;
-          //logsink << queryalignment.alignment << std::endl;
+          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << std::endl;
+          logsink << queryalignment.alignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
           dist = std::numeric_limits< int >::max();
@@ -617,8 +624,8 @@ public:
                 ++pass_1_counter;
                 large_unsigned_int sim = segmentalignment.similarity;
 
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
-                //logsink << segmentalignment.alignment << std::endl;
+                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
+                logsink << segmentalignment.alignment << std::endl;
               }
             }
 
@@ -746,6 +753,7 @@ public:
             const float qsearchscore = records[i]->getScore();
             const large_unsigned_int qsearchmatch = records[i]->getIdentities();
             int dist;
+            large_unsigned_int sim;
             Alignment<StringType> segmentalignment;
 
             if (i == index_anchor) dist = 0;
@@ -760,10 +768,10 @@ public:
 
                 segmentalignment = getAlignment(segments[i], segments[index_anchor]);
                 dist = segmentalignment.distance;
+                sim = segmentalignment.similarity;
 
-
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; qpid=" << qpid << std::endl;
-                //logsink << segmentalignment.alignment << std::endl;
+                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
+                logsink << segmentalignment.alignment << std::endl;
                 ++pass_2_counter;
                 querydistance[i] = dist;
               }
@@ -777,20 +785,18 @@ public:
                 if(seqan::empty(segments[index_anchor])) segments[index_anchor] = getSequence(records[index_anchor]->getReferenceIdentifier(),  records[index_anchor]->getReferenceStart(), records[index_anchor]->getReferenceStop(), records[index_anchor]->getQueryStart() - qrstart, qrstop - records[index_anchor]->getQueryStop());
                 stopwatch_seqret.stop();
 
-                //int dist = -seqan::globalAlignmentScore(segments[index_anchor], qrseq, ScoringScheme);
-                //int dist = getAlignment(segments[index_anchor],qrseq);
                 segmentalignment =  getAlignment(segments[index_anchor], qrseq);
                 int dist = segmentalignment.distance;
 
                 large_unsigned_int sim = std::max(static_cast<large_unsigned_int>(segmentalignment.similarity), querysimilarity[index_anchor]);
 
                 double qpid = static_cast<double>(sim)/qrlength;
-                logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; dist=" << dist << "; sim=" << sim << "; qpid=" << qpid << std::endl;
+                logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
+                logsink << segmentalignment.alignment << std::endl;
                 querydistance[index_anchor] = dist;
                 querysimilarity[index_anchor] = sim;
                 qdist_ex = dist*bandfactor_max;
                 logsink << "      query: (" << qdist_ex << ") unknown" << std::endl;
-                //logsink << segmentalignment.alignment << std::endl;
                 ++pass_2_counter;
               } else qdist_ex = querydistance[index_anchor]*bandfactor_max;
 
