@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <boost/ptr_container/ptr_list.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/regex.hpp>
 #include "boost/filesystem.hpp"
 #include "src/taxontree.hh"
 #include "src/ncbidata.hh"
@@ -39,6 +40,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "src/bioboxes.hh"
 
 using namespace std;
+
+const std::string extractRegex(const std::string& text, const boost::regex& regex) {
+  boost::cmatch re_results;
+  assert( boost::regex_match( text.c_str(), re_results, regex ) );
+  assert(  re_results.size() > 1 );
+  return std::string(re_results[1].first, re_results[1].second);
+}
 
 int main ( int argc, char** argv ) {
 
@@ -91,7 +99,7 @@ int main ( int argc, char** argv ) {
         cout << hidden_options << endl;
         return EXIT_SUCCESS;
     }
-    
+
     if ( vm.count ( "version" ) ) {
         cout << program_version << endl;
         return EXIT_SUCCESS;
@@ -100,6 +108,9 @@ int main ( int argc, char** argv ) {
     po::notify ( vm );  // check required etc.
 
     if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
+
+    // test sequence globbing
+    const boost::regex globbing_regex("([^_]+)_.*");
 
     // interpret given sample support
     if ( min_support_in_sample_str.find( '.' ) == std::string::npos ) min_support_in_sample = boost::lexical_cast< large_unsigned_int >( min_support_in_sample_str );
@@ -134,7 +145,7 @@ int main ( int argc, char** argv ) {
     }
 
     try {
-        //STEP 0: PARSING INPUT
+        //STEP 0: PARSING INPUT TODO: simplify and do not require sorted input
 
         // setup parser for primary input file (that determines the output order)
         boost::scoped_ptr< PredictionFileParser< PredictionRecordBinning > > parse;
@@ -183,19 +194,28 @@ int main ( int argc, char** argv ) {
 
         {
             if ( additional_files.empty() ) { //parse only primary file (predictions for same sequences must be consecutive!)
-                const std::string* prev_name = &empty_string;
+                std::cerr << "parse primary file" << std::endl;
+                std::string a, b;
+                std::string* prev_name = &a;
+                std::string* curr_name = &b;
                 boost::ptr_list< PredictionRecordBinning >* last_added_rec_list = NULL;
                 for ( PredictionRecordBinning* rec = parse->next(); rec; rec = parse->next() ) {
-                    if ( rec->getQueryIdentifier() != *prev_name ) {
-                        prev_name = &rec->getQueryIdentifier();
-                        // 					std::cerr << "new query: " << rec->getQueryIdentifier() << std::endl;
-                        // 					std::cerr << "entry output is: " << *rec;
+                    // glob query identifier using regex
+                    *curr_name = extractRegex(rec->getQueryIdentifier(), globbing_regex);
+
+                    std::cerr << rec->getQueryIdentifier() << " --> " << *curr_name << std::endl;
+
+                    if ( *curr_name != *prev_name ) {
+              					std::cerr << "new query: " << *curr_name << std::endl;
+              					std::cerr << "entry output is: " << *rec;
                         last_added_rec_list = new boost::ptr_list< PredictionRecordBinning >();
                         predictions_per_query.push_back( last_added_rec_list );
+                        std::swap(curr_name, prev_name);
                     }
                     last_added_rec_list->push_back( rec ); //will take ownership of the record
                 }
-            } else { //parse additional
+            } else { //parse additional TODO: change to glob identifier
+              std::cerr << "parse additional" << std::endl;
 
                 std::map< string, boost::ptr_list< PredictionRecordBinning >* > records_by_queryid; //TODO: use save mem trick
 
@@ -308,7 +328,7 @@ int main ( int argc, char** argv ) {
         }
         std::cerr << pruned_nodes.size() << " taxa removed" << std::endl;
 
-        // STEP 2: BINNING
+        // STEP 2: BINNING and output
         // in this step multiple ranges are combined into a single range by combining
         // evidence for sub-ranges. This algorithm considers only support. Signal
         // strength and interpolation values are ignored. This heuristic seems quite
@@ -320,9 +340,9 @@ int main ( int argc, char** argv ) {
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
         BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
-        
+
         for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
-            if( it->empty() ) continue;
+            if( it->empty() ) continue;  // TODO: suppress empty lists
             boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
             const PredictionRecordBinning* prec;
             if ( it->size() > 1 ) { //run combination algo for sequence segments
