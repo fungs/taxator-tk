@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
 #include <stack>
+#include <unordered_map>
 #include <boost/program_options/cmdline.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -42,6 +43,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace std;
 
 const std::string extractRegex(const std::string& text, const boost::regex& regex) {
+  // special case, empty regex equals "(.*)"
+  if(text.empty()) return text;
+
   boost::cmatch re_results;
   assert( boost::regex_match( text.c_str(), re_results, regex ) );
   assert(  re_results.size() > 1 );
@@ -145,120 +149,61 @@ int main ( int argc, char** argv ) {
     }
 
     try {
-        //STEP 0: PARSING INPUT TODO: simplify and do not require sorted input
+        // STEP 0: PARSING INPUT
 
-        // setup parser for primary input file (that determines the output order)
-        boost::scoped_ptr< PredictionFileParser< PredictionRecordBinning > > parse;
+        // check input files and setup one parser each
+        boost::ptr_list< PredictionFileParser< PredictionRecordBinning > > input;
         if ( files.empty() ) {
-            parse.reset( new PredictionFileParser< PredictionRecordBinning > ( std::cin, tax.get() ) );
+            input.push_back(new PredictionFileParser< PredictionRecordBinning > ( std::cin, tax.get() ) );
         } else {
-            vector< string >::iterator file_it = files.begin();
-            while( file_it != files.end() ) {
+            for(auto file_it = files.begin(); file_it != files.end(); ++file_it ) {
                 if( *file_it == "-" ) {
-                    parse.reset( new PredictionFileParser< PredictionRecordBinning > ( std::cin, tax.get() ) );
-                    ++file_it;
-                    break;
+                    input.push_back(new PredictionFileParser< PredictionRecordBinning > ( std::cin, tax.get() ) );
                 } else {
                     if( boost::filesystem::exists( *file_it ) ) {
-                        parse.reset( new PredictionFileParser< PredictionRecordBinning > ( *file_it, tax.get() ) );
-                        break;
+                        input.push_back(new PredictionFileParser< PredictionRecordBinning > ( *file_it, tax.get() ) );
                     } else {
                         cerr << "Could not read file \"" << *file_it++ << "\"" << endl;
+                        return EXIT_FAILURE;
                     }
                 }
             }
-
-            if ( ! parse ) {
-                cerr << "There was no valid input file" << endl;
-                return EXIT_FAILURE;
-            }
-
-            // define additional input files
-            if ( file_it != files.end() ) {
-                const std::string& primary_file = *file_it;
-                do {
-                    if( boost::filesystem::exists( *file_it ) ) {
-                        additional_files.insert( *file_it );
-                    } else {
-                        cerr << "Could not read file \"" << *file_it << "\"" << endl;
-                    }
-                } while ( ++file_it != files.end() );
-                additional_files.erase( primary_file );
-            }
         }
 
-        // parse primary input
-        // default output order corresponds to the first input file with additional records appended at the end
-        boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > > predictions_per_query; //future owner of all dynamically allocated objects
-        predictions_per_query.reserve( num_queries_preallocation ); //avoid early re-allocation
+        // collect all records in input files and group by glob identifier
+        typedef boost::ptr_list< PredictionRecordBinning > RecordGroup;
+        std::unordered_map<std::string, RecordGroup> grouped_records;
 
         {
-            if ( additional_files.empty() ) { //parse only primary file (predictions for same sequences must be consecutive!)
-                std::cerr << "parse primary file" << std::endl;
-                std::string a, b;
-                std::string* prev_name = &a;
-                std::string* curr_name = &b;
-                boost::ptr_list< PredictionRecordBinning >* last_added_rec_list = NULL;
-                for ( PredictionRecordBinning* rec = parse->next(); rec; rec = parse->next() ) {
-                    // glob query identifier using regex
-                    *curr_name = extractRegex(rec->getQueryIdentifier(), globbing_regex);
+          std::string a, b;
+          std::string* new_name = &a;
+          std::string* old_name = &b;
+          RecordGroup* records;
+          const RecordGroup empty_record_group;
 
-                    std::cerr << rec->getQueryIdentifier() << " --> " << *curr_name << std::endl;
+          for(auto input_stream = input.begin(); input_stream != input.end(); ++input_stream) {
+            for(auto rec = input_stream->next(); rec; rec = input_stream->next()) {
 
-                    if ( *curr_name != *prev_name ) {
-              					std::cerr << "new query: " << *curr_name << std::endl;
-              					std::cerr << "entry output is: " << *rec;
-                        last_added_rec_list = new boost::ptr_list< PredictionRecordBinning >();
-                        predictions_per_query.push_back( last_added_rec_list );
-                        std::swap(curr_name, prev_name);
-                    }
-                    last_added_rec_list->push_back( rec ); //will take ownership of the record
-                }
-            } else { //parse additional TODO: change to glob identifier
-              std::cerr << "parse additional" << std::endl;
+              *new_name = extractRegex(rec->getQueryIdentifier(), globbing_regex);
 
-                std::map< string, boost::ptr_list< PredictionRecordBinning >* > records_by_queryid; //TODO: use save mem trick
+              // debug output
+              // std::cerr << rec->getQueryIdentifier() << " --> " << *new_name << std::endl;
+              // std::cerr << "entry is: " << *rec;
 
-                {   //parse primary in case of multiple files (with lookup!)
-                    const std::string* prev_name = &empty_string;
-                    boost::ptr_list< PredictionRecordBinning >* last_added_rec_list = NULL;
-                    for ( PredictionRecordBinning* rec = parse->next(); rec; rec = parse->next() ) {
-                        if ( rec->getQueryIdentifier() == *prev_name ) last_added_rec_list->push_back( rec ); //transfer ownership of record_container
-                        else {
-                            prev_name = &rec->getQueryIdentifier();
-                            std::map< string, boost::ptr_list< PredictionRecordBinning >* >::iterator find_it = records_by_queryid.find( rec->getQueryIdentifier() );
-                            if ( find_it != records_by_queryid.end() ) {
-                                find_it->second->push_back( rec ); //transfer ownership
-                            } else {
-                                last_added_rec_list = new boost::ptr_list< PredictionRecordBinning >();
-                                predictions_per_query.push_back( last_added_rec_list ); //transfer ownership
-                                records_by_queryid[ rec->getQueryIdentifier() ] = last_added_rec_list;
-                                last_added_rec_list->push_back( rec ); //transfer ownership
-                            }
-                        }
-                    }
-                }
+              if ( *new_name != *old_name ) { // TODO: make sure that regex matching fails, if no match can be found
+                  // insert using emplace
+                  records = &(grouped_records.emplace(
+                    *new_name,
+                    empty_record_group // clone empty list to avoid construction
+                    // std::initializer_list<RecordGroup>({})
+                  ).first->second);
 
-                // parse additional files
-                for (set< string >::const_iterator file_it = additional_files.begin(); file_it != additional_files.end(); ++file_it ) {
-                    PredictionFileParser< PredictionRecordBinning > parse( *file_it, tax.get() );
-                    boost::ptr_list< PredictionRecordBinning >* last_added_rec_list = NULL;
-                    for ( PredictionRecordBinning* rec = parse.next(); rec; rec = parse.next() ) {
-                        std::map< string, boost::ptr_list< PredictionRecordBinning >* >::iterator find_it = records_by_queryid.find( rec->getQueryIdentifier() );
-                        if ( find_it == records_by_queryid.end() ) {
-                            last_added_rec_list = new boost::ptr_list< PredictionRecordBinning >();
-                            predictions_per_query.push_back( last_added_rec_list ); //transfer ownership
-                            records_by_queryid[ rec->getQueryIdentifier() ] = last_added_rec_list;
-                            last_added_rec_list->push_back( rec ); //transfer ownership
-                        } else {
-                            find_it->second->push_back( rec ); //transfer ownership
-                        }
-                    }
-                }
+                  std::swap(old_name, new_name);
+              }
+              records->push_back(rec); // transfer record ownership
             }
+          }
         }
-
-
 
         // STEP 1: RANGE PRUNING
         // in this step the overall sample support for each node is recorded and each
@@ -270,8 +215,12 @@ int main ( int argc, char** argv ) {
         const TaxonNode* const root_node = taxinter.getRoot();
         FastNodeMap< large_unsigned_int > support( taxinter.getMaxDepth() );
         large_unsigned_int& root_support = support[ root_node ];
-        for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator query_it = predictions_per_query.begin(); query_it != predictions_per_query.end(); ++query_it ) {
-            for ( boost::ptr_list< PredictionRecordBinning >::iterator prec_it = query_it->begin(); prec_it != query_it->end(); ++prec_it ) {
+        for ( auto group_it = grouped_records.begin(); group_it != grouped_records.end(); ++group_it ) {
+            RecordGroup& records = group_it->second;
+            // const std::string& identifier = group_it->first;
+
+            // std::cerr << "processing glob identifier" << identifier << std::endl;
+            for ( RecordGroup::const_iterator prec_it = records.begin(); prec_it != records.end(); ++prec_it ) {
                 Taxonomy::PathUpIterator pit = taxinter.traverseUp( prec_it->getLowerNode() );
 
                 // process lowest node
@@ -304,8 +253,9 @@ int main ( int argc, char** argv ) {
         std::cerr << "Noise removal: ";
         std::set< const TaxonNode* > pruned_nodes;
         if ( minimum_support_found < min_support_in_sample ) {
-            for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator query_it = predictions_per_query.begin(); query_it != predictions_per_query.end(); ++query_it ) {
-                for ( boost::ptr_list< PredictionRecordBinning >::iterator prec_it = query_it->begin(); prec_it != query_it->end(); ) {
+            for ( auto group_it = grouped_records.begin(); group_it != grouped_records.end(); ++group_it ) {
+                RecordGroup& records = group_it->second;
+                for ( RecordGroup::iterator prec_it = records.begin(); prec_it != records.end(); ) {
                     const TaxonNode* lower_node = prec_it->getLowerNode();
                     const TaxonNode* upper_node = prec_it->getUpperNode();
 
@@ -317,12 +267,12 @@ int main ( int argc, char** argv ) {
 
                     if ( pit == upper_node && support[ &*pit ] < min_support_in_sample ) { //remove whole range
                         pruned_nodes.insert( &*pit );
-                        prec_it = query_it->erase( prec_it ); //TODO: mask instead of delete
+                        prec_it = records.erase( prec_it ); //TODO: mask instead of delete TODO: is this a memory leak?
                         continue;
                     }
 
                     if ( pit != lower_node ) prec_it->pruneLowerNode( &*pit ); //prune
-                    ++prec_it;
+                    ++prec_it; // because erase already increments
                 }
             }
         }
@@ -336,20 +286,25 @@ int main ( int argc, char** argv ) {
 
         std::cerr << "Consensus taxonomy assignment: ";
         std::ofstream binning_debug_output( log_filename.c_str() );
+
+        // use Bioboxes output format
         const std::vector<std::tuple<const std::string, const std::string>> custom_header_tags = {std::make_tuple("Version", program_version)};
         const std::vector<std::string> custom_column_tags = {"Support", "Length"};
         std::vector<std::string> extra_cols(2);
         BioboxesBinningFormat binning_output(BioboxesBinningFormat::ColumnTags::taxid, sample_identifier, taxinter.getVersion(), std::cout, "TaxatorTK", custom_header_tags, custom_column_tags);
 
-        for ( boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::iterator it = predictions_per_query.begin(); it != predictions_per_query.end(); ++it ) {
-            if( it->empty() ) continue;  // TODO: suppress empty lists
+        // consensus and output
+        for ( auto it = grouped_records.begin(); it != grouped_records.end(); ++it ) {
+            const std::string& identifier = it->first;
+            RecordGroup& records = it->second;
+            if( records.empty() ) continue;  // TODO: suppress empty lists
             boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
             const PredictionRecordBinning* prec;
-            if ( it->size() > 1 ) { //run combination algo for sequence segments
-                prec_sptr.reset( combinePredictionRanges( *it, tax.get(), signal_majority_per_sequence, min_support_per_sequence, binning_debug_output ) );
+            if ( records.size() > 1 ) { //run combination algo for sequence segments
+                prec_sptr.reset( combinePredictionRanges( records, tax.get(), signal_majority_per_sequence, min_support_per_sequence, binning_debug_output ) );
                 prec = prec_sptr.get();
             } else { // pass-through segment prediction for whole sequence
-                prec = &it->front();
+                prec = &records.front();
             }
             // apply user-defined constrain
             if ( prec->getUpperNode() != root_node && ! pid_per_rank.empty() ) {
@@ -370,11 +325,11 @@ int main ( int argc, char** argv ) {
                 } while ( pit != target_node );
                 extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(predict_node));
                 extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
-                binning_output.writeBodyLine(prec->getQueryIdentifier(), predict_node->data->taxid, extra_cols);
+                binning_output.writeBodyLine(identifier, predict_node->data->taxid, extra_cols);
             } else {
                 extra_cols[0] = boost::lexical_cast<std::string>(prec->getSupportAt(prec->getUpperNode()));
                 extra_cols[1] = boost::lexical_cast<std::string>(prec->getQueryLength());
-                binning_output.writeBodyLine(prec->getQueryIdentifier(), prec->getUpperNode()->data->taxid, extra_cols);
+                binning_output.writeBodyLine(identifier, prec->getUpperNode()->data->taxid, extra_cols);
             }
         }
         std::cerr << " done" << std::endl;
