@@ -304,7 +304,7 @@ int main ( int argc, char** argv ) {
             boost::scoped_ptr< PredictionRecordBinning > prec_sptr;
             const PredictionRecordBinning* prec;
             if ( records.size() > 1 ) { //run combination algo for sequence segments
-                prec_sptr.reset( combinePredictionRanges( records, tax.get(), signal_majority_per_sequence, min_support_per_sequence, binning_debug_output ) );
+                prec_sptr.reset( combinePredictionRanges( records, identifier, tax.get(), signal_majority_per_sequence, min_support_per_sequence, binning_debug_output ) );
                 prec = prec_sptr.get();
             } else { // pass-through segment prediction for whole sequence
                 prec = &records.front();
