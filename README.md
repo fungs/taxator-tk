@@ -21,6 +21,10 @@ Please see separate documentation:
 * [extended pipeline description](extended/README.md)
 * [extended pipeline dependencies](extended/DEPENDENCIES.md)
 
+## FAQ
+
+### 
+
 ## Code licensing
 The taxator-tk source is licensend under the GPLv3 and builds on the following software components:
 
