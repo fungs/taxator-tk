@@ -43,12 +43,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace std;
 
 const std::string extractRegex(const std::string& text, const boost::regex& regex) {
-  // special case, empty regex equals "(.*)"
-  if(text.empty()) return text;
+  // special case, empty regex equals full globbing"
+  if(!regex.size()) return "consensus_sequence";
 
   boost::cmatch re_results;
   assert( boost::regex_match( text.c_str(), re_results, regex ) );
   assert(  re_results.size() > 1 );
+  assert( re_results[1].first != re_results[1].second );  // match empty string is disallowed atm, use empty regex instead
   return std::string(re_results[1].first, re_results[1].second);
 }
 
@@ -58,7 +59,7 @@ int main ( int argc, char** argv ) {
     bool delete_unmarked;
     large_unsigned_int min_support_in_sample( 0 );
     float signal_majority_per_sequence, min_support_in_sample_percentage( 0. );
-    string min_support_in_sample_str, log_filename, sample_identifier;
+    string min_support_in_sample_str, log_filename, sample_identifier, glob_identifier_regex;
     large_unsigned_int min_support_per_sequence;
     boost::ptr_vector< boost::ptr_list< PredictionRecordBinning > >::size_type num_queries_preallocation;
 
@@ -70,10 +71,11 @@ int main ( int argc, char** argv ) {
     ( "advanced-options", "show advanced program options" )
     ( "version,V", "show program version" )
     ( "sample-identifier,n", po::value< std::string >( &sample_identifier)->required(), "unique sample identifier")
+    ( "glob-identifier,g", po::value< std::string >( &glob_identifier_regex )->default_value("(.+)"), "grouping regex for substring matching to glob sequence identifiers for consensus binning (for instance to bin amino acid sequences derived from a long nucleotide string or to do consensus genome binning)")
     ( "sequence-min-support,s", po::value< large_unsigned_int >( &min_support_per_sequence )->default_value( 50 ), "minimum number of positions supporting a taxonomic signal for any single sequence. If not reached, a fall-back on a more robust algorthm will be used" )
     ( "signal-majority,j", po::value< float >( &signal_majority_per_sequence )->default_value( .7 ), "minimum combined fraction of support for any single sequence (> 0.5 to be stable)" )
     ( "identity-constrain,i", po::value< vector< string > >(), "minimum required identity for this rank (e.g. -i species:0.8 -i genus:0.7)")
-    ( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (replaces standard input, use \"-\" to specify a combination of both)" )
+    ( "files,f", po::value< vector< string > >( &files )->multitoken(), "arbitrary number of prediction files (instead of standard input, use \"-\" in list to specify a combination of stdin and files)" )
     ( "logfile,l", po::value< std::string >( &log_filename )->default_value( "binning.log" ), "specify name of file for logging (appending lines)" );
 
     po::options_description hidden_options("Hidden options");
@@ -114,7 +116,7 @@ int main ( int argc, char** argv ) {
     if ( ! vm.count ( "ranks" ) ) ranks = default_ranks;
 
     // test sequence globbing
-    const boost::regex globbing_regex("([^_]+)_.*");
+    const boost::regex globbing_regex(glob_identifier_regex);  // eg "([^_]+)_.*"
 
     // interpret given sample support
     if ( min_support_in_sample_str.find( '.' ) == std::string::npos ) min_support_in_sample = boost::lexical_cast< large_unsigned_int >( min_support_in_sample_str );
@@ -187,6 +189,7 @@ int main ( int argc, char** argv ) {
               *new_name = extractRegex(rec->getQueryIdentifier(), globbing_regex);
 
               // debug output
+              // std::cerr << "extracted identifier is '" << *new_name << "'" << std::endl;
               // std::cerr << rec->getQueryIdentifier() << " --> " << *new_name << std::endl;
               // std::cerr << "entry is: " << *rec;
 
