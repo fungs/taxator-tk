@@ -63,7 +63,7 @@ if [ ! -d "$refpack"/"$index_subdir" ]; then
 fi
 
 # Set refpack-related locations
-initrefpack "$refpack"  # set variables: aligner_index, refdata, refdata_index, mapping, input, TAXATORTK_TAXONOMY_NCBI
+initrefpack_nucleotide "$refpack"  # set variables: aligner_index, refdata, refdata_index, mapping, input, TAXATORTK_TAXONOMY_NCBI
 input_filename="${input##*/}"
 export TAXATORTK_TAXONOMY_NCBI  # make taxator-tk programs work with taxonomy
 
@@ -110,11 +110,12 @@ $time_cmd -p -o taxator.time taxator \
   -l "${taxator_logfile:-$taxator_logfile_default}" \
   -x "${taxator_speedup:-$taxator_speedup_default}" \
   -o 0  |
-sort -k1,1 > "$sample_name".gff3
+sort -k1,1 > "$sample_name".gff3  # TODO: remove sort (new binner does not need it)
 
 echo "Assigning whole sequences."
 $time_cmd -p -o binner.time binner \
   -n "$input_filename" \
+  -g '(.+)' \
   -l "${binner_logfile:-$binner_logfile_default}" \
   < "$sample_name".gff3 \
   > "$sample_name".binning

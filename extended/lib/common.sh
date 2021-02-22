@@ -90,7 +90,7 @@ _EOF_
 }
 
 # set all variable for a refpack folder
-initrefpack() {
+initrefpack_nucleotide() {
 	checkexecutables readlink || return 2
 	refpack="$1"
 
@@ -103,6 +103,25 @@ initrefpack() {
 	aligner_index="$ref_root/$index_subdir/nuc"
 	refdata="$ref_root/refdata.fna"
 	refdata_index="$ref_root/refdata.fna.fai"
+	mapping="$ref_root/mapping.tax"
+	input="$(readlink -f "$input")"
+	TAXATORTK_TAXONOMY_NCBI="$ref_root"/ncbi-taxonomy
+}
+
+# set all variable for a refpack folder
+initrefpack_protein() {
+	checkexecutables readlink || return 2
+	refpack="$1"
+
+	if [ -z "$refpack" ]; then
+		echo 'Refpack path must be defined' 1>&2
+		return 1;
+	fi
+
+	ref_root="$(readlink -f "$refpack")"
+	aligner_index="$ref_root/$index_subdir/prot"
+	refdata="$ref_root/refdata.faa"
+	refdata_index="$ref_root/refdata.faa.fai"
 	mapping="$ref_root/mapping.tax"
 	input="$(readlink -f "$input")"
 	TAXATORTK_TAXONOMY_NCBI="$ref_root"/ncbi-taxonomy

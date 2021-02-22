@@ -210,7 +210,7 @@ int main ( int argc, char** argv ) {
 
         // STEP 1: RANGE PRUNING
         // in this step the overall sample support for each node is recorded and each
-        // range is shrunk such that the remaining nodes have a minimum support (unit is bp)
+        // range is shrunk such that the remaining nodes have a minimum support (unit is sequence positions)
 
         //counting support of nodes
         std::cerr << "Analyzing sample composition: ";
@@ -247,7 +247,7 @@ int main ( int argc, char** argv ) {
                 }
             }
         }
-        std::cerr << support.size() << " nested taxa with total support of " << support[ root_node ] << " bp" << std::endl;
+        std::cerr << support.size() << " nested taxa with total support of " << support[ root_node ] << " positions" << std::endl;
 
         // if min_support_in_sample was given as fraction
         if ( min_support_in_sample_percentage ) min_support_in_sample = support[ root_node ]*min_support_in_sample_percentage;
