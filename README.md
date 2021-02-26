@@ -21,8 +21,52 @@ Please see separate documentation:
 * [extended pipeline description](extended/README.md)
 * [extended pipeline dependencies](extended/DEPENDENCIES.md)
 
+## FAQ
+
+### Help, the majority of assigned taxa are unspecific, like phylum or (super)kingdom, what can I do?
+
+### Why do taxator-tk pipelines run so long compared to others?
+
+### Can the sequences classification be accelerated?
+
+### Is taxator-tk made for reads or assembled sequences? Or is the program targeted towards a specific sequencing platform?
+
+### If a sequence was assigned to a taxon by the algorithm, where can I see why?
+
+### Can I use taxator-tk with targeted sequencing data like amplicons?
+
+### Why do I get an error if there are spaces in the FASTA identifiers?
+
+### I'm running out of memory. Can I run taxator-tk on my desktop machine?
+
+### What is the advantage/disadvanage in using taxator-tk over fast k-mer or hash based sequence classification with programs like Centrifuge or Kraken?
+
+### What is the advantage/disadvantage in using taxator-tk over marker gene phylogenetic placement with programs like MetagPhlan, CheckM, RAxML or pplacer?
+
+### What is a refpack?
+
+### Where can I find refpacks?
+
+### I want to build my own refpack, why do I have mapping problems with taxonomic identifiers?
+
+### Can I use a different taxonomy than NCBI?
+
+### Should I use a nucleotide or protein alignment and classification pipeline?
+
+### I want to use taxator-tk with aligner XYZ, can I?
+
+### Can I use taxator-tk to quantify relative in-sample or between-sampe abundances?
+
+### Why are some of the input sequences not listed in the final results files?
+
+### I want to use a pipeline but it says that some program is missing. What can I do?
+
+### What does the support value in the output mean?
+
+
+
 ## Code licensing
-The taxator-tk source is licensend under the GPLv3 and builds on the following software components:
+The taxator-tk source is licensend under the GPLv3 but builds on other free software components, which have their own respective licenses and are listed under dependencies.
 
 ## Acknowledgments and contact
 
