@@ -11,7 +11,7 @@
 #   http://creativecommons.org/publicdomain/zero/1.0/
 
 pipeline_version() {
-	echo '1.4.0' # TODO: take from Git or file
+	echo '1.5.0' # TODO: take from Git or file
 }
 
 # check if binary in path

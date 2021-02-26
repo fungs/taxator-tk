@@ -9,6 +9,12 @@ There are no recorded dates and only record type `Changed` prior to v1.4.0.
 Also, no version tags existis prior to version 1.0.0. Pipeline scripts were only
 added to this repository starting from version 1.4.0.
 
+## [1.5.0] - XXXX-XX-XX TODO: insert date
+### Added
+* core: taxator RPA algorithm with protein sequences
+* core: binner supports query globbing via regular expression
+* extended: new sample pipeline using protein alignment with orfM and blastp
+
 ## [1.4.0] - 2021-01-26
 ### Added
 * all: reorganized code and included extended pipeline scripts and documentation
@@ -131,7 +137,9 @@ added to this repository starting from version 1.4.0.
 ### Changed
 * core: functional framework with support for various LCA methods and fast aligners
 
-[Unreleased]: https://github.com/fungs/taxator-tk/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/fungs/taxator-tk/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/fungs/taxator-tk/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/fungs/taxator-tk/compare/v1.3.3...v1.4.0
 [1.3.3]: https://github.com/fungs/taxator-tk/compare/v1.3.2...v1.3.3
 [1.3.1]: https://github.com/fungs/taxator-tk/compare/v1.3.1...v1.3.0
 [1.3.0]: https://github.com/fungs/taxator-tk/compare/v1.2.2...v1.3.0
