@@ -132,6 +132,7 @@ added to this repository starting from version 1.4.0.
 * core: functional framework with support for various LCA methods and fast aligners
 
 [Unreleased]: https://github.com/fungs/taxator-tk/compare/v1.3.3...HEAD
+[1.4.0]: https://github.com/fungs/taxator-tk/compare/v1.3.3...v1.4.0
 [1.3.3]: https://github.com/fungs/taxator-tk/compare/v1.3.2...v1.3.3
 [1.3.1]: https://github.com/fungs/taxator-tk/compare/v1.3.1...v1.3.0
 [1.3.0]: https://github.com/fungs/taxator-tk/compare/v1.2.2...v1.3.0
