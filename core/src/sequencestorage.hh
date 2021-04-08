@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ncbidata.hh"
 #include <assert.h>
 #include "exception.hh"
+#include "faidx.h"
 
 
 // This currently works with standard and packed strings
@@ -320,11 +321,11 @@ class RandomIndexedSeqstoreRO : public RandomSeqStoreROInterface<StringType> {
 public:
     RandomIndexedSeqstoreRO( const std::string& fasta_filename, const std::string& index_filename ) : index_filename_( index_filename ), write_on_exit_( false ) {
         if ( ! boost::filesystem::exists( index_filename ) )  {
-            if ( seqan::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
+            if ( seqanmod::build( index_, fasta_filename.c_str() ) ) { //TODO: propagate error
                 BOOST_THROW_EXCEPTION(GeneralError{} << general_info{"could not build fasta index"} << file_info{index_filename});
                 return;
             } else write_on_exit_ = true;
-        } else if ( ! seqan::open( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
+        } else if ( ! seqanmod::open( index_, fasta_filename.c_str(), index_filename.c_str() ) ) {
             BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename});
             return;
         }
@@ -350,11 +351,11 @@ public:
             BOOST_THROW_EXCEPTION(SequenceNotFound {} << seqid_info{id});
         }
 
-        stop = std::min< large_unsigned_int >( stop, seqan::sequenceLength( index_, seq_num) );
+        stop = std::min< large_unsigned_int >( stop, seqanmod::sequenceLength( index_, seq_num) );
 
 	{ // TODO: check if locking is still required
 		boost::mutex::scoped_lock lock(seq_mutex);
-        	seqan::readRegion( seq, index_, seq_num, start - 1, stop );
+        	seqanmod::readRegion( seq, index_, seq_num, start - 1, stop );
 	}
 
 	assert( seqan::length( seq ) == (stop - start + 1) );
@@ -394,12 +395,12 @@ public:
 
     ~RandomIndexedSeqstoreRO() {
         if ( write_on_exit_ && ! boost::filesystem::exists( index_filename_ ) )
-            if( seqan::save( index_, index_filename_.c_str() ) ) BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename_});
+            if( seqanmod::save( index_, index_filename_.c_str() ) ) BOOST_THROW_EXCEPTION(FileError{} << file_info{index_filename_});
     }
 
 protected:
     const std::string index_filename_;
-    seqan::FaiIndex index_;
+    seqanmod::FaiIndex index_;
     bool write_on_exit_;
     tsl::htrie_map<char, unsigned int> refid2position_;
     mutable boost::mutex seq_mutex;
