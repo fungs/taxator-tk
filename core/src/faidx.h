@@ -136,7 +136,7 @@ public:
     // The index entries.
     String<FaiIndexEntry_> indexEntryStore;  //TODO: reduce size
     // A store for the sequence names.
-    StringSet<CharString> seqNameStore;  //TODO: duplicate name string saved in entry?
+    // StringSet<CharString> seqNameStore;  //TODO: duplicate name string saved in entry?
     // A cache for fast access to the sequence name store.
     //NameStoreCache<StringSet<CharString> > seqNameStoreCache;
 
@@ -173,7 +173,7 @@ inline void clear(FaiIndex & index)
     clear(index.fastaFilename);
     clear(index.faiFilename);
     clear(index.indexEntryStore);
-    clear(index.seqNameStore);
+    // clear(index.seqNameStore);
     // clear(index.seqNameStoreCache);
     index.file.clear();
     index.file.seekg(0, index.file.beg);
@@ -514,7 +514,7 @@ inline bool open(FaiIndex & index, char const * fastaFilename, char const * faiF
     while (!atEnd(reader))
     {
         readRecord(entry, reader, buffer);
-        appendValue(index.seqNameStore, entry.name);
+        // appendValue(index.seqNameStore, entry.name);
         appendValue(index.indexEntryStore, entry);
     }
 
@@ -666,7 +666,7 @@ inline bool build(FaiIndex & index, char const * fastaFilename, char const * fai
     DirectionIterator<std::ifstream, Input>::Type iter = directionIterator(index.file, Input());
 
     // Clear everything.
-    clear(index.seqNameStore);
+    // clear(index.seqNameStore);
     // clear(index.seqNameStoreCache);
     clear(index.indexEntryStore);
 
@@ -675,7 +675,7 @@ inline bool build(FaiIndex & index, char const * fastaFilename, char const * fai
     while (!atEnd(iter))
     {
         getRecordInfo(entry, iter, Fasta());
-        appendValue(index.seqNameStore, entry.name);
+        // appendValue(index.seqNameStore, entry.name);
         appendValue(index.indexEntryStore, entry);
     }
 

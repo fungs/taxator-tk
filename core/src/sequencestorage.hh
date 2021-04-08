@@ -332,8 +332,8 @@ public:
 
         //make a thread-safe lookup for identifiers, broken in SEQAN as of version 1.4.1
         unsigned int idx = 0;
-        for (auto it = seqan::begin(index_.seqNameStore); !seqan::atEnd(it); seqan::goNext(it)) {
-            refid2position_[seqan::toCString(*it)] = idx++;
+        for (auto it = seqan::begin(index_.indexEntryStore); !seqan::atEnd(it); seqan::goNext(it)) {
+            refid2position_[seqan::toCString(it->name)] = idx++;
         }
     }
 
