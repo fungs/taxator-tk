@@ -13,10 +13,11 @@ find_package(Threads REQUIRED)  # necessary workaround for cmake boost detection
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
-find_package( Boost "${boost_version_required}" REQUIRED COMPONENTS program_options system filesystem thread )
+set(Boost_VERSION_MACRO 000000)
+find_package( Boost "${boost_version_required}" REQUIRED COMPONENTS program_options system filesystem thread regex )
 if( Boost_FOUND )
-	if( Boost_VERSION LESS "${boost_version_required_enc}" )
-    message( FATAL_ERROR "FOUND INCORRECT BOOST VERSION: ${Boost_LIB_VERSION},\n${project_name} requires at least version ${boost_version_required} ")
+	if( Boost_VERSION_MACRO LESS "${boost_version_required_enc}" )
+    message( FATAL_ERROR "FOUND INCORRECT BOOST VERSION: ${Boost_VERSION_MACRO} (${Boost_VERSION_STRING}): ${project_name} requires at least version ${boost_version_required} ")
   else()
 		include_directories(${Boost_INCLUDE_DIRS})
 		link_directories(${Boost_LIBRARY_DIRS})
@@ -38,9 +39,9 @@ target_link_libraries( taxator ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_L
 
 # apply filtering to predictions file
 add_executable( binner binner.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp src/predictionrecord.cpp src/bioboxes.cpp )
-target_link_libraries( binner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
+target_link_libraries( binner ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
-# taxknife 
+# taxknife
 add_executable( taxknife taxknife.cpp src/taxontree.cpp src/taxonomyinterface.cpp src/ncbidata.cpp )
 target_link_libraries( taxknife ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} )
 
