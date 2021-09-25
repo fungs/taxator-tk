@@ -38,20 +38,20 @@ class ConcurrentOutStream {
 			{
 				for ( uint i=0; i<threads; ++i ) buffers_.push_back( new std::ostringstream ); //because streams are not copyable
 			};
-		
+
 		~ConcurrentOutStream() {
 			for ( uint i=0; i<buffers_.size(); ++i ) flushSerial( i ); //no locking required
 		}
-		
+
 		std::ostream& operator()( const uint channel ) { return buffers_[channel]; }
-		
+
 		void flush( const uint channel ) {
 			if ( buffers_[channel].str().size() < max_buffer_size_ ) tryFlush( channel );
 			else forceFlush( channel );
 		}
-		
+
 		const uint channels() { return buffers_.size(); };
-	
+
 	protected:
 		void tryFlush( const uint channel ) { // write if ostream not busy
 			if ( mutex_.try_lock() ) {
@@ -60,20 +60,20 @@ class ConcurrentOutStream {
 				mutex_.unlock();
 			}
 		}
-		
+
 		void forceFlush( const uint channel ) {
 			if ( ! buffers_[channel].str().empty() ) {
 // 				os_ << "forced write " << buffers_[channel].str().size() << std::endl;
-				boost::mutex::scoped_lock( mutex_ );
+				boost::mutex::scoped_lock lock( mutex_ );
 				flushSerial( channel );
 			}
 		}
-		
+
 		void flushSerial( const uint channel ) {
 			os_ << buffers_[channel].str();
 			buffers_[channel].str("");
 		}
-		
+
 		std::ostream& os_;
 		const uint max_buffer_size_;
 		boost::ptr_vector< std::ostringstream > buffers_;
