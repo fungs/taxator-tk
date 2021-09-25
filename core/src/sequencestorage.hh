@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <seqan/sequence.h>
 #include <seqan/file.h>
 #include <seqan/seq_io.h>
-#include <boost/progress.hpp>
 #include <boost/concept_check.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread/mutex.hpp>
