@@ -13,7 +13,6 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/progress.hpp>
 #include <boost/bind.hpp>
 
 template <class T>
@@ -47,16 +46,16 @@ class BoundedBuffer {
 			}
 			return retobj;
 		}
-		
+
 		void waitUntilEmpty() {
 			if ( empty() ) return;
 			boost::unique_lock< boost::mutex > lock( m_mutex_ );
 			empty_.wait( lock );
 		}
-		
+
 		size_type size() { return m_container_.size(); }
 		bool empty() { return ! m_unread_; }
-		
+
 	private:
 		BoundedBuffer(const BoundedBuffer&);              // Disabled copy constructor
 		BoundedBuffer& operator = (const BoundedBuffer&); // Disabled assign operator
