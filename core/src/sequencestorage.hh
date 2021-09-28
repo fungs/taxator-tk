@@ -420,7 +420,7 @@ public:
             return;
         }
 
-        //make a thread-safe lookup for identifiers, broken in SEQAN as of version 1.4.1
+        //make a thread-safe lookup for identifiers, broken in SEQAN as of version 2.4.1
         unsigned int idx = 0;
         for (auto it = seqan::begin(index_.indexEntryStore); !seqan::atEnd(it); seqan::goNext(it)) {
             refid2position_[seqan::toCString(it->name)] = idx++;
