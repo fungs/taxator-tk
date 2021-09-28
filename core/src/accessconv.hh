@@ -94,7 +94,7 @@ private:
         flatfile.close();
     };
 
-    typename tsl::htrie_map< char, TaxonID > accessidconv; //TODO: hash_map aka unordered_map would be better
+    typename tsl::htrie_map< char, TaxonID > accessidconv;
     const std::string filename_;
 };
 
