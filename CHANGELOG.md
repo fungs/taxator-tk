@@ -17,7 +17,7 @@ added to this repository starting from version 1.4.0.
 * core: binner supports query globbing via regular expression
 * extended: new sample pipeline using protein alignment with orfM and blastp
 
-## [1.4.0] - 2021-01-26
+## [1.4.0] - 2021-01-27
 ### Added
 * all: reorganized code and included extended pipeline scripts and documentation
 
@@ -34,13 +34,13 @@ added to this repository starting from version 1.4.0.
 * extended: align with last-align v1170
 * extended: parallel index building and ambiguous characters with last aligner
 
-## [1.3.3]
+## [1.3.3] - 2016-04-18
 ### Changed
 * core: fix crashes in all LCA algorithms
 * core: more consistent behavior of command line parameters in taxknife
 * core: better error reporting
 
-## [1.3.1]
+## [1.3.2] - 2016-04-07
 ### Changed
 * extended: set more options via variable with LAST and BLAST
 * extended: refactor shell code for cleaner workflows and
@@ -48,7 +48,7 @@ added to this repository starting from version 1.4.0.
 * extended: better CPU core detection via numproc command (supports containers)
 * extended: specification of output folder (backward-compatible behavior)
 
-## [1.3.0]
+## [1.3.0] - 2015-04-16
 ### Changed
 * core: rewrite of RPA with better handling of input alignments and
         speed improvements
@@ -69,7 +69,7 @@ added to this repository starting from version 1.4.0.
 * extended: download script for sample refpack removed, the project page will
             point to a location from where to download refpacks
 
-## [1.2.2]
+## [1.2.2] - 0000-00-00
 ### Changed
 * extended: make reference data and aligner index location independent of
 *           installation root (easier to run it in multiuser environments)
@@ -78,12 +78,12 @@ added to this repository starting from version 1.4.0.
 * extended: change standard BLAST algorithm to "discontiguous megablast"
             for better sensitivity (increases the runtime by ~20x)
 
-## [1.2.1]
+## [1.2.1] - 0000-00-00
 ### Changed
 * extended: fix bug in binning-workflow-fasta-last.sh, reference FASTA index wasn't used
 * extended: replaced quickstart.pdf by a text-based README file
 
-## [1.2.0]
+## [1.2.0] - 2014-07-07
 ### Changed
 * core: program taxknife substitutes name-filter and rank-filter
 * core: adjust data types to support longer segments
@@ -92,12 +92,12 @@ added to this repository starting from version 1.4.0.
 * core: heuristic to avoid excessive runtime with bad alignments
 * core: workaround for CMake bug with boost threads linking
 
-## [1.1.1]
+## [1.1.1] - 0000-00-00
 ### Changed
 * extended: fix typo bug in create-index-last.sh
 * extended: quickstart manual update
 
-## [1.1.0]
+## [1.1.0] - 0000-00-00
 ### Changed
 * core: code cleanup
 * core: SEQAN update with faster alignments (>2x speed improvement)
@@ -112,7 +112,7 @@ added to this repository starting from version 1.4.0.
 * extended: general cleanup/improvement of included workflow scripts;
             no Python required any more in BLAST workflow
 
-## [1.0.0]
+## [1.0.0] - 2013-08-19
 ### Changed
 * core: publication release, many functionality added;
   evaluations done on this version
@@ -121,7 +121,7 @@ added to this repository starting from version 1.4.0.
   includes microbial RefSeq with taxonomy
 * extended: large prepared LAST index with download script
 
-## [0.3]
+## [0.3] - 0000-00-00
 ### Changed
 * core: bug fix for noise filtering in binner
 * core: tools reduced to a core set around taxator (previously predictor) and binner
@@ -129,13 +129,13 @@ added to this repository starting from version 1.4.0.
 * core: multi-threading support in taxator
 * core: binner supports user defined identity constrains at fixed ranks
 
-## [0.2]
+## [0.2] - 0000-00-00
 ### Changed
 * core: predictions-filter for combination of predictions by mutiple methods/experts
   and to clean up the predictions of natural samples where we require a certain
   number of read for each taxonomic group to be considered
 
-## [0.1]
+## [0.1] - 0000-00-00
 ### Changed
 * core: functional framework with support for various LCA methods and fast aligners
 
