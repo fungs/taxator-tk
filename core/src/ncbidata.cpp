@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <zstr/zstr.hh>
 #include "utils.hh"
 #include "ncbidata.hh"
 #include "constants.hh"
@@ -36,8 +37,8 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
             std::list<std::string> fields;
             std::list<std::string>::iterator field_it;
 
-            // process nodes.dmp
-            std::ifstream nodesfile( nodes_filename.c_str() );
+            // process nodes.dmp(.gz)
+            zstr::ifstream nodesfile( nodes_filename );
             while( std::getline( nodesfile, line ) ) {
                 tokenizeMultiCharDelim( line, fields, "\t|\t", 3 );
                 field_it = fields.begin();
@@ -48,14 +49,13 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
                 annotation[ taxid ] = new TaxonAnnotation( tax->insertRankInternal( rank ) );
                 fields.clear();
             }
-            nodesfile.close(); //close nodes.dmp
         }
 
-        // process names.dmp
+        // process names.dmp(.gz)
         {
             std::vector<std::string> fields;
 
-            std::ifstream namesfile( names_filename.c_str() );
+            zstr::ifstream namesfile( names_filename );
             while( std::getline( namesfile, line ) ) {
                 tokenizeMultiCharDelim( line, fields, "\t|\t", 4 );
                 if( fields[3] == "scientific name\t|" ) { //stupid NCBI row separator
@@ -64,7 +64,7 @@ Taxonomy* parseNCBIFlatFiles( const std::string& nodes_filename, const std::stri
                 }
                 fields.clear();
             }
-            namesfile.close();
+            // namesfile.close();
         }
     }
 
@@ -177,28 +177,35 @@ Taxonomy* loadTaxonomyFromEnvironment( const std::vector< std::string >* ranks_t
 
     const std::string ncbi_root_folder = env;
     const std::string nodes_filename = ncbi_root_folder + "/nodes.dmp";
+    const std::string nodes_filename_compress = nodes_filename + ".gz";
     const std::string names_filename = ncbi_root_folder + "/names.dmp";
+    const std::string names_filename_compress = names_filename + ".gz";
     const std::string version_filename = ncbi_root_folder + "/version.txt";
 
-    
-    if ( ! boost::filesystem::exists( nodes_filename ) ) {
+    std::string nodes_filename_effective = nodes_filename;
+    if ( boost::filesystem::exists( nodes_filename_compress ) ) {
+      nodes_filename_effective = nodes_filename_compress;
+    } else if ( ! boost::filesystem::exists( nodes_filename ) ) {
         std::cerr << " \"" << nodes_filename << "\" not found" << std::endl;
         return NULL;
     }
-    
-    if ( ! boost::filesystem::exists( names_filename ) ) {
+
+    std::string names_filename_effective = names_filename;
+    if ( boost::filesystem::exists( names_filename_compress ) ) {
+      names_filename_effective = names_filename_compress;
+    } else if ( ! boost::filesystem::exists( names_filename ) ) {
         std::cerr << " \"" << names_filename << "\" not found" << std::endl;
         return NULL;
     }
-    
+
     // optional version file
     std::string version;
     if (boost::filesystem::exists(version_filename)) {
         std::ifstream versionfile(version_filename.c_str());
         std::getline(versionfile, version);
     }
-    
-    return parseNCBIFlatFiles( nodes_filename, names_filename, version, ranks_to_mark );;
+
+    return parseNCBIFlatFiles( nodes_filename_effective, names_filename_effective, version, ranks_to_mark );;
 }
 
 
