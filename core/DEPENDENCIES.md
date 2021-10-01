@@ -2,7 +2,7 @@
 
 The core tools depend on the following software. We list the recommended version for each release of taxator-tk starting from v1.3.3
 
-## [1.4.0]
+## [1.5.0]
 
 ### SeqAn
 Files: headers
@@ -16,6 +16,13 @@ Files: tree.hh
 License: GPLv3
 Link: http://tree.phi-sci.com
 Version: 3.7
+Included: yes
+
+### htrie
+Files: headers
+License: MIT
+Link: https://github.com/Tessil/hat-trie
+Version: 0.6.0
 Included: yes
 
 ### zstr
