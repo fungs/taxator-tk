@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef accessconv_hh_
 #define accessconv_hh_
 
+#include <tsl/htrie_map.h>
 #include <string>
-#include <map>
 #include <queue>
 #include <iostream>
 #include <list>
@@ -55,9 +55,13 @@ public:
     }
 
     TaxonID operator[](const TypeT& acc) { /*throw( std::out_of_range )*/
-        typename std::map< TypeT, TaxonID >::iterator it = accessidconv.find(acc);
-        if(it == accessidconv.end()) BOOST_THROW_EXCEPTION(TaxonMappingNotFound{} << seqid_info{acc} << file_info{filename_});
-        return it->second;
+        typename tsl::htrie_map< char, TaxonID >::const_iterator it = accessidconv.find(acc.c_str());
+        if(it == accessidconv.end()) {
+          BOOST_THROW_EXCEPTION(
+            TaxonMappingNotFound{} << seqid_info{acc} << file_info{filename_}
+          );
+        }
+        return *it;
     }
 
 private:
@@ -79,7 +83,7 @@ private:
                 acc = boost::lexical_cast< TypeT >( *field_it );
                 ++field_it;
                 TaxonID taxid = boost::lexical_cast< TaxonID >( *field_it );
-                accessidconv[ acc ] = taxid;
+                accessidconv[ acc.c_str() ] = taxid;
             } catch( boost::bad_lexical_cast &e ) {  // TODO: pass info via exception
                 std::cerr << "Could not parse line: " << line << ", skipping alignment." << std::endl;
                 std::cerr << "key:" << acc << std::endl;
@@ -90,7 +94,7 @@ private:
         flatfile.close();
     };
 
-    typename std::map< TypeT, TaxonID > accessidconv; //TODO: hash_map aka unordered_map would be better
+    typename tsl::htrie_map< char, TaxonID > accessidconv;
     const std::string filename_;
 };
 

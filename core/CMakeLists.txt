@@ -27,10 +27,11 @@ else()
 endif()
 
 include_directories( "includes-external" )
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") #-g for debuggin, -m32 for x32
+# TODO: activate -O 3 flag for better speed
+set(CMAKE_CXX_FLAGS "-Wall -pedantic -Wno-long-long -Wno-variadic-macros -fpermissive -O2 -march=native") # -std=gnu++17") #-g for debuggin, -m32 for x32
 
 # apply filtering to alignments file
 add_executable( alignments-filter alignments-filter.cpp src/alignmentrecord.cpp src/accessconv.cpp )

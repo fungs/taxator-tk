@@ -180,7 +180,7 @@ int main ( int argc, char** argv ) {
           std::string a, b;
           std::string* new_name = &a;
           std::string* old_name = &b;
-          RecordGroup* records;
+          RecordGroup* records = NULL;
           const RecordGroup empty_record_group;
 
           for(auto input_stream = input.begin(); input_stream != input.end(); ++input_stream) {

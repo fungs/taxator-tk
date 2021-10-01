@@ -12,6 +12,8 @@ added to this repository starting from version 1.4.0.
 ## [1.5.0] - XXXX-XX-XX TODO: insert date
 ### Added
 * core: taxator RPA algorithm with protein sequences
+* core: taxator reduce memory usage with large fasta index and taxonomy
+        mapping
 * core: binner supports query globbing via regular expression
 * extended: new sample pipeline using protein alignment with orfM and blastp
 
