@@ -14,7 +14,8 @@ added to this repository starting from version 1.4.0.
 * core: taxator RPA algorithm with protein sequences
 * core: taxator reduce memory usage with large fasta index and taxonomy
         mapping
-* core: binner supports query globbing via regular expression
+* core: binner supports query globbing via regular expression to implement
+        whole-genome binning
 * core: add transparent gzip compression of taxonomy dump files
 * extended: new sample pipeline using protein alignment with orfM and blastp
 
