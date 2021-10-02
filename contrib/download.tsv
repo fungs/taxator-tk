@@ -1,0 +1,6 @@
+checksum_sha256	filename	url
+8fb35e742085ad7cd6ae202fcac05b55e95470361dd409e670fdb62c7e7e6a1a	KronaTools-2.7.1.tar	https://github.com/marbl/Krona/releases/download/v2.7.1/KronaTools-2.7.1.tar
+841b86e90197b41aef36bb5a654fa2f20c6ed99430facac54646ee5a82f92477	last-1170.zip	http://last.cbrc.jp/last-1170.zip
+030644df4611007ff7dc962d981f390361e6c97a34e5cbc393ddfbe019ffe2c1	lz4-1.9.3.tar.gz	https://github.com/lz4/lz4/archive/refs/tags/v1.9.3.tar.gz
+93454cbdf5ba6f541745f31155efd9ba48bc6249fe3659b0aeaea4af62e62b58	ncbi-blast-2.11.0+-x64-linux.tar.gz	https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blast-2.11.0+-x64-linux.tar.gz
+ef8c56075fb7908344dea4c0fb1cdd4b6ffb3f76f6388e8b961326e8af39b32f	orfm-0.7.1_Linux_x86_64.tar.gz	https://github.com/wwood/OrfM/releases/download/v0.7.1/orfm-0.7.1_Linux_x86_64.tar.gz
