@@ -54,6 +54,10 @@ checkexecutables lastdb && echo -n 'lastdb: ' && extract_version "$(lastdb --ver
 regex='^lastal (.+)$'
 checkexecutables lastal && echo -n 'lastal: ' && extract_version "$(lastal --version 2>&1)" "$regex"
 
+# orfM
+regex='^OrfM version (.+)$'
+checkexecutables orfm && echo -n 'orfm: ' && extract_version "$(orfm -v 2>&1)" "$regex"
+
 # LZ4
 regex='^\*\*\*\ LZ4\ command\ line\ interface\ 64-bits\ (.+)\,\ by\ Yann\ Collet\ .*\*\*\*$'
 checkexecutables lz4 && echo -n 'lz4: ' && extract_version "$(lz4 --version 2>&1)" "$regex"
