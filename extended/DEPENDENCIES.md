@@ -11,7 +11,7 @@ which are also containted in the binary extended release package.
 If you use a different setup, please report all program versions with your
 results.
 
-## [Unreleased]
+## [1.5.0]
 
 ### taxator-tk
 Files: core binaries
@@ -41,7 +41,7 @@ Link: http://www.gnu.org/software/parallel/
 Version: 20201222
 Included: yes
 
-## OrfM
+### OrfM
 Files: orfm
 License: LGPLv3
 Link: https://github.com/wwood/OrfM
