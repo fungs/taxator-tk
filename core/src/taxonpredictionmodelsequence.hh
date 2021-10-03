@@ -471,7 +471,7 @@ public:
     }
 
     std::vector< StringType > segments(n);    //TODO: don't call element constructors
-    std::vector< int > querydistance(n, std::numeric_limits< int >::max()); // distance to query sequence
+    std::vector< float > querydistance(n, std::numeric_limits< float >::max()); // distance to query sequence
     std::vector< float > querysimilarity(n, .0);   // number of matches for nucleotide
     stopwatch_init.stop();
 
@@ -533,7 +533,7 @@ public:
           logsink << queryalignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
-          dist = std::numeric_limits< int >::max();
+          dist = std::numeric_limits< float >::max();
           sim = records[i]->getIdentities();
         }
         querydistance[i] = dist;
