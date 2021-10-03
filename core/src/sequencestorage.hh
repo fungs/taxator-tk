@@ -93,7 +93,7 @@ public:
         //only seqs, make index of ids
 
         for(large_unsigned_int i = 0; i < num_records; ++i){
-            if ( whitelist.count( std::string::c_str(*id) ) ) {
+            if (whitelist.count(seqan::toCString(*id))) {
                 id2pos_[ *id ] = seqan::assignValueById( data_, *seq );
                     }
             id++;
