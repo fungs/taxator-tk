@@ -132,7 +132,8 @@ binning2taxpath() {
 	checkexecutables grep taxknife || return 2
 	cat $@ |
 	grep -v -e '^@' -e '^#' |
-	taxknife -f 2 --mode annotate -s path
+	taxknife -f 2 --mode annotate -s path |
+	LC_COLLATE='C' sort
 }
 
 
