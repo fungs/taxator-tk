@@ -57,24 +57,24 @@ inline bool maskedLine( const std::string& line ) {
 // easy tokenizer without having to use boost
 template < class ContainerT >
 void tokenizeSingleCharDelim(const std::string& str, ContainerT& tokens, const std::string& delimiters = " ", int fieldnum = 0, const bool trimempty = false) {
-	const unsigned int stringlength = str.size();
+  const unsigned int stringlength = str.size();
   if (! fieldnum) fieldnum = stringlength;  // in case not provided or 0 given
-	std::string::size_type pos, lastpos = 0;
-	while( fieldnum && lastpos < stringlength ) {
-		pos = str.find_first_of(delimiters, lastpos);
-		if( pos == std::string::npos ) {
-			pos = str.length();
-			if( pos != lastpos || !trimempty ) tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );
-			lastpos = pos;
+  std::string::size_type pos, lastpos = 0;
+  while ( fieldnum && lastpos < stringlength ) {
+    pos = str.find_first_of(delimiters, lastpos);
+    if ( pos == std::string::npos ) {
+      pos = str.length();
+      if ( pos != lastpos || !trimempty ) tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );
+      lastpos = pos;
 			break;
-		}
-		if( pos != lastpos || !trimempty ) {
-			tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );
-			--fieldnum;
-		}
-		lastpos = pos + 1;
-	}
- 	tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)stringlength - lastpos ) ); //append rest
+    }
+    if ( pos != lastpos || !trimempty ) {
+      tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)pos - lastpos ) );
+      --fieldnum;
+    }
+    lastpos = pos + 1;
+  }
+  tokens.push_back( typename ContainerT::value_type( str.data() + lastpos, (typename ContainerT::value_type::size_type)stringlength - lastpos ) );  //append rest
 }
 
 
