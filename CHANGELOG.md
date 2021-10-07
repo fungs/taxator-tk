@@ -9,6 +9,10 @@ There are no recorded dates and only record type `Changed` prior to v1.4.0.
 Also, no version tags existis prior to version 1.0.0. Pipeline scripts were only
 added to this repository starting from version 1.4.0.
 
+## [1.4.1] - 2021-10-03
+### Fixed
+* core: compile with recent compiler and Boost CMake detection
+
 ## [1.4.0] - 2021-01-26
 ### Added
 * all: reorganized code and included extended pipeline scripts and documentation
