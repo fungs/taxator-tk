@@ -111,6 +111,10 @@ The pipelines combine taxator-tk core with other free software. Use the binary d
 
 The support value measures sequence similarity to the best reference, which supports the classification decision, in the unit number of positions. For nucleotide sequences, this is the estimated number of matches (lower bound). For amino acid sequence, it is a more abstract similarity based on the BLOSUM62 scoring matrix. In any case, dividing the sequence length by support positions yields a simple measure of percentage similarity.
 
+> 23: I know that all my sequences come from the same organism. I want is a single classification, not one for every input sequence.
+
+The extended pipeline scripts are made for typical metagenomic data which contain a mixture of different species. However, you can just rerun the program `binner`, which has a grouping command line parameter and is very fast, with the generated GFF3 file as input. Passing a catch-all regular expression `-g '(.*)'` will assume that all segments identified and classified in the previous calculation are from the same organism and the output will be a single classification.
+
 ## Code licensing
 The taxator-tk source is licensend under the GPLv3 but builds on other free software components, which have their own respective licenses and are listed under dependencies.
 
