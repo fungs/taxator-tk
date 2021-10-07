@@ -339,10 +339,8 @@ int main( int argc, char** argv ) {
     // std::cerr << "end load taxonomy\n";
     if( delete_unmarked ) tax->deleteUnmarkedNodes();  // do everything only with the major NCBI ranks given by "ranks"
 
-    // std::cerr << "load idtotax\n";
     boost::scoped_ptr< StrIDConverter > seqid2taxid( loadStrIDConverterFromFile( accessconverter_filename, 1000 ) );
-    std::ofstream logsink( log_filename.c_str(), std::ios_base::app );
-    // std::cerr << "end load idtotax\n";
+    std::ofstream logsink( log_filename.c_str(), std::ios_base::app);  // TODO: is ::ate more appropriate?
 
     try {
       // choose appropriate prediction model from command line parameters

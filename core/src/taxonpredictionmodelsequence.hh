@@ -344,6 +344,7 @@ public:
     boost::format seqname_fmt("%d:%d@%s");  // local variable because not thread-safe
     StopWatchCPUTime stopwatch_init("initializing this record");  // log overall time for this predict phase
     stopwatch_init.start();
+    logsink << std::fixed << std::setprecision(2);  // TODO: reverse/clear flags afterwards
 
     // push records into active_records  TODO: remove intermediate active_records?
     active_list_type_ active_records;
@@ -512,7 +513,7 @@ public:
           qgroup.insert(i);
           dist = 0;
           sim = records[i]->getIdentities();
-          logsink << std::setprecision(2) << "    *ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=1.0" << std::endl;
+          logsink << "    *ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=1.0" << std::endl;
           ++pass_0_counter_naive;
         } else if (records[i]->getScore() >= dbalignment_searchscore_threshold) {
 
@@ -529,7 +530,7 @@ public:
 
           sim = std::max(queryalignment.similarity, static_cast<float>(records[i]->getIdentities()));
           double qpid = static_cast<double>(sim)/qrlength;
-          logsink << std::setprecision(2) << "    +ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << std::endl;
+          logsink << "    +ALN " << i << " <=> query" << tab  << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << std::endl;
           logsink << queryalignment << std::endl;
 
         } else {  // not similar -> fill in some dummy values
@@ -591,7 +592,7 @@ public:
         std::list< boost::tuple< uint, int > > outgroup_tmp;
 
         // align all others <=> anchor TODO: adaptive cut-off
-        logsink << std::setprecision(2) << "      query: (" << qdist << ") unknown" << std::endl;
+        logsink << "      query: (" << qdist << ") unknown" << std::endl;
         pass_1_counter_naive += n - 1;
 
         // TODO: implement heuristic cut-off
@@ -632,7 +633,7 @@ public:
                 ++pass_1_counter;
                 float sim = segmentalignment.similarity;
 
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
+                logsink << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qsearchpid=" << qsearchpid << "; qpid=" << qpid << "; qsearchscore_cut=" << qsearchscore_thresh_heuristic << "; qpid_cutg=" << qpid_thresh_guarantee << "; qpid_cut_h=" << qpid_thresh_heuristic << std::endl;
                 logsink << segmentalignment << std::endl;
               }
             }
@@ -645,7 +646,7 @@ public:
               if(dist <= qdist) {
                 lnode = this->taxinter_.getLCA(lnode, cnode);
                 if(dist > ldist) ldist = dist;
-                logsink << std::setprecision(2) << "      current lower node: " << "("<< dist <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
+                logsink << "      current lower node: " << "("<< dist <<") "<<lnode->data->annotation->name << " (+ " << cnode->data->annotation->name << " at " << static_cast<int>(this->taxinter_.getLCA(cnode, rnode)->data->root_pathlength) << " )" << std::endl;
               }
               else {
                 if(dist < udist) {  // true if we find a segment with a lower dist than query
@@ -717,7 +718,7 @@ public:
           ival = 1.;
         } else if(unode != lnode && ldist < qdist) ival = (qdist - ldist)/(udist - ldist);
 
-        logsink << std::endl << std::setprecision(2) << "    SCORE\tldist = " << ldist << "; udist = " << udist << "; querydist = " << qdist << "; querydist_ex = " << qdist_ex << "; ival = " << ival  << std::endl << std::endl;
+        logsink << std::endl << "    SCORE\tldist = " << ldist << "; udist = " << udist << "; querydist = " << qdist << "; querydist_ex = " << qdist_ex << "; ival = " << ival  << std::endl << std::endl;
         const float taxsig = .0;  // TODO: placer.getTaxSignal(qdist);
 
         ival_global = std::max(ival, ival_global);  // combine interpolation values conservatively
@@ -778,7 +779,7 @@ public:
                 dist = segmentalignment.distance;
                 sim = segmentalignment.similarity;
 
-                logsink << std::setprecision(2) << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
+                logsink << "    +ALN " << i << " <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << qsearchscore << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
                 logsink << segmentalignment << std::endl;
                 ++pass_2_counter;
                 querydistance[i] = dist;
@@ -798,7 +799,7 @@ public:
                 float sim = std::max(segmentalignment.similarity, querysimilarity[index_anchor]);
 
                 double qpid = static_cast<double>(sim)/qrlength;
-                logsink << std::setprecision(2) << "    +ALN query <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
+                logsink << "    +ALN query <=> " << index_anchor << tab << "dist=" << dist << "; sim=" << sim << "; qsearchscore=" << records[index_anchor]->getScore() << "; qsearchmatch=" << qsearchmatch << "; qpid=" << qpid << std::endl;
                 logsink << segmentalignment << std::endl;
                 querydistance[index_anchor] = dist;
                 querysimilarity[index_anchor] = sim;
@@ -833,7 +834,7 @@ public:
     gcounter = pass_0_counter + pass_1_counter + pass_2_counter;
     float normalised_rt = (float)gcounter/(float)n;
     stopwatch_process.stop();
-    logsink << "STATS" << tab << qrseqname << tab << n << tab << pass_0_counter << tab << pass_1_counter << tab << pass_2_counter << tab << gcounter << tab << stopwatch_init.read() << tab << stopwatch_seqret.read() << tab << stopwatch_process.read() << tab << std::setprecision(2) << std::fixed << normalised_rt << std::endl << std::endl;
+    logsink << "STATS" << tab << qrseqname << tab << n << tab << pass_0_counter << tab << pass_1_counter << tab << pass_2_counter << tab << gcounter << tab << stopwatch_init.read() << tab << stopwatch_seqret.read() << tab << stopwatch_process.read() << tab << normalised_rt << std::endl << std::endl;
   }
 
 protected:
