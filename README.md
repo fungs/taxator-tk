@@ -25,7 +25,7 @@ Please see separate documentation:
 
 > 1: Help, the majority of assigned taxa are unspecific, like phylum or (super)kingdom, what can I do?
 
-Your input sequences are likely too short or too novel, which means that they lack relative sequences in your refpack. Check that you are using a comprehensive, recent and suitable refpack for classification. For short sequences, you can still find the associated taxonomic information in the intermediate GFF3 file, just not at the confidence level which is required for the final consensus assignment.
+Your input sequences are likely too short or too novel, which means that they lack relative sequences in your refpack. Check that you are using a comprehensive, recent and suitable refpack for classification. For short sequences, you can still find the associated taxonomic information in the [intermediate GFF3](doc/fileformats.md) file, just not at the confidence level which is required for the final consensus assignment.
 
 > 2: Why do taxator-tk pipelines run so long compared to other classification programs?
 
@@ -77,7 +77,7 @@ A refpack is just a collection of reference sequences in FASTA format and a dump
 
 > 14: Where can I find refpacks?
 
-Ready to use refpacks can be downloaded along with the binary distribution of the program at the Helmholtz Centre for Infection Research. Because we cannot always keep up with new sequence collection releases or provide specialized refpacks, you are also encouraged to build your own. This is explained in the documentation or maybe you will find (this blog post)[https://scienceblog.fungs.de/posts/taxator-tk-marine-refpack/] useful.
+Ready to use refpacks can be downloaded along with the binary distribution of the program at the Helmholtz Centre for Infection Research. Because we cannot always keep up with new sequence collection releases or provide specialized refpacks, you are also encouraged to build your own. This is explained in the documentation or maybe you will find [this blog post](https://scienceblog.fungs.de/posts/taxator-tk-marine-refpack/) useful.
 
 > 15: I want to build my own refpack, why do I have mapping problems with taxonomic identifiers?
 
@@ -93,7 +93,7 @@ That is a hard question. The protein alignment feature is pretty new in taxator-
 
 > 18: I want to use taxator-tk with aligner XYZ, can I?
 
-Yes, just implement the (intermediate text-based and TAB-separated alignment format)[doc/fileformats.md] and feed the output into `taxator`.
+Yes, just implement the [intermediate text-based and TAB-separated alignment format](doc/fileformats.md) and feed the output into `taxator`.
 
 > 19: Can I use taxator-tk to quantify relative in-sample or between-sampe abundances (taxonomic profiling)?
 
