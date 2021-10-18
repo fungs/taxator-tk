@@ -116,7 +116,7 @@ The support value measures sequence similarity to the best reference, which supp
 The extended pipeline scripts are made for typical metagenomic data which contain a mixture of different species. However, you can just rerun the program `binner`, which has a grouping command line parameter and is very fast, with the generated GFF3 file as input. Passing a catch-all regular expression `-g '(.*)'` will assume that all segments identified and classified in the previous calculation are from the same organism and the output will be a single classification.
 
 ## Sponsoring
-![ermine](https://user-images.githubusercontent.com/8776981/137801205-87f0a851-bbba-4484-bd80-7ab6387cba78.png)
+<img alt="ermine" src="https://user-images.githubusercontent.com/8776981/137801205-87f0a851-bbba-4484-bd80-7ab6387cba78.png" width="100" height="100">
 
 A license for Ermine was provided free of charge by [magicermine.com](https://magicermine.com) to make the Linux 64bit binary files for download portable.
 
