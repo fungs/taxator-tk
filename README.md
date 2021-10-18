@@ -116,10 +116,8 @@ The support value measures sequence similarity to the best reference, which supp
 The extended pipeline scripts are made for typical metagenomic data which contain a mixture of different species. However, you can just rerun the program `binner`, which has a grouping command line parameter and is very fast, with the generated GFF3 file as input. Passing a catch-all regular expression `-g '(.*)'` will assume that all segments identified and classified in the previous calculation are from the same organism and the output will be a single classification.
 
 ## Sponsoring
-
 ![ermine](https://user-images.githubusercontent.com/8776981/137801205-87f0a851-bbba-4484-bd80-7ab6387cba78.png)
-
-A license for Ermine was provided free of charge by magicErmine.com to make the Linux 64bit binary files for download portable.
+A license for Ermine was provided free of charge by [magicermine.com](https://magicermine.com) to make the Linux 64bit binary files for download portable.
 
 ## Code licensing
 The taxator-tk source is licensend under the GPLv3 but builds on other free software components, which have their own respective licenses and are listed under dependencies.
