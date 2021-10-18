@@ -117,6 +117,7 @@ The extended pipeline scripts are made for typical metagenomic data which contai
 
 ## Sponsoring
 ![ermine](https://user-images.githubusercontent.com/8776981/137801205-87f0a851-bbba-4484-bd80-7ab6387cba78.png)
+
 A license for Ermine was provided free of charge by [magicermine.com](https://magicermine.com) to make the Linux 64bit binary files for download portable.
 
 ## Code licensing
