@@ -2,8 +2,10 @@
 A set of programs for the taxonomic analysis of genetic sequences
 
 ## Introduction
-This is the source code for the taxator toolkit. If you are looking for pre-packaged sample refpacks for taxonomic assignment, please go to the
-[official download page](http://research.bifo.helmholtz-hzi.de/webapps/wa-download/). 64bit Linux binary packages are also available in GitHub releases.
+This is the source code for the taxator toolkit, a set of programs and example pipelines for taxonomic classification of nucleotide and amino acid sequences. The input typically represents a mixture of taxa from complex environments.
+
+If you are looking for pre-packaged sample refpacks for taxonomic assignment, these are hosted at
+[the HZI refpack download page](https://research.bifo.helmholtz-hzi.de/downloads/taxator-tk_refpacks/). 64bit Linux binary packages are also available in GitHub releases. Older releases can also be found at the [HZI app download page](http://research.bifo.helmholtz-hzi.de/webapps/wa-download/).
 
 This repository consists of two parts, the actual taxator-tk C++ code in the folder `core` and the pipeline scripts which are used to build the ready-to-use binary distribution in folder `extended`. The folder `contrib` contains information on how to add the external binaries which are part of the binary extended version package.
 
