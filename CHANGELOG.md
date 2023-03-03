@@ -9,7 +9,7 @@ There are no recorded dates and only record type `Changed` prior to v1.4.0.
 Also, no version tags existis prior to version 1.0.0. Pipeline scripts were only
 added to this repository starting from version 1.4.0.
 
-## [1.5.0] - XXXX-XX-XX TODO: insert date
+## [1.5.0] - 2021-10-02
 ### Added
 * core: taxator RPA algorithm with protein sequences
 * core: taxator reduce memory usage with large fasta index and taxonomy
